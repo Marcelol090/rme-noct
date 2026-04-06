@@ -2,7 +2,15 @@
 
 from __future__ import annotations
 
-import importlib
+import pytest
+
+
+def _require_rme_core():
+    """Import the native extension or skip when it is unavailable."""
+    return pytest.importorskip(
+        "pyrme.rme_core",
+        reason="pyrme.rme_core is not built in this environment",
+    )
 
 
 class TestRustCoreImport:
@@ -10,12 +18,12 @@ class TestRustCoreImport:
 
     def test_import_rme_core(self) -> None:
         """rme_core module should be importable."""
-        rme_core = importlib.import_module("pyrme.rme_core")
+        rme_core = _require_rme_core()
         assert rme_core.__name__ == "pyrme.rme_core"
 
     def test_version_returns_string(self) -> None:
         """rme_core.version() should return a non-empty version string."""
-        from pyrme import rme_core  # type: ignore[attr-defined]
+        rme_core = _require_rme_core()
 
         version = rme_core.version()
         assert isinstance(version, str)
@@ -24,7 +32,7 @@ class TestRustCoreImport:
 
     def test_build_info(self) -> None:
         """rme_core.build_info() should return build information."""
-        from pyrme import rme_core  # type: ignore[attr-defined]
+        rme_core = _require_rme_core()
 
         info = rme_core.build_info()
         assert isinstance(info, str)

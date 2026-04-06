@@ -21,11 +21,18 @@ echo ""
 # ── 1. Check prerequisites ──────────────────────────────────
 echo "📋 Checking prerequisites..."
 
-command -v node >/dev/null 2>&1 || { echo "❌ Node.js 18+ is required. Install: https://nodejs.org"; exit 1; }
+command -v node >/dev/null 2>&1 || { echo "❌ Node.js 22+ is required. Install: https://nodejs.org"; exit 1; }
 command -v npm >/dev/null 2>&1 || { echo "❌ npm is required."; exit 1; }
 command -v python >/dev/null 2>&1 || { echo "❌ Python 3.12+ is required."; exit 1; }
 command -v cargo >/dev/null 2>&1 || { echo "❌ Rust/Cargo is required. Install: https://rustup.rs"; exit 1; }
 command -v git >/dev/null 2>&1 || { echo "❌ Git is required."; exit 1; }
+
+NODE_MAJOR="$(node -p "process.versions.node.split('.')[0]")"
+if [ "$NODE_MAJOR" -lt 22 ]; then
+    echo "❌ Node.js 22+ is required for the local gsd-pi toolchain."
+    echo "   Current version: $(node -v)"
+    exit 1
+fi
 
 echo "✅ All prerequisites found"
 echo ""
@@ -108,7 +115,7 @@ echo "  .agent/workflows/      Antigravity workflows"
 echo ""
 echo "Quick start:"
 echo "  python -m pyrme          Launch the editor"
-echo "  npm run gsd:auto         Start GSD autonomous mode"
+echo "  npm run gsd:auto         Start GSD autonomous mode (Node 22+)"
 echo "  pytest tests/            Run tests"
 echo "  maturin develop          Rebuild Rust core"
 echo "============================================================"

@@ -49,7 +49,7 @@
 
 - Python 3.12+
 - Rust (via [rustup](https://rustup.rs/))
-- Node.js 18+ (for devtools)
+- Node.js 22+ (required for the local GSD toolchain)
 
 ### Setup
 
@@ -57,6 +57,9 @@
 # Clone the repository
 git clone https://github.com/Marcelol090/rme-noct.git
 cd rme-noct
+
+# Install local devtools, including gsd-pi
+npm install
 
 # Run the full setup (Python venv + Rust build + devtools)
 bash scripts/setup-devtools.sh
@@ -88,9 +91,15 @@ cargo test --manifest-path crates/rme_core/Cargo.toml
 # Lint
 ruff check pyrme/
 
+# GSD local CLI entrypoints
+npm run gsd:status
+npm run gsd:plan -- "Plan the next milestone"
+
 # GSD autonomous mode
 npm run gsd:auto
 ```
+
+`npm run gsd:*` uses the repo-local `gsd-pi` installation from `node_modules`, so Node 22+ and `npm install` are required before those commands will work.
 
 ## Features (Planned)
 

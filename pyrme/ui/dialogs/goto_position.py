@@ -206,8 +206,9 @@ class GotoPositionDialog(QDialog):
         # Clear existing
         while self._recent_container.count():
             item = self._recent_container.takeAt(0)
-            if item and item.widget():
-                item.widget().deleteLater()
+            widget = item.widget() if item is not None else None
+            if widget is not None:
+                widget.deleteLater()
 
         chip_style = f"""
             QPushButton {{

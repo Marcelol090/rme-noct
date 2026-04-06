@@ -5,15 +5,15 @@
   "description": "DevTools dependencies for PyRME (GSD-2 integration)",
   "scripts": {
     "setup": "bash scripts/setup-devtools.sh",
-    "gsd": "npx gsd-pi",
-    "gsd:auto": "npx gsd-pi auto",
-    "gsd:plan": "npx gsd-pi plan",
-    "gsd:status": "npx gsd-pi status"
+    "gsd": "gsd",
+    "gsd:auto": "gsd auto",
+    "gsd:plan": "gsd plan",
+    "gsd:status": "gsd status"
   },
   "devDependencies": {
-    "gsd-pi": "latest"
+    "gsd-pi": "2.64.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.0.0"
   }
 }

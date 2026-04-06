@@ -12,6 +12,7 @@ interface usable from within PyRME.
 
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -44,7 +45,7 @@ class AIAssistant:
 
     def _run_gsd_command(self, subcommand: str, *args: str) -> str:
         """Execute a GSD CLI command and return output."""
-        cmd = ["npx", "gsd-pi", subcommand, *[a for a in args if a]]
+        cmd = [str(self._gsd_binary()), subcommand, *[a for a in args if a]]
         try:
             result = subprocess.run(
                 cmd,
@@ -55,9 +56,17 @@ class AIAssistant:
             )
             return result.stdout or result.stderr or "(no output)"
         except FileNotFoundError:
-            return "Error: GSD-2 not installed. Run: npm install gsd-pi"
+            return (
+                "Error: repo-local GSD-2 is not installed. "
+                "Use Node.js 22+ and run: npm install"
+            )
         except subprocess.TimeoutExpired:
             return "Error: GSD command timed out after 60s"
+
+    def _gsd_binary(self) -> Path:
+        """Resolve the repo-local gsd binary."""
+        suffix = ".cmd" if os.name == "nt" else ""
+        return self.project_root / "node_modules" / ".bin" / f"gsd{suffix}"
 
     # ── Superpowers Skills ───────────────────────────────────
 
