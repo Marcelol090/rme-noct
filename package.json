@@ -1,0 +1,19 @@
+{
+  "name": "pyrme-devtools",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DevTools dependencies for PyRME (GSD-2 integration)",
+  "scripts": {
+    "setup": "bash scripts/setup-devtools.sh",
+    "gsd": "npx gsd-pi",
+    "gsd:auto": "npx gsd-pi auto",
+    "gsd:plan": "npx gsd-pi plan",
+    "gsd:status": "npx gsd-pi status"
+  },
+  "devDependencies": {
+    "gsd-pi": "latest"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
