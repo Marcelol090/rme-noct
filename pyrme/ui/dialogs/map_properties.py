@@ -6,6 +6,8 @@ Follows the Noct Map Editor Design System (DESIGN.md) for dialog styling.
 
 from __future__ import annotations
 
+from dataclasses import dataclass, replace
+
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -23,20 +25,37 @@ from PyQt6.QtWidgets import (
 
 from pyrme.ui.theme import THEME, TYPOGRAPHY
 
+DEFAULT_MAP_VERSION = "OTServ 0.6.1"
+DEFAULT_CLIENT_VERSION = "10.98"
+DEFAULT_MAP_WIDTH = 256
+DEFAULT_MAP_HEIGHT = 256
+
+
+@dataclass(slots=True)
+class MapPropertiesState:
+    """Local state object for the Map Properties dialog."""
+
+    description: str = ""
+    map_version: str = DEFAULT_MAP_VERSION
+    client_version: str = DEFAULT_CLIENT_VERSION
+    width: int = DEFAULT_MAP_WIDTH
+    height: int = DEFAULT_MAP_HEIGHT
+    house_file: str = ""
+    spawn_file: str = ""
+    waypoint_file: str = ""
+
 
 class MapPropertiesDialog(QDialog):
-    """Dialog for editing map meta-properties.
-
-    Mirrors legacy C++ MapPropertiesWindow with:
-    - Description, OTBM Version, Client Version
-    - Map Width/Height
-    - External House/Spawn/Waypoint file paths
-    """
+    """Dialog for editing map meta-properties."""
 
     # DESIGN.md: Map Properties dialog = 520 × 420
     DIALOG_SIZE = QSize(520, 420)
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        state: MapPropertiesState | None = None,
+    ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Map Properties")
         self.setFixedSize(self.DIALOG_SIZE)
@@ -44,8 +63,10 @@ class MapPropertiesDialog(QDialog):
             self.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint
         )
 
+        self._state = replace(state) if state is not None else MapPropertiesState()
         self._apply_dialog_style()
         self._build_layout()
+        self.set_state(self._state)
 
     def _apply_dialog_style(self) -> None:
         """Apply Noct Map Editor Elevation 3 dialog styling."""
@@ -79,27 +100,23 @@ class MapPropertiesDialog(QDialog):
         layout.setContentsMargins(24, 24, 24, 24)
         layout.setSpacing(16)
 
-        # Dialog heading (DESIGN.md: Inter 14px weight 600 Moonstone White)
         heading = QLabel("Map Properties")
         heading.setFont(TYPOGRAPHY.dialog_heading())
         heading.setStyleSheet(f"color: {THEME.moonstone_white.name()}; font-weight: 600;")
         layout.addWidget(heading)
 
-        # Form layout
         form = QFormLayout()
         form.setLabelAlignment(
             Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
         )
         form.setSpacing(12)
 
-        # Description (legacy: wxTextCtrl, multiline)
         self.desc_edit = QTextEdit()
         self.desc_edit.setMinimumHeight(60)
         self.desc_edit.setMaximumHeight(80)
         self.desc_edit.setToolTip("Enter a description for the map")
         form.addRow("Description:", self.desc_edit)
 
-        # OTBM Version (legacy: wxChoice with OTServ labels)
         self.otbm_combo = QComboBox()
         self.otbm_combo.addItems([
             "OTServ 0.5.0",
@@ -107,19 +124,16 @@ class MapPropertiesDialog(QDialog):
             "OTServ 0.6.1",
             "OTServ 0.7.0 (revscriptsys)",
         ])
-        self.otbm_combo.setCurrentIndex(2)  # Default: OTBM 3
         self.otbm_combo.setToolTip(
             "Select the OTBM version (Determines feature support)"
         )
         form.addRow("Map Version:", self.otbm_combo)
 
-        # Client Version (legacy: wxChoice, populated dynamically)
         self.client_combo = QComboBox()
         self.client_combo.addItems(["10.98", "8.60", "7.60"])
         self.client_combo.setToolTip("Select the target client version")
         form.addRow("Client Version:", self.client_combo)
 
-        # Map Dimensions – side by side like legacy C++
         dim_widget = QWidget()
         dim_layout = QHBoxLayout(dim_widget)
         dim_layout.setContentsMargins(0, 0, 0, 0)
@@ -142,7 +156,6 @@ class MapPropertiesDialog(QDialog):
 
         form.addRow("Dimensions:", dim_widget)
 
-        # External files (legacy: wxTextCtrl for each)
         self.house_edit = QLineEdit()
         self.house_edit.setToolTip(
             "External house XML file (leave empty for internal)"
@@ -164,7 +177,6 @@ class MapPropertiesDialog(QDialog):
         layout.addLayout(form)
         layout.addStretch()
 
-        # Footer buttons (DESIGN.md: Ghost Cancel + Amethyst Primary OK)
         footer = QHBoxLayout()
         footer.addStretch()
 
@@ -208,3 +220,48 @@ class MapPropertiesDialog(QDialog):
         footer.addWidget(self.ok_btn)
 
         layout.addLayout(footer)
+
+    def set_state(self, state: MapPropertiesState) -> None:
+        """Load a state object into the dialog controls."""
+        self._state = replace(state)
+        self.desc_edit.setPlainText(state.description)
+        self._set_combo_value(self.otbm_combo, state.map_version)
+        self._set_combo_value(self.client_combo, state.client_version)
+        self.width_spin.setValue(state.width)
+        self.height_spin.setValue(state.height)
+        self.house_edit.setText(state.house_file)
+        self.spawn_edit.setText(state.spawn_file)
+        self.waypoint_edit.setText(state.waypoint_file)
+
+    def state(self) -> MapPropertiesState:
+        """Return the current dialog state."""
+        return self._snapshot_state()
+
+    def accept(self) -> None:  # noqa: D401
+        """Accept the dialog and persist the current widget values."""
+        self._state = self._snapshot_state()
+        super().accept()
+
+    def _snapshot_state(self) -> MapPropertiesState:
+        """Collect the current widget values into a state object."""
+        return MapPropertiesState(
+            description=self.desc_edit.toPlainText(),
+            map_version=self.otbm_combo.currentText(),
+            client_version=self.client_combo.currentText(),
+            width=self.width_spin.value(),
+            height=self.height_spin.value(),
+            house_file=self.house_edit.text(),
+            spawn_file=self.spawn_edit.text(),
+            waypoint_file=self.waypoint_edit.text(),
+        )
+
+    @staticmethod
+    def _set_combo_value(combo: QComboBox, value: str) -> None:
+        """Select a combo-box entry, adding it if it is not already present."""
+        index = combo.findText(value)
+        if index >= 0:
+            combo.setCurrentIndex(index)
+            return
+
+        combo.addItem(value)
+        combo.setCurrentIndex(combo.count() - 1)
