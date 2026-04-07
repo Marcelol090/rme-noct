@@ -23,7 +23,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from pyrme.ui.theme import THEME, TYPOGRAPHY
+from pyrme.ui.styles import dialog_base_qss, ghost_button_qss, primary_button_qss
+from pyrme.ui.theme import TYPOGRAPHY
 
 DEFAULT_MAP_VERSION = "OTServ 0.6.1"
 DEFAULT_CLIENT_VERSION = "10.98"
@@ -70,29 +71,9 @@ class MapPropertiesDialog(QDialog):
 
     def _apply_dialog_style(self) -> None:
         """Apply Noct Map Editor Elevation 3 dialog styling."""
-        self.setStyleSheet(f"""
-            QDialog {{
-                background-color: {THEME.void_black.name()};
-                color: {THEME.moonstone_white.name()};
-            }}
-            QLabel {{
-                color: {THEME.moonstone_white.name()};
-                font-family: 'Inter', sans-serif;
-                font-size: 12px;
-            }}
-            QLineEdit, QSpinBox, QComboBox, QTextEdit {{
-                background-color: {THEME.obsidian_glass.name()};
-                border: 1px solid {THEME.ghost_border.name()};
-                border-radius: 4px;
-                color: {THEME.moonstone_white.name()};
-                padding: 4px 8px;
-                font-family: 'Inter', sans-serif;
-                font-size: 12px;
-            }}
-            QLineEdit:focus, QSpinBox:focus, QComboBox:focus, QTextEdit:focus {{
-                border: 1px solid {THEME.focus_border.name()};
-            }}
-        """)
+        self.setStyleSheet(
+            dialog_base_qss("QLineEdit, QSpinBox, QComboBox, QTextEdit")
+        )
 
     def _build_layout(self) -> None:
         """Construct the dialog layout matching legacy C++ MapPropertiesWindow."""
@@ -102,7 +83,6 @@ class MapPropertiesDialog(QDialog):
 
         heading = QLabel("Map Properties")
         heading.setFont(TYPOGRAPHY.dialog_heading())
-        heading.setStyleSheet(f"color: {THEME.moonstone_white.name()}; font-weight: 600;")
         layout.addWidget(heading)
 
         form = QFormLayout()
@@ -182,40 +162,13 @@ class MapPropertiesDialog(QDialog):
 
         self.cancel_btn = QPushButton("Cancel")
         self.cancel_btn.setToolTip("Discard changes")
-        self.cancel_btn.setStyleSheet(f"""
-            QPushButton {{
-                background: none;
-                border: 1px solid {THEME.ghost_border.name()};
-                border-radius: 6px;
-                color: {THEME.ash_lavender.name()};
-                padding: 6px 16px;
-                font-family: 'Inter', sans-serif;
-                font-weight: 500;
-            }}
-            QPushButton:hover {{
-                background-color: {THEME.lifted_glass.name()};
-                border: 1px solid {THEME.active_border.name()};
-            }}
-        """)
+        self.cancel_btn.setStyleSheet(ghost_button_qss())
         self.cancel_btn.clicked.connect(self.reject)
         footer.addWidget(self.cancel_btn)
 
         self.ok_btn = QPushButton("Save")
         self.ok_btn.setToolTip("Confirm changes")
-        self.ok_btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {THEME.amethyst_core.name()};
-                border: none;
-                border-radius: 6px;
-                color: {THEME.moonstone_white.name()};
-                padding: 6px 16px;
-                font-family: 'Inter', sans-serif;
-                font-weight: 500;
-            }}
-            QPushButton:hover {{
-                background-color: {THEME.deep_amethyst.name()};
-            }}
-        """)
+        self.ok_btn.setStyleSheet(primary_button_qss())
         self.ok_btn.clicked.connect(self.accept)
         footer.addWidget(self.ok_btn)
 

@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from pyrme.ui.styles import qss_color, secondary_label_qss
 from pyrme.ui.theme import THEME, TYPOGRAPHY
 
 # Floor labels matching Tibia convention (DESIGN.md §7: Floor 7 = Ground)
@@ -76,42 +77,42 @@ class PositionInput(QWidget):
 
         coord_font = TYPOGRAPHY.coordinate_display(large=True)
         label_style = (
-            f"color: {THEME.ash_lavender.name()}; "
+            f"{secondary_label_qss()} "
             "font-family: 'Inter', sans-serif; font-size: 11px;"
         )
         spinbox_style = f"""
             QSpinBox {{
                 background-color: rgba(255,255,255,15);
-                border: 1px solid {THEME.ghost_border.name()};
+                border: 1px solid {qss_color(THEME.ghost_border)};
                 border-radius: 4px;
-                color: {THEME.moonstone_white.name()};
+                color: {qss_color(THEME.moonstone_white)};
                 padding: 4px 8px;
                 min-width: 70px;
             }}
             QSpinBox:focus {{
-                border: 1px solid {THEME.focus_border.name()};
+                border: 1px solid {qss_color(THEME.focus_border)};
             }}
         """
         combo_style = f"""
             QComboBox {{
                 background-color: rgba(255,255,255,15);
-                border: 1px solid {THEME.ghost_border.name()};
+                border: 1px solid {qss_color(THEME.ghost_border)};
                 border-radius: 4px;
-                color: {THEME.moonstone_white.name()};
+                color: {qss_color(THEME.moonstone_white)};
                 padding: 4px 8px;
                 min-width: 90px;
             }}
             QComboBox:focus {{
-                border: 1px solid {THEME.focus_border.name()};
+                border: 1px solid {qss_color(THEME.focus_border)};
             }}
             QComboBox::drop-down {{
                 border: none;
             }}
             QComboBox QAbstractItemView {{
-                background-color: {THEME.void_black.name()};
-                color: {THEME.moonstone_white.name()};
-                border: 1px solid {THEME.ghost_border.name()};
-                selection-background-color: {THEME.amethyst_core.name()};
+                background-color: {qss_color(THEME.void_black)};
+                color: {qss_color(THEME.moonstone_white)};
+                border: 1px solid {qss_color(THEME.ghost_border)};
+                selection-background-color: {qss_color(THEME.amethyst_core)};
             }}
         """
 

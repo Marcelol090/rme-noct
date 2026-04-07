@@ -22,7 +22,8 @@ from PyQt6.QtWidgets import (
 )
 
 from pyrme.ui.components.glass import GlassDockWidget
-from pyrme.ui.theme import THEME, TYPOGRAPHY
+from pyrme.ui.styles import destructive_button_qss, ghost_button_qss, item_view_qss
+from pyrme.ui.theme import TYPOGRAPHY
 
 DEFAULT_WAYPOINT_NAME = "Waypoint"
 DEFAULT_WAYPOINT_X = 32000
@@ -75,41 +76,7 @@ class WaypointsDock(GlassDockWidget):
             header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
             header.resizeSection(1, 150)
 
-        self.tree_widget.setStyleSheet(f"""
-            QTreeWidget {{
-                background-color: {THEME.obsidian_glass.name()};
-                border: 1px solid {THEME.ghost_border.name()};
-                border-radius: 4px;
-                color: {THEME.moonstone_white.name()};
-                font-family: 'Inter', sans-serif;
-                font-size: 12px;
-                outline: none;
-            }}
-            QTreeWidget::item {{
-                padding: 4px 0;
-                border-left: 3px solid transparent;
-                min-height: 24px;
-            }}
-            QTreeWidget::item:selected {{
-                background-color: {THEME.lifted_glass.name()};
-                border-left: 3px solid {THEME.amethyst_core.name()};
-                color: {THEME.moonstone_white.name()};
-            }}
-            QTreeWidget::item:hover {{
-                background-color: {THEME.lifted_glass.name()};
-            }}
-            QHeaderView::section {{
-                background-color: transparent;
-                color: {THEME.ash_lavender.name()};
-                font-family: 'Inter', sans-serif;
-                font-size: 11px;
-                font-weight: 600;
-                border: none;
-                border-bottom: 1px solid {THEME.ghost_border.name()};
-                padding: 4px 8px;
-                text-transform: uppercase;
-            }}
-        """)
+        self.tree_widget.setStyleSheet(item_view_qss("QTreeWidget", include_header=True))
 
         layout.addWidget(self.tree_widget)
 
@@ -120,48 +87,9 @@ class WaypointsDock(GlassDockWidget):
         self.btn_rename = QPushButton("Rename")
         self.btn_remove = QPushButton("Remove")
 
-        ghost_style = f"""
-            QPushButton {{
-                background: none;
-                color: {THEME.ash_lavender.name()};
-                border: 1px solid {THEME.ghost_border.name()};
-                border-radius: 4px;
-                padding: 4px 8px;
-                font-family: 'Inter', sans-serif;
-                font-size: 12px;
-            }}
-            QPushButton:hover {{
-                background-color: {THEME.lifted_glass.name()};
-                border: 1px solid {THEME.active_border.name()};
-                color: {THEME.moonstone_white.name()};
-            }}
-            QPushButton:disabled {{
-                color: {THEME.muted_slate.name()};
-                border: 1px solid {THEME.ghost_border.name()};
-            }}
-        """
-        self.btn_add.setStyleSheet(ghost_style)
-        self.btn_rename.setStyleSheet(ghost_style)
-        self.btn_remove.setStyleSheet(f"""
-            QPushButton {{
-                background: none;
-                color: {THEME.ember_red.name()};
-                border: 1px solid {THEME.ember_red.name()};
-                border-radius: 4px;
-                padding: 4px 8px;
-                font-family: 'Inter', sans-serif;
-                font-size: 12px;
-            }}
-            QPushButton:hover {{
-                background-color: rgba(224, 92, 92, 38);
-                border: 1px solid {THEME.ember_red.name()};
-                color: {THEME.moonstone_white.name()};
-            }}
-            QPushButton:disabled {{
-                color: {THEME.muted_slate.name()};
-                border: 1px solid {THEME.ghost_border.name()};
-            }}
-        """)
+        self.btn_add.setStyleSheet(ghost_button_qss())
+        self.btn_rename.setStyleSheet(ghost_button_qss())
+        self.btn_remove.setStyleSheet(destructive_button_qss())
 
         self.btn_add.clicked.connect(self._add_default_waypoint)
         self.btn_rename.clicked.connect(self._rename_selected_waypoint)

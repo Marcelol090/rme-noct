@@ -14,6 +14,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QBrush, QPainter, QPaintEvent, QPen
 from PyQt6.QtWidgets import QDockWidget, QHBoxLayout, QLabel, QWidget
 
+from pyrme.ui.styles import section_heading_qss
 from pyrme.ui.theme import THEME
 
 
@@ -82,13 +83,7 @@ class GlassTitleBar(QWidget):
         layout.setSpacing(4)
 
         self.title_label = QLabel(title.upper())
-        self.title_label.setStyleSheet(f"""
-            color: {THEME.ash_lavender.name()};
-            font-family: 'Inter', sans-serif;
-            font-size: 11px;
-            font-weight: 600;
-            letter-spacing: 0.08em;
-        """)
+        self.title_label.setStyleSheet(section_heading_qss())
         layout.addWidget(self.title_label)
         layout.addStretch()
 

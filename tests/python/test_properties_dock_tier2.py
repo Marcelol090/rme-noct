@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PyQt6.QtWidgets import QFormLayout, QVBoxLayout
+from PyQt6.QtWidgets import QFormLayout, QLabel, QVBoxLayout
 
 from pyrme.ui.docks.properties import PropertiesDock
 
@@ -34,4 +34,5 @@ def test_properties_dock_instantiates_all_value_widgets(qtbot) -> None:
         assert field_item is not None
         field_widget = field_item.widget()
         assert field_widget is not None
+        assert isinstance(field_widget, QLabel)
         assert field_widget.text() == expected

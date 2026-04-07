@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
 from pyrme import __app_name__, __version__
 from pyrme.ui.dialogs import FindItemDialog, MapPropertiesDialog
 from pyrme.ui.docks import BrushPaletteDock, MinimapDock, PropertiesDock, WaypointsDock
+from pyrme.ui.styles import qss_color
 from pyrme.ui.theme import THEME, TYPOGRAPHY
 
 logger = logging.getLogger(__name__)
@@ -45,7 +46,9 @@ class MainWindow(QMainWindow):
         self.resize(self.WINDOW_DEFAULT_SIZE)
         self.setDockNestingEnabled(True)
         # Main application background: Void Black
-        self.setStyleSheet(f"QMainWindow {{ background-color: {THEME.void_black.name()}; }}")
+        self.setStyleSheet(
+            f"QMainWindow {{ background-color: {qss_color(THEME.void_black)}; }}"
+        )
 
     def _setup_menu_bar(self) -> None:
         """Create the main menu bar."""
@@ -201,11 +204,11 @@ class MainWindow(QMainWindow):
         canvas_placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         canvas_placeholder.setStyleSheet(
             "QLabel {"
-            f"  color: {THEME.ash_lavender.name()};"
+            f"  color: {qss_color(THEME.ash_lavender)};"
             "  font-size: 18px;"
             "  font-weight: 300;"
-            f"  background-color: {THEME.void_black.name()};"
-            f"  border: 1px solid {THEME.ghost_border.name()};"
+            f"  background-color: {qss_color(THEME.void_black)};"
+            f"  border: 1px solid {qss_color(THEME.ghost_border)};"
             "  border-radius: 8px;"
             "  padding: 40px;"
             "}"
@@ -248,17 +251,23 @@ class MainWindow(QMainWindow):
         self._coord_label = QLabel("Pos: (X: 32000, Y: 32000, Z: 07)")
         # Must use JetBrains Mono for coordinates!
         self._coord_label.setFont(TYPOGRAPHY.coordinate_display())
-        self._coord_label.setStyleSheet(f"padding: 0 12px; color: {THEME.ash_lavender.name()};")
+        self._coord_label.setStyleSheet(
+            f"padding: 0 12px; color: {qss_color(THEME.ash_lavender)};"
+        )
         status_bar.addPermanentWidget(self._coord_label)
 
         self._zoom_label = QLabel("100%")
         self._zoom_label.setFont(TYPOGRAPHY.ui_label())
-        self._zoom_label.setStyleSheet(f"padding: 0 12px; color: {THEME.ash_lavender.name()};")
+        self._zoom_label.setStyleSheet(
+            f"padding: 0 12px; color: {qss_color(THEME.ash_lavender)};"
+        )
         status_bar.addPermanentWidget(self._zoom_label)
 
         self._items_label = QLabel("Floor 7 (Ground)")
         self._items_label.setFont(TYPOGRAPHY.ui_label())
-        self._items_label.setStyleSheet(f"padding: 0 12px; color: {THEME.ash_lavender.name()};")
+        self._items_label.setStyleSheet(
+            f"padding: 0 12px; color: {qss_color(THEME.ash_lavender)};"
+        )
         status_bar.addPermanentWidget(self._items_label)
 
         status_bar.showMessage(f"{__app_name__} v{__version__} — Ready", 5000)

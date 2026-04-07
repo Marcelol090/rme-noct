@@ -27,7 +27,17 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from pyrme.ui.theme import THEME, TYPOGRAPHY
+from pyrme.ui.styles import (
+    checkbox_qss,
+    dialog_base_qss,
+    ghost_button_qss,
+    group_box_qss,
+    item_view_qss,
+    primary_button_qss,
+    secondary_label_qss,
+    section_heading_qss,
+)
+from pyrme.ui.theme import TYPOGRAPHY
 
 
 class FindItemResultMode(str, Enum):
@@ -144,84 +154,16 @@ class FindItemDialog(QDialog):
 
     def _apply_dialog_style(self) -> None:
         """Apply Noct Map Editor Elevation 3 dialog styling."""
-        self.setStyleSheet(f"""
-            QDialog {{
-                background-color: {THEME.void_black.name()};
-                color: {THEME.moonstone_white.name()};
-            }}
-            QLabel {{
-                color: {THEME.moonstone_white.name()};
-                font-family: 'Inter', sans-serif;
-                font-size: 12px;
-                background: transparent;
-            }}
-            QLineEdit {{
-                background-color: {THEME.obsidian_glass.name()};
-                border: 1px solid {THEME.ghost_border.name()};
-                border-radius: 4px;
-                color: {THEME.moonstone_white.name()};
-                padding: 6px 8px;
-                font-family: 'Inter', sans-serif;
-                font-size: 13px;
-            }}
-            QLineEdit:focus {{
-                border: 1px solid {THEME.focus_border.name()};
-                background-color: {THEME.lifted_glass.name()};
-            }}
-            QListWidget {{
-                background-color: {THEME.obsidian_glass.name()};
-                border: 1px solid {THEME.ghost_border.name()};
-                border-radius: 4px;
-                color: {THEME.moonstone_white.name()};
-                font-family: 'Inter', sans-serif;
-                font-size: 12px;
-                outline: none;
-            }}
-            QListWidget::item {{
-                padding: 4px 8px;
-                border-left: 3px solid transparent;
-                min-height: 24px;
-            }}
-            QListWidget::item:selected {{
-                background-color: {THEME.lifted_glass.name()};
-                border-left: 3px solid {THEME.amethyst_core.name()};
-                color: {THEME.moonstone_white.name()};
-            }}
-            QListWidget::item:hover {{
-                background-color: {THEME.lifted_glass.name()};
-            }}
-            QGroupBox {{
-                border: 1px solid {THEME.ghost_border.name()};
-                border-radius: 4px;
-                margin-top: 12px;
-                padding: 8px 8px 4px 8px;
-                font-family: 'Inter', sans-serif;
-                font-size: 11px;
-                font-weight: 600;
-                color: {THEME.ash_lavender.name()};
-            }}
-            QGroupBox::title {{
-                subcontrol-origin: margin;
-                padding: 0 6px;
-                color: {THEME.ash_lavender.name()};
-            }}
-            QCheckBox {{
-                spacing: 6px;
-                color: {THEME.moonstone_white.name()};
-                font-family: 'Inter', sans-serif;
-                font-size: 12px;
-            }}
-            QCheckBox::indicator {{
-                width: 14px;
-                height: 14px;
-                border-radius: 3px;
-                border: 1px solid {THEME.ghost_border.name()};
-            }}
-            QCheckBox::indicator:checked {{
-                background-color: {THEME.amethyst_core.name()};
-                border-color: {THEME.amethyst_core.name()};
-            }}
-        """)
+        self.setStyleSheet(
+            "\n".join(
+                [
+                    dialog_base_qss("QLineEdit"),
+                    item_view_qss("QListWidget"),
+                    group_box_qss(),
+                    checkbox_qss(),
+                ]
+            )
+        )
 
     def _build_layout(self) -> None:
         """Construct the dialog layout with splitter."""
@@ -231,9 +173,6 @@ class FindItemDialog(QDialog):
 
         heading = QLabel("Find Item")
         heading.setFont(TYPOGRAPHY.dialog_heading())
-        heading.setStyleSheet(
-            f"color: {THEME.moonstone_white.name()}; font-weight: 600;"
-        )
         layout.addWidget(heading)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -309,7 +248,7 @@ class FindItemDialog(QDialog):
 
         mode_label = QLabel("MODE")
         mode_label.setFont(TYPOGRAPHY.dock_title())
-        mode_label.setStyleSheet(f"color: {THEME.ash_lavender.name()};")
+        mode_label.setStyleSheet(section_heading_qss())
         mode_row.addWidget(mode_label)
 
         self.btn_list_mode = QPushButton("List")
@@ -335,7 +274,7 @@ class FindItemDialog(QDialog):
 
         self.result_count = QLabel("0 results")
         self.result_count.setFont(TYPOGRAPHY.ui_label(11))
-        self.result_count.setStyleSheet(f"color: {THEME.ash_lavender.name()};")
+        self.result_count.setStyleSheet(secondary_label_qss())
         right_layout.addWidget(self.result_count)
 
         self.item_list = QListWidget()
@@ -352,60 +291,23 @@ class FindItemDialog(QDialog):
         footer.setSpacing(8)
 
         self.btn_search_map = QPushButton("Search on Map")
-        self.btn_search_map.setStyleSheet(self._ghost_button_style())
+        self.btn_search_map.setStyleSheet(ghost_button_qss())
         self.btn_search_map.clicked.connect(self._capture_search_map_query)
         footer.addWidget(self.btn_search_map)
 
         footer.addStretch()
 
         self.btn_cancel = QPushButton("Cancel")
-        self.btn_cancel.setStyleSheet(self._ghost_button_style())
+        self.btn_cancel.setStyleSheet(ghost_button_qss())
         self.btn_cancel.clicked.connect(self.reject)
         footer.addWidget(self.btn_cancel)
 
         self.btn_ok = QPushButton("OK")
-        self.btn_ok.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {THEME.amethyst_core.name()};
-                border: none;
-                border-radius: 6px;
-                color: {THEME.moonstone_white.name()};
-                padding: 6px 16px;
-                font-family: 'Inter', sans-serif;
-                font-weight: 500;
-            }}
-            QPushButton:hover {{
-                background-color: {THEME.deep_amethyst.name()};
-            }}
-        """)
+        self.btn_ok.setStyleSheet(primary_button_qss())
         self.btn_ok.clicked.connect(self.accept)
         footer.addWidget(self.btn_ok)
 
         layout.addLayout(footer)
-
-    def _ghost_button_style(self) -> str:
-        """Return the ghost (secondary) button stylesheet."""
-        return f"""
-            QPushButton {{
-                background: none;
-                border: 1px solid {THEME.ghost_border.name()};
-                border-radius: 6px;
-                color: {THEME.ash_lavender.name()};
-                padding: 6px 16px;
-                font-family: 'Inter', sans-serif;
-                font-weight: 500;
-            }}
-            QPushButton:hover {{
-                background-color: {THEME.lifted_glass.name()};
-                border: 1px solid {THEME.active_border.name()};
-                color: {THEME.moonstone_white.name()};
-            }}
-            QPushButton:checked {{
-                background-color: {THEME.lifted_glass.name()};
-                border: 1px solid {THEME.focus_border.name()};
-                color: {THEME.moonstone_white.name()};
-            }}
-        """
 
     def current_query(self) -> FindItemQuery:
         """Return the current search query derived from the widgets."""

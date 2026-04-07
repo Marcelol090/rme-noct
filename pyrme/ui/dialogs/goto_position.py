@@ -20,7 +20,15 @@ from PyQt6.QtWidgets import (
 )
 
 from pyrme.ui.components.position_input import PositionInput
-from pyrme.ui.theme import THEME, TYPOGRAPHY
+from pyrme.ui.styles import (
+    dialog_base_qss,
+    ghost_button_qss,
+    position_chip_qss,
+    primary_button_qss,
+    section_heading_qss,
+    subtle_action_qss,
+)
+from pyrme.ui.theme import TYPOGRAPHY
 
 # Max recent positions to keep (FIFO)
 _MAX_RECENT = 5
@@ -53,17 +61,7 @@ class GotoPositionDialog(QDialog):
 
     def _apply_dialog_style(self) -> None:
         """Apply Noct Map Editor Elevation 3 dialog styling."""
-        self.setStyleSheet(f"""
-            QDialog {{
-                background-color: {THEME.void_black.name()};
-                color: {THEME.moonstone_white.name()};
-            }}
-            QLabel {{
-                color: {THEME.moonstone_white.name()};
-                font-family: 'Inter', sans-serif;
-                font-size: 12px;
-            }}
-        """)
+        self.setStyleSheet(dialog_base_qss())
 
     def _build_layout(self) -> None:
         """Construct the dialog layout matching legacy C++ GotoPositionDialog."""
@@ -74,9 +72,6 @@ class GotoPositionDialog(QDialog):
         # Dialog heading (DESIGN.md: Inter 14px weight 600 Moonstone White)
         heading = QLabel("Go To Position")
         heading.setFont(TYPOGRAPHY.dialog_heading())
-        heading.setStyleSheet(
-            f"color: {THEME.moonstone_white.name()}; font-weight: 600;"
-        )
         layout.addWidget(heading)
 
         # Position input (reusable component)
@@ -84,12 +79,10 @@ class GotoPositionDialog(QDialog):
         layout.addWidget(self.position_input)
 
         # Recent positions section
-        recent_header = QLabel("RECENT POSITIONS")
-        recent_header.setFont(TYPOGRAPHY.dock_title())
-        recent_header.setStyleSheet(
-            f"color: {THEME.ash_lavender.name()};"
-        )
-        layout.addWidget(recent_header)
+        self.recent_header = QLabel("RECENT POSITIONS")
+        self.recent_header.setFont(TYPOGRAPHY.dock_title())
+        self.recent_header.setStyleSheet(section_heading_qss())
+        layout.addWidget(self.recent_header)
 
         # Recent position chips container
         self._recent_container = QVBoxLayout()
@@ -98,20 +91,7 @@ class GotoPositionDialog(QDialog):
 
         # Clear recent button
         self._clear_btn = QPushButton("Clear Recent")
-        self._clear_btn.setStyleSheet(f"""
-            QPushButton {{
-                background: none;
-                border: none;
-                color: {THEME.ash_lavender.name()};
-                font-family: 'Inter', sans-serif;
-                font-size: 11px;
-                padding: 2px 4px;
-                text-align: left;
-            }}
-            QPushButton:hover {{
-                color: {THEME.moonstone_white.name()};
-            }}
-        """)
+        self._clear_btn.setStyleSheet(subtle_action_qss())
         self._clear_btn.clicked.connect(self._clear_recent)
         self._clear_btn.setVisible(False)
         layout.addWidget(self._clear_btn)
@@ -124,40 +104,13 @@ class GotoPositionDialog(QDialog):
 
         cancel_btn = QPushButton("Cancel")
         cancel_btn.setToolTip("Close this window")
-        cancel_btn.setStyleSheet(f"""
-            QPushButton {{
-                background: none;
-                border: 1px solid {THEME.ghost_border.name()};
-                border-radius: 6px;
-                color: {THEME.ash_lavender.name()};
-                padding: 6px 16px;
-                font-family: 'Inter', sans-serif;
-                font-weight: 500;
-            }}
-            QPushButton:hover {{
-                background-color: rgba(255,255,255,18);
-                border: 1px solid {THEME.active_border.name()};
-            }}
-        """)
+        cancel_btn.setStyleSheet(ghost_button_qss())
         cancel_btn.clicked.connect(self.reject)
         footer.addWidget(cancel_btn)
 
         jump_btn = QPushButton("Jump")
         jump_btn.setToolTip("Go to position (Enter)")
-        jump_btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {THEME.amethyst_core.name()};
-                border: none;
-                border-radius: 6px;
-                color: {THEME.moonstone_white.name()};
-                padding: 6px 16px;
-                font-family: 'Inter', sans-serif;
-                font-weight: 500;
-            }}
-            QPushButton:hover {{
-                background-color: {THEME.deep_amethyst.name()};
-            }}
-        """)
+        jump_btn.setStyleSheet(primary_button_qss())
         jump_btn.setDefault(True)
         jump_btn.clicked.connect(self._on_jump)
         footer.addWidget(jump_btn)
@@ -210,28 +163,11 @@ class GotoPositionDialog(QDialog):
             if widget is not None:
                 widget.deleteLater()
 
-        chip_style = f"""
-            QPushButton {{
-                background: none;
-                border: 1px solid {THEME.ghost_border.name()};
-                border-radius: 12px;
-                color: {THEME.ash_lavender.name()};
-                padding: 3px 10px;
-                font-size: 11px;
-                text-align: left;
-            }}
-            QPushButton:hover {{
-                background-color: rgba(255,255,255,18);
-                border-color: {THEME.active_border.name()};
-                color: {THEME.moonstone_white.name()};
-            }}
-        """
-
         for pos in self._recent:
             x, y, z = pos
             chip = QPushButton(f"{x}, {y}, {z:02d}")
             chip.setFont(TYPOGRAPHY.item_id())
-            chip.setStyleSheet(chip_style)
+            chip.setStyleSheet(position_chip_qss())
             chip.clicked.connect(
                 lambda checked, px=x, py=y, pz=z: self._select_recent(px, py, pz)
             )
