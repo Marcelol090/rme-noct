@@ -29,6 +29,7 @@
   - budget and supervision policy
   - verification commands
   - skill routing hints in `.gsd/preferences.md`
+- Durable task memory lives in `.gsd/task-registry.json` and follows `.gsd/task-registry.schema.json`; update it as tasks complete so future sessions can see what has already been done.
 - `GSD` skill rules are routing metadata only. They must point toward the same skills Codex already knows how to use.
 
 ## Example End-to-End Chain
