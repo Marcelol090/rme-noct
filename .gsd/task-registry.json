@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project": "remeres-map-editor-redux",
-  "updated_at": "2026-04-07T00:00:00-03:00",
+  "updated_at": "2026-04-07T17:49:05-03:00",
   "tasks": [
     {
       "id": "GSD-RUNTIME-NODE22",
@@ -369,6 +369,54 @@
       "recorded_at": "2026-04-07T00:00:00-03:00",
       "updated_at": "2026-04-07T15:40:03-03:00",
       "completed_at": "2026-04-07T15:40:03-03:00"
+    },
+    {
+      "id": "M5-SHELL-NAVIGATION",
+      "title": "Wire main window shell navigation state",
+      "category": "feature",
+      "status": "verified",
+      "milestone": "M5",
+      "slice": "shell-navigation",
+      "summary": "MainWindow now drives real shell navigation state, view visibility actions, and persisted layout without depending on the canvas backend.",
+      "done_criteria": [
+        "Go To Position updates the active shell position and floor state",
+        "Floor actions and minimap Z controls mutate shell state instead of logging stubs",
+        "Dock and toolbar visibility actions are exposed through the View menu",
+        "Window geometry, layout, floor, and visibility toggles persist through QSettings"
+      ],
+      "scope": [
+        "pyrme/ui/main_window.py",
+        "pyrme/ui/components/glass.py",
+        "pyrme/ui/dialogs/__init__.py",
+        "tests/python/test_main_window_navigation_m5.py"
+      ],
+      "files_modified": [
+        "pyrme/ui/main_window.py",
+        "pyrme/ui/components/glass.py",
+        "pyrme/ui/dialogs/__init__.py",
+        "tests/python/test_main_window_navigation_m5.py"
+      ],
+      "tests_run": [
+        "pytest tests/python/test_main_window_navigation_m5.py -v --tb=short",
+        "pytest tests/python -v --tb=short",
+        "ruff check pyrme/ tests/python/",
+        "mypy pyrme/ tests/python/ --ignore-missing-imports"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "The shell navigation slice was verified in the feat-m5-shell-navigation worktree",
+          "Worktree closeout commit: 28f458c",
+          "GSD status remained available, but headless new-milestone did not materialize milestone files in this environment"
+        ]
+      },
+      "notes": [
+        "This slice keeps canvas rendering out of scope and uses QSettings plus QMainWindow state APIs to persist the editor shell.",
+        "The new shell tests intentionally avoid top-level show() calls to keep offscreen Qt verification stable."
+      ],
+      "recorded_at": "2026-04-07T17:49:05-03:00",
+      "updated_at": "2026-04-07T17:49:05-03:00",
+      "completed_at": "2026-04-07T17:49:05-03:00"
     }
   ]
 }
