@@ -4,11 +4,11 @@ Provides Python bindings to discover and load Superpowers skills
 for use within the editor's AI assistant. Based on the Superpowers
 plugin architecture (Context7: /obra/superpowers).
 
-Official Skill Resolution Order (from Context7 docs):
-1. Personal skills (project-local or ~/.config/superpowers/skills/)
-2. Superpowers skills (cloned from git repo)
-3. Personal skills OVERRIDE superpowers skills when names match
-4. Prefix "superpowers:" to force using the bundled version
+Codex-first resolution order in this repo:
+1. Project-local Codex skills in .agents/skills/
+2. User Codex skills in ~/.agents/skills/
+3. Bundled Superpowers skills in ~/.codex/superpowers/skills/
+4. Prefix "superpowers:" forces the bundled Superpowers version
 
 Official SKILL.md Format:
   ---
@@ -103,45 +103,45 @@ def _extract_frontmatter(text: str) -> dict[str, str]:
 class SkillsLoader:
     """Discovers and loads Superpowers skills.
 
-    Follows the official resolution order from Context7 docs:
-    1. Personal skills (project .superpowers/ or ~/.config/superpowers/skills/)
-    2. Superpowers bundled skills
-    3. Personal overrides bundled when names match
-    4. "superpowers:" prefix forces bundled version
+    Codex-first resolution order:
+    1. Project-local Codex skills
+    2. User Codex skills
+    3. Bundled Superpowers skills
+    4. "superpowers:" prefix forces the bundled version
     """
 
     def __init__(
         self,
         project_root: Path | None = None,
+        repo_skills_dir: Path | None = None,
+        user_skills_dir: Path | None = None,
         superpowers_dir: Path | None = None,
         personal_dir: Path | None = None,
     ) -> None:
         self.project_root = project_root or Path.cwd()
-
-        # Official paths per Context7 docs
-        self.superpowers_dir = superpowers_dir or (
-            self.project_root / ".superpowers" / "skills"
+        self.repo_skills_dir = repo_skills_dir or personal_dir or (
+            self.project_root / ".agents" / "skills"
         )
-        self.personal_dir = personal_dir or (
-            Path.home() / ".config" / "superpowers" / "skills"
+        self.user_skills_dir = user_skills_dir or (Path.home() / ".agents" / "skills")
+        self.superpowers_dir = superpowers_dir or (
+            Path.home() / ".codex" / "superpowers" / "skills"
         )
 
     def find_skills(self, max_depth: int = 3) -> list[Skill]:
-        """Find all available skills from personal and superpowers directories.
-
-        Per official docs: personal skills override superpowers when names match.
-        """
-        personal = self._scan_dir(self.personal_dir, "personal", max_depth)
-        superpowers = self._scan_dir(self.superpowers_dir, "superpowers", max_depth)
-
-        # Personal skills override superpowers when names match
+        """Find all available skills in precedence order."""
         seen_names: set[str] = set()
         result: list[Skill] = []
-        for skill in personal:
-            seen_names.add(skill.name)
-            result.append(skill)
-        for skill in superpowers:
-            if skill.name not in seen_names:
+
+        sources = [
+            (self.repo_skills_dir, "repo"),
+            (self.user_skills_dir, "user"),
+            (self.superpowers_dir, "superpowers"),
+        ]
+        for directory, source_type in sources:
+            for skill in self._scan_dir(directory, source_type, max_depth):
+                if skill.name in seen_names:
+                    continue
+                seen_names.add(skill.name)
                 result.append(skill)
 
         return result
@@ -149,23 +149,26 @@ class SkillsLoader:
     def resolve_skill(self, skill_name: str) -> Skill | None:
         """Resolve a skill by name.
 
-        Per official docs:
         - "superpowers:" prefix forces the bundled version
-        - Otherwise, personal overrides superpowers
+        - Otherwise, repo-local overrides user-global overrides bundled
         """
         force_superpowers = skill_name.startswith("superpowers:")
         clean_name = skill_name.removeprefix("superpowers:")
 
-        # Try personal first (unless explicitly superpowers:)
-        if not force_superpowers:
-            personal_path = self.personal_dir / clean_name
-            if personal_path.exists() and (personal_path / "SKILL.md").exists():
-                return self._load_skill(personal_path, "personal")
+        if force_superpowers:
+            sp_path = self.superpowers_dir / clean_name
+            if sp_path.exists() and (sp_path / "SKILL.md").exists():
+                return self._load_skill(sp_path, "superpowers")
+            return None
 
-        # Try superpowers
-        sp_path = self.superpowers_dir / clean_name
-        if sp_path.exists() and (sp_path / "SKILL.md").exists():
-            return self._load_skill(sp_path, "superpowers")
+        candidates = [
+            (self.repo_skills_dir / clean_name, "repo"),
+            (self.user_skills_dir / clean_name, "user"),
+            (self.superpowers_dir / clean_name, "superpowers"),
+        ]
+        for path, source_type in candidates:
+            if path.exists() and (path / "SKILL.md").exists():
+                return self._load_skill(path, source_type)
 
         return None
 

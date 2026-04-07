@@ -100,6 +100,19 @@ npm run gsd:auto
 ```
 
 `npm run gsd:*` uses the repo-local `gsd-pi` installation from `node_modules`, so Node 22+ and `npm install` are required before those commands will work.
+`npm install` also reapplies the repo-local `gsd-pi` hotfix through `postinstall`, which keeps the GSD startup path reproducible across reinstalls.
+`npm run gsd:status` uses `gsd headless query`, and `npm run gsd:plan -- "..."` creates a new milestone from inline context via `gsd headless new-milestone --context-text`.
+
+## AI Workflow
+
+This repo uses a strict `Codex-first` layering model:
+
+- `Codex/OpenAI` owns runtime behavior: `AGENTS.md`, `config.toml`, MCP servers, skills, subagents, and workflow surfaces.
+- `Superpowers` provides workflow discipline: `using-superpowers -> brainstorming -> using-git-worktrees -> writing-plans -> execution -> test-driven-development -> requesting-code-review -> finishing-a-development-branch`.
+- `GSD 2` starts after spec and plan approval and owns milestone/worktree orchestration, status, budget, and verification commands.
+- `Context7` is the required documentation source for third-party tools and libraries.
+
+The repo-wide contract and an end-to-end example live in [docs/superpowers/workflows/2026-04-06-codex-first-superpowers-gsd.md](/mnt/c/Users/Marcelo%20Henrique/Desktop/rme-noct/docs/superpowers/workflows/2026-04-06-codex-first-superpowers-gsd.md).
 
 ## Features (Planned)
 

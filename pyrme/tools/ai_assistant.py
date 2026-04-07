@@ -1,4 +1,4 @@
-"""AI Assistant – Unified wrapper for GSD-2 and Superpowers integration.
+"""AI Assistant – Codex-first wrapper for GSD-2 and Superpowers integration.
 
 This module provides the AI-assisted development interface that
 can be invoked from:
@@ -6,8 +6,10 @@ can be invoked from:
 - The Tools > AI Assistant menu
 - Directly via Python script
 
-It wraps GSD-2 commands and Superpowers skills into a single
-interface usable from within PyRME.
+It keeps the repo's workflow layers separate:
+- Codex provides runtime behavior and skill discovery
+- Superpowers provides workflow discipline
+- GSD-2 provides milestone/worktree orchestration
 """
 
 from __future__ import annotations
@@ -32,20 +34,30 @@ class AIAssistant:
     # ── GSD Integration ──────────────────────────────────────
 
     def gsd_auto(self, task: str = "") -> str:
-        """Run GSD in autonomous mode (Context7: `/gsd auto`)."""
-        return self._run_gsd_command("auto", task)
+        """Run GSD in autonomous mode using the headless interface."""
+        if task:
+            return self._run_gsd_command(
+                "headless",
+                "new-milestone",
+                "--context-text",
+                task,
+                "--auto",
+            )
+        return self._run_gsd_command("headless", "auto")
 
     def gsd_plan(self, task: str = "") -> str:
-        """Run GSD planning phase."""
-        return self._run_gsd_command("plan", task)
+        """Create a new milestone from inline context text."""
+        if not task:
+            return "Error: gsd_plan requires milestone context text"
+        return self._run_gsd_command("headless", "new-milestone", "--context-text", task)
 
     def gsd_status(self) -> str:
-        """Get GSD project status."""
-        return self._run_gsd_command("status")
+        """Get a headless JSON snapshot of the current GSD project state."""
+        return self._run_gsd_command("headless", "query")
 
-    def _run_gsd_command(self, subcommand: str, *args: str) -> str:
+    def _run_gsd_command(self, *parts: str) -> str:
         """Execute a GSD CLI command and return output."""
-        cmd = [str(self._gsd_binary()), subcommand, *[a for a in args if a]]
+        cmd = [str(self._gsd_binary()), *[part for part in parts if part]]
         try:
             result = subprocess.run(
                 cmd,
@@ -99,20 +111,19 @@ class AIAssistant:
         return content
 
     def plan(self, task: str = "") -> str:
-        """Activate the planning skill + GSD planning."""
-        skill_content = self.use_skill("superpowers:planning")
+        """Activate the writing-plans skill for a task."""
+        skill_content = self.use_skill("superpowers:writing-plans")
         if task:
-            gsd_output = self.gsd_plan(task)
-            return f"Task: {task}\n\n{skill_content}\n\n--- GSD Output ---\n{gsd_output}"
+            return f"Task: {task}\n\n{skill_content}"
         return skill_content
 
     def tdd(self) -> str:
         """Activate TDD skill."""
-        return self.use_skill("superpowers:tdd")
+        return self.use_skill("superpowers:test-driven-development")
 
     def review(self) -> str:
         """Activate code review skill."""
-        return self.use_skill("superpowers:code-review")
+        return self.use_skill("superpowers:requesting-code-review")
 
     def info(self) -> dict[str, Any]:
         """Return assistant configuration info."""
@@ -126,5 +137,7 @@ class AIAssistant:
                 for s in skills
             ],
             "gsd_dir": str(self.gsd_config.gsd_dir),
-            "pi_skills_dir": str(self.gsd_config.pi_skills_dir),
+            "repo_skills_dir": str(self.gsd_config.repo_skills_dir),
+            "user_skills_dir": str(self.gsd_config.user_skills_dir),
+            "bundled_superpowers_dir": str(self.skills_loader.superpowers_dir),
         }

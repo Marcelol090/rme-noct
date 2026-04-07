@@ -3,23 +3,19 @@
 This module provides the configuration interface for GSD-2
 (Get Stuff Done) coding agent integration within the editor.
 
-Official GSD-2 Skill Directories (from Context7 docs):
-- User-scope (global):    ~/.gsd/agent/skills/
-- Project-scope (local):  .pi/agent/skills/
-
-Both follow the SKILL.md + router pattern:
-  skill-name/
-  ├── SKILL.md          (router + principles)
-  ├── workflows/        (procedures)
-  ├── references/       (knowledge)
-  ├── templates/        (output structures)
-  └── scripts/          (reusable code)
-
 Official Preferences Schema (from Context7 docs):
   Located at: .gsd/preferences.md (YAML frontmatter)
   Required fields: version, models, verification_commands
   Optional fields: budget_ceiling, auto_supervisor, git, skill_rules,
                    notifications, post_unit_hooks
+
+In this repo, GSD is not the primary skill system. Codex owns runtime skill
+discovery via the standard Codex locations:
+- User-scope (global):    ~/.agents/skills/
+- Project-scope (local):  .agents/skills/
+
+GSD should point at those skills through preferences and routing policy rather
+than inventing a parallel skill tree.
 """
 
 from __future__ import annotations
@@ -38,6 +34,14 @@ class GSDConfig:
 
     project_root: Path = field(default_factory=lambda: Path.cwd())
     mode: str = "solo"  # "solo" or "team"
+    models: dict[str, str] = field(
+        default_factory=lambda: {
+            "research": "gpt-5.4-mini",
+            "planning": "gpt-5.4",
+            "execution": "gpt-5.4-mini",
+            "completion": "gpt-5.4-mini",
+        }
+    )
 
     # Skill preferences (from Context7: GSD skill_rules config)
     always_use_skills: list[str] = field(
@@ -74,14 +78,24 @@ class GSDConfig:
         return self.project_root / ".gsd"
 
     @property
+    def repo_skills_dir(self) -> Path:
+        """Project-scope Codex skills directory."""
+        return self.project_root / ".agents" / "skills"
+
+    @property
+    def user_skills_dir(self) -> Path:
+        """User-scope Codex skills directory."""
+        return Path.home() / ".agents" / "skills"
+
+    @property
     def pi_skills_dir(self) -> Path:
-        """Project-scope skills directory (official GSD convention)."""
-        return self.project_root / ".pi" / "agent" / "skills"
+        """Compatibility alias for older callers expecting a project skill path."""
+        return self.repo_skills_dir
 
     @property
     def global_skills_dir(self) -> Path:
-        """User-scope global skills directory (official GSD convention)."""
-        return Path.home() / ".gsd" / "agent" / "skills"
+        """Compatibility alias for older callers expecting a global skill path."""
+        return self.user_skills_dir
 
     @property
     def preferences_file(self) -> Path:
@@ -89,27 +103,27 @@ class GSDConfig:
         return self.gsd_dir / "preferences.md"
 
     def ensure_dirs(self) -> None:
-        """Create required GSD directories if they don't exist."""
+        """Create required GSD and Codex skill directories if they don't exist."""
         self.gsd_dir.mkdir(parents=True, exist_ok=True)
-        self.pi_skills_dir.mkdir(parents=True, exist_ok=True)
+        self.repo_skills_dir.mkdir(parents=True, exist_ok=True)
 
     def list_project_skills(self) -> list[str]:
-        """List all project-scope skills in .pi/agent/skills/."""
-        if not self.pi_skills_dir.exists():
+        """List all project-scope skills in .agents/skills/."""
+        if not self.repo_skills_dir.exists():
             return []
         return [
             d.name
-            for d in self.pi_skills_dir.iterdir()
+            for d in self.repo_skills_dir.iterdir()
             if d.is_dir() and (d / "SKILL.md").exists()
         ]
 
     def list_global_skills(self) -> list[str]:
-        """List all global skills in ~/.gsd/agent/skills/."""
-        if not self.global_skills_dir.exists():
+        """List all global skills in ~/.agents/skills/."""
+        if not self.user_skills_dir.exists():
             return []
         return [
             d.name
-            for d in self.global_skills_dir.iterdir()
+            for d in self.user_skills_dir.iterdir()
             if d.is_dir() and (d / "SKILL.md").exists()
         ]
 
@@ -118,12 +132,20 @@ class GSDConfig:
         lines = [
             "---",
             "version: 1",
-            f"mode: {self.mode}",
+            "",
+            "# Model Selection",
+            "models:",
+        ]
+        for phase, model in self.models.items():
+            lines.append(f"  {phase}: {model}")
+        lines.extend([
             "",
             "# Skills",
             "skill_discovery: suggest",
+            "git:",
+            "  isolation: worktree",
             "always_use_skills:",
-        ]
+        ])
         for s in self.always_use_skills:
             lines.append(f"  - {s}")
         lines.append("prefer_skills:")

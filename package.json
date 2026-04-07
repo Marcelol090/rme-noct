@@ -6,9 +6,11 @@
   "scripts": {
     "setup": "bash scripts/setup-devtools.sh",
     "gsd": "gsd",
-    "gsd:auto": "gsd auto",
-    "gsd:plan": "gsd plan",
-    "gsd:status": "gsd status"
+    "gsd:patch": "node scripts/patch-gsd-pi.mjs",
+    "gsd:auto": "gsd headless auto",
+    "gsd:plan": "gsd headless new-milestone --context-text",
+    "gsd:status": "gsd headless query",
+    "postinstall": "node scripts/patch-gsd-pi.mjs"
   },
   "devDependencies": {
     "gsd-pi": "2.64.0"

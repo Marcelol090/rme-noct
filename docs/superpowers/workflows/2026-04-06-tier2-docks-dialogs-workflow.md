@@ -3,6 +3,9 @@
 ## Purpose
 This document is the orchestration layer for the Tier 2 milestone. It exists to keep GSD workflow context separate from component-level implementation specs.
 
+Repo-wide workflow ownership is defined in `docs/superpowers/workflows/2026-04-06-codex-first-superpowers-gsd.md`.
+This file only covers milestone-local sequencing and verification.
+
 ## Active Milestone
 - Tier 2 Docks & Dialogs
 - Source plan: `docs/superpowers/plans/2026-04-05-tier2-docks.md`

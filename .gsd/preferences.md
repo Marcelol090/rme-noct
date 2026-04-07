@@ -2,16 +2,12 @@
 version: 1
 
 # ── Model Selection ──────────────────────────────────────────
-# Per GSD-2 docs: configure models for each phase
+# Codex-first runtime: prefer OpenAI models for all default phases
 models:
-  research: claude-sonnet-4-6
-  planning:
-    model: claude-opus-4-6
-    fallbacks:
-      - openrouter/z-ai/glm-5
-      - openrouter/minimax/minimax-m2.5
-  execution: claude-sonnet-4-6
-  completion: claude-sonnet-4-6
+  research: gpt-5.4-mini
+  planning: gpt-5.4
+  execution: gpt-5.4-mini
+  completion: gpt-5.4-mini
 
 # ── Token Optimization ──────────────────────────────────────
 token_profile: balanced
@@ -97,6 +93,9 @@ post_unit_hooks:
 
 ## Conventions
 - Conventional commits (feat/fix/refactor/test/docs)
+- Codex/OpenAI is the primary runtime contract
+- Superpowers provides workflow discipline before and after coding
+- GSD starts after spec and plan approval and manages milestone orchestration
 - TDD-first approach via Superpowers skills
 - Context7 MCP for all documentation lookups
 - Stitch for UI mockups before implementation
