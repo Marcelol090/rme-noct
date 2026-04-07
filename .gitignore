@@ -64,6 +64,11 @@ htmlcov/
 .gsd/STATE.md
 .gsd/metrics.json
 .gsd/gsd.db
+.gsd/agent/
+.gsd/extensions/
+.gsd/sessions/
+.gsd/web-server.pid
+.gsd/web-preferences.json
 .gsd/activity/
 .gsd/runtime/
 .gsd/worktrees/

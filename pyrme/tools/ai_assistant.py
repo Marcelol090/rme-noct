@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from pyrme.devtools.gsd.config import GSDConfig
+from pyrme.devtools.gsd.runtime import build_gsd_env
 from pyrme.devtools.superpowers.skills_loader import Skill, SkillsLoader
 
 
@@ -62,6 +63,7 @@ class AIAssistant:
             result = subprocess.run(
                 cmd,
                 cwd=str(self.project_root),
+                env=build_gsd_env(self.project_root, os.environ),
                 capture_output=True,
                 text=True,
                 timeout=60,

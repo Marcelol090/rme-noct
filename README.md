@@ -100,6 +100,7 @@ npm run gsd:auto
 ```
 
 `npm run gsd:*` uses the repo-local `gsd-pi` installation from `node_modules`, so Node 22+ and `npm install` are required before those commands will work.
+The `npm run gsd:*` wrapper also forces `GSD_HOME` to the repo-local `.gsd/` directory before launching the CLI, which keeps the sync path writable even when the user home directory is read-only.
 `npm install` also reapplies the repo-local `gsd-pi` hotfix through `postinstall`, which keeps the GSD startup path reproducible across reinstalls.
 `npm run gsd:status` uses `gsd headless query`, and `npm run gsd:plan -- "..."` creates a new milestone from inline context via `gsd headless new-milestone --context-text`.
 

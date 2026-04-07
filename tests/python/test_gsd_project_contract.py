@@ -10,11 +10,14 @@ def test_package_json_requires_node_22_for_gsd() -> None:
 
     assert package["engines"]["node"] == ">=22.0.0"
     assert package["devDependencies"]["gsd-pi"] == "2.64.0"
-    assert package["scripts"]["gsd"] == "gsd"
+    assert package["scripts"]["gsd"] == "node scripts/run-gsd.mjs"
     assert package["scripts"]["gsd:patch"] == "node scripts/patch-gsd-pi.mjs"
-    assert package["scripts"]["gsd:auto"] == "gsd headless auto"
-    assert package["scripts"]["gsd:plan"] == "gsd headless new-milestone --context-text"
-    assert package["scripts"]["gsd:status"] == "gsd headless query"
+    assert package["scripts"]["gsd:auto"] == "node scripts/run-gsd.mjs headless auto"
+    assert (
+        package["scripts"]["gsd:plan"]
+        == "node scripts/run-gsd.mjs headless new-milestone --context-text"
+    )
+    assert package["scripts"]["gsd:status"] == "node scripts/run-gsd.mjs headless query"
     assert package["scripts"]["postinstall"] == "node scripts/patch-gsd-pi.mjs"
 
 
@@ -35,6 +38,7 @@ def test_readme_documents_local_gsd_commands() -> None:
 
     assert "npm install" in readme
     assert "postinstall" in readme
+    assert "GSD_HOME" in readme
     assert "npm run gsd:auto" in readme
     assert "gsd headless query" in readme
     assert "gsd headless new-milestone --context-text" in readme
@@ -93,3 +97,14 @@ def test_readme_documents_codex_first_layering() -> None:
     assert "Superpowers" in readme
     assert "GSD 2" in readme
     assert "Context7" in readme
+
+
+def test_gitignore_covers_repo_local_gsd_runtime_artifacts() -> None:
+    """Runtime directories from the repo-local GSD home should stay untracked."""
+    gitignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
+
+    assert ".gsd/agent/" in gitignore
+    assert ".gsd/extensions/" in gitignore
+    assert ".gsd/sessions/" in gitignore
+    assert ".gsd/web-server.pid" in gitignore
+    assert ".gsd/web-preferences.json" in gitignore
