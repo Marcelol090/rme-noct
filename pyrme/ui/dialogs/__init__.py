@@ -6,6 +6,7 @@ from pyrme.ui.dialogs.find_item import (
     FindItemResult,
     FindItemResultMode,
 )
+from pyrme.ui.dialogs.goto_position import GotoPositionDialog
 from pyrme.ui.dialogs.map_properties import MapPropertiesDialog, MapPropertiesState
 
 __all__ = [
@@ -13,6 +14,7 @@ __all__ = [
     "FindItemQuery",
     "FindItemResult",
     "FindItemResultMode",
+    "GotoPositionDialog",
     "MapPropertiesDialog",
     "MapPropertiesState",
 ]

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtCore import QSettings, QSize, Qt
 from PyQt6.QtGui import QAction, QActionGroup
 from PyQt6.QtWidgets import (
     QLabel,
@@ -15,9 +15,10 @@ from PyQt6.QtWidgets import (
 )
 
 from pyrme import __app_name__, __version__
-from pyrme.ui.legacy_menu_contract import LEGACY_TOP_LEVEL_MENUS, PHASE1_ACTIONS
-from pyrme.ui.dialogs import FindItemDialog, MapPropertiesDialog
+from pyrme.ui.canvas_host import CanvasWidgetProtocol, PlaceholderCanvasWidget
+from pyrme.ui.dialogs import FindItemDialog, GotoPositionDialog, MapPropertiesDialog
 from pyrme.ui.docks import BrushPaletteDock, MinimapDock, PropertiesDock, WaypointsDock
+from pyrme.ui.legacy_menu_contract import LEGACY_TOP_LEVEL_MENUS, PHASE1_ACTIONS
 from pyrme.ui.styles import qss_color
 from pyrme.ui.theme import THEME, TYPOGRAPHY
 
@@ -31,8 +32,24 @@ class MainWindow(QMainWindow):
     WINDOW_MIN_SIZE = QSize(1280, 720)
     WINDOW_DEFAULT_SIZE = QSize(1600, 1000)
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        settings: QSettings | None = None,
+        goto_dialog_factory=None,
+        canvas_factory=None,
+    ) -> None:
         super().__init__(parent)
+        self._settings = settings or QSettings("Noct Map Editor", "Noct")
+        self._goto_dialog_factory = goto_dialog_factory or GotoPositionDialog
+        self._canvas_factory = canvas_factory or PlaceholderCanvasWidget
+        self._current_x, self._current_y, self._current_z = (32000, 32000, 7)
+        self._previous_position: tuple[int, int, int] | None = None
+        self._zoom_percent = 100
+        self._show_grid_enabled = False
+        self._ghost_higher_enabled = False
+        self._show_lower_enabled = True
         self._setup_window()
         self._setup_menu_bar()
         self._setup_toolbars()
@@ -175,25 +192,10 @@ class MainWindow(QMainWindow):
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.floor_toolbar)
 
     def _setup_central_widget(self) -> None:
-        """Set up the central canvas area (placeholder until Milestone 4)."""
-        canvas_placeholder = QLabel(
-            f"🗺️ {__app_name__} Canvas\n\n"
-            "Rust-backed wgpu renderer will be integrated in Milestone 4.\n"
-            "This is the opaque, void-black mapping area."
-        )
-        canvas_placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        canvas_placeholder.setStyleSheet(
-            "QLabel {"
-            f"  color: {qss_color(THEME.ash_lavender)};"
-            "  font-size: 18px;"
-            "  font-weight: 300;"
-            f"  background-color: {qss_color(THEME.void_black)};"
-            f"  border: 1px solid {qss_color(THEME.ghost_border)};"
-            "  border-radius: 8px;"
-            "  padding: 40px;"
-            "}"
-        )
-        self.setCentralWidget(canvas_placeholder)
+        """Set up the central canvas area."""
+        self._canvas: CanvasWidgetProtocol = self._canvas_factory(self)
+        self.setCentralWidget(self._canvas)
+        self._sync_canvas_shell_state()
 
     def _show_map_properties(self) -> None:
         """Show the map properties dialog."""
@@ -215,7 +217,8 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage("No previous position stored.", 3000)
 
     def _show_goto_position(self) -> None:
-        self.statusBar().showMessage("Go to Position is not available yet.", 3000)
+        dialog = self._goto_dialog_factory(self)
+        dialog.exec()
 
     def _show_jump_to_brush(self) -> None:
         self.statusBar().showMessage("Jump to Brush is not available yet.", 3000)
@@ -224,6 +227,8 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage("Jump to Item is not available yet.", 3000)
 
     def _toggle_show_grid(self, checked: bool) -> None:
+        self._show_grid_enabled = checked
+        self._canvas.set_show_grid(checked)
         self.statusBar().showMessage(f"Show Grid {'ON' if checked else 'OFF'}", 3000)
 
     def _setup_docks(self) -> None:
@@ -304,13 +309,25 @@ class MainWindow(QMainWindow):
         logger.warning("Floor Down: NotImplementedError — awaiting canvas backend")
 
     def _stub_ghost_higher(self, checked: bool) -> None:
+        self._ghost_higher_enabled = checked
+        self._canvas.set_ghost_higher(checked)
         logger.warning(
             "Ghost Higher Floors %s: NotImplementedError — awaiting canvas backend",
             "ON" if checked else "OFF",
         )
 
     def _stub_show_lower(self, checked: bool) -> None:
+        self._show_lower_enabled = checked
+        self._canvas.set_show_lower(checked)
         logger.warning(
             "Show Lower Floors %s: NotImplementedError — awaiting canvas backend",
             "ON" if checked else "OFF",
         )
+
+    def _sync_canvas_shell_state(self) -> None:
+        self._canvas.set_position(self._current_x, self._current_y, self._current_z)
+        self._canvas.set_floor(self._current_z)
+        self._canvas.set_zoom(self._zoom_percent)
+        self._canvas.set_show_grid(self._show_grid_enabled)
+        self._canvas.set_ghost_higher(self._ghost_higher_enabled)
+        self._canvas.set_show_lower(self._show_lower_enabled)
