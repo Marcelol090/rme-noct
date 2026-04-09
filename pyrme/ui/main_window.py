@@ -5,8 +5,9 @@ from __future__ import annotations
 import logging
 
 from PyQt6.QtCore import QSettings, QSize, Qt
-from PyQt6.QtGui import QAction, QActionGroup
+from PyQt6.QtGui import QAction, QActionGroup, QCloseEvent
 from PyQt6.QtWidgets import (
+    QDialog,
     QLabel,
     QMainWindow,
     QStatusBar,
@@ -31,6 +32,7 @@ class MainWindow(QMainWindow):
     # Responsive design: desktop-only application target
     WINDOW_MIN_SIZE = QSize(1280, 720)
     WINDOW_DEFAULT_SIZE = QSize(1600, 1000)
+    DEFAULT_POSITION = (32000, 32000, 7)
 
     def __init__(
         self,
@@ -44,7 +46,13 @@ class MainWindow(QMainWindow):
         self._settings = settings or QSettings("Noct Map Editor", "Noct")
         self._goto_dialog_factory = goto_dialog_factory or GotoPositionDialog
         self._canvas_factory = canvas_factory or PlaceholderCanvasWidget
-        self._current_x, self._current_y, self._current_z = (32000, 32000, 7)
+        self.brush_palette_dock: BrushPaletteDock | None = None
+        self.minimap_dock: MinimapDock | None = None
+        self.properties_dock: PropertiesDock | None = None
+        self.waypoints_dock: WaypointsDock | None = None
+        self.toggle_minimap_action: QAction | None = None
+        self.toggle_floors_toolbar_action: QAction | None = None
+        self._current_x, self._current_y, self._current_z = self.DEFAULT_POSITION
         self._previous_position: tuple[int, int, int] | None = None
         self._zoom_percent = 100
         self._show_grid_enabled = False
@@ -56,6 +64,8 @@ class MainWindow(QMainWindow):
         self._setup_central_widget()
         self._setup_docks()
         self._setup_status_bar()
+        self._restore_window_state()
+        self._sync_canvas_shell_state()
 
     def _setup_window(self) -> None:
         """Configure window properties."""
@@ -149,6 +159,9 @@ class MainWindow(QMainWindow):
             action = self._action(f"F{i}")
             action.setObjectName(f"floor_{i}")
             action.setCheckable(True)
+            action.triggered.connect(
+                lambda checked=False, value=i: self._select_floor(value) if checked else None
+            )
             floor_group.addAction(action)
             self.floor_toolbar.addAction(action)
             self.floor_actions.append(action)
@@ -161,13 +174,13 @@ class MainWindow(QMainWindow):
         self.floor_up_action = self._action("Floor Up", "Ctrl+PgUp")
         self.floor_up_action.setObjectName("floor_up_action")
         self.floor_up_action.setToolTip("Go to higher floor (Ctrl+PageUp)")
-        self.floor_up_action.triggered.connect(self._stub_floor_up)
+        self.floor_up_action.triggered.connect(self._floor_up)
         self.floor_toolbar.addAction(self.floor_up_action)
 
         self.floor_down_action = self._action("Floor Down", "Ctrl+PgDown")
         self.floor_down_action.setObjectName("floor_down_action")
         self.floor_down_action.setToolTip("Go to lower floor (Ctrl+PageDown)")
-        self.floor_down_action.triggered.connect(self._stub_floor_down)
+        self.floor_down_action.triggered.connect(self._floor_down)
         self.floor_toolbar.addAction(self.floor_down_action)
 
         self.floor_toolbar.addSeparator()
@@ -191,6 +204,7 @@ class MainWindow(QMainWindow):
         self.floor_toolbar.addAction(self.show_lower_action)
 
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.floor_toolbar)
+        self.toggle_floors_toolbar_action = self.floor_toolbar.toggleViewAction()
 
     def _setup_central_widget(self) -> None:
         """Set up the central canvas area."""
@@ -215,11 +229,35 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage("Map Statistics is not available yet.", 3000)
 
     def _go_to_previous_position(self) -> None:
-        self.statusBar().showMessage("No previous position stored.", 3000)
+        if self._previous_position is None:
+            self._status_bar().showMessage("No previous position stored.", 3000)
+            return
+
+        current = (self._current_x, self._current_y, self._current_z)
+        previous = self._previous_position
+        self._previous_position = current
+        self._set_current_position(*previous)
+        self._status_bar().showMessage(
+            f"Returned to previous position {previous[0]}, {previous[1]}, {previous[2]:02d}",
+            3000,
+        )
 
     def _show_goto_position(self) -> None:
         dialog = self._goto_dialog_factory(self)
-        dialog.exec()
+        if hasattr(dialog, "position_input") and hasattr(
+            dialog.position_input, "set_position"
+        ):
+            dialog.position_input.set_position(
+                self._current_x,
+                self._current_y,
+                self._current_z,
+            )
+        if dialog.exec() == int(QDialog.DialogCode.Accepted):
+            self._set_current_position(
+                *dialog.get_position(),
+                track_history=True,
+                announce=True,
+            )
 
     def _show_jump_to_brush(self) -> None:
         self.statusBar().showMessage("Jump to Brush is not available yet.", 3000)
@@ -235,20 +273,26 @@ class MainWindow(QMainWindow):
     def _setup_docks(self) -> None:
         """Create dock widgets for palettes and tools using Glassmorphism."""
         # Brush Palette dock (left side)
-        palette_dock = BrushPaletteDock(self)
-        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, palette_dock)
+        self.brush_palette_dock = BrushPaletteDock(self)
+        self.addDockWidget(
+            Qt.DockWidgetArea.LeftDockWidgetArea,
+            self.brush_palette_dock,
+        )
 
         # Minimap dock (right side)
-        minimap_dock = MinimapDock(self)
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, minimap_dock)
+        self.minimap_dock = MinimapDock(self)
+        self.minimap_dock.z_up_btn.clicked.connect(self._floor_up)
+        self.minimap_dock.z_down_btn.clicked.connect(self._floor_down)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.minimap_dock)
+        self.toggle_minimap_action = self.minimap_dock.toggleViewAction()
 
         # Properties dock (right side, below minimap)
-        props_dock = PropertiesDock(self)
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, props_dock)
+        self.properties_dock = PropertiesDock(self)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.properties_dock)
 
         # Waypoints dock (right side, below properties)
-        waypoints_dock = WaypointsDock(self)
-        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, waypoints_dock)
+        self.waypoints_dock = WaypointsDock(self)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.waypoints_dock)
 
     def _setup_status_bar(self) -> None:
         """Create the status bar with coordinate and zoom info."""
@@ -279,6 +323,11 @@ class MainWindow(QMainWindow):
 
         status_bar.showMessage(f"{__app_name__} v{__version__} — Ready", 5000)
 
+    def _status_bar(self) -> QStatusBar:
+        status_bar = self.statusBar()
+        assert status_bar is not None
+        return status_bar
+
     def _action(self, text: str, shortcut: str | None = None) -> QAction:
         """Helper to create a QAction."""
         action = QAction(text, self)
@@ -300,6 +349,11 @@ class MainWindow(QMainWindow):
         if handler is not None:
             action.triggered.connect(handler)
         return action
+
+    def _sync_checkable_action(self, action: QAction, checked: bool) -> None:
+        was_blocked = action.blockSignals(True)
+        action.setChecked(checked)
+        action.blockSignals(was_blocked)
 
     # ── Stub slots (Tier 2: logged NotImplementedError) ──────
 
@@ -325,6 +379,71 @@ class MainWindow(QMainWindow):
             "ON" if checked else "OFF",
         )
 
+    def _describe_floor(self, z: int) -> str:
+        if z < 7:
+            return "Above Ground"
+        if z == 7:
+            return "Ground"
+        return "Underground"
+
+    def _set_current_position(
+        self,
+        x: int,
+        y: int,
+        z: int,
+        *,
+        track_history: bool = False,
+        announce: bool = False,
+    ) -> None:
+        next_position = (
+            max(0, min(65000, x)),
+            max(0, min(65000, y)),
+            max(0, min(15, z)),
+        )
+        current = (self._current_x, self._current_y, self._current_z)
+        if track_history and next_position != current:
+            self._previous_position = current
+
+        self._current_x, self._current_y, self._current_z = next_position
+        self._coord_label.setText(
+            f"Pos: (X: {self._current_x}, Y: {self._current_y}, Z: {self._current_z:02d})"
+        )
+        self._items_label.setText(
+            f"Floor {self._current_z} ({self._describe_floor(self._current_z)})"
+        )
+        if self.minimap_dock is not None:
+            self.minimap_dock.pos_label.setText(f"Z: {self._current_z:02d}")
+
+        self._sync_floor_actions(self._current_z)
+        self._sync_canvas_shell_state()
+
+        if announce:
+            self._status_bar().showMessage(
+                "Navigation focus moved to "
+                f"{self._current_x}, {self._current_y}, {self._current_z:02d}",
+                3000,
+            )
+
+    def _select_floor(self, floor: int) -> None:
+        self._set_current_position(
+            self._current_x,
+            self._current_y,
+            floor,
+            track_history=True,
+        )
+
+    def _floor_up(self) -> None:
+        if self._current_z <= 0:
+            self._status_bar().showMessage("Already at the top-most floor", 2000)
+            return
+        self._select_floor(self._current_z - 1)
+
+    def _floor_down(self) -> None:
+        if self._current_z >= 15:
+            self._status_bar().showMessage("Already at the lowest floor", 2000)
+            return
+        self._select_floor(self._current_z + 1)
+
     def _sync_canvas_shell_state(self) -> None:
         self._canvas.set_position(self._current_x, self._current_y, self._current_z)
         self._canvas.set_floor(self._current_z)
@@ -332,3 +451,101 @@ class MainWindow(QMainWindow):
         self._canvas.set_show_grid(self._show_grid_enabled)
         self._canvas.set_ghost_higher(self._ghost_higher_enabled)
         self._canvas.set_show_lower(self._show_lower_enabled)
+
+    def _sync_floor_actions(self, floor: int) -> None:
+        floor = max(0, min(15, floor))
+        for index, action in enumerate(self.floor_actions):
+            self._sync_checkable_action(action, index == floor)
+        if self.floor_up_action is not None:
+            self.floor_up_action.setEnabled(floor > 0)
+        if self.floor_down_action is not None:
+            self.floor_down_action.setEnabled(floor < 15)
+        if self.minimap_dock is not None:
+            self.minimap_dock.z_up_btn.setEnabled(floor > 0)
+            self.minimap_dock.z_down_btn.setEnabled(floor < 15)
+
+    def _restore_window_state(self) -> None:
+        geometry = self._settings.value("main_window/geometry")
+        if geometry is not None:
+            self.restoreGeometry(geometry)
+
+        state = self._settings.value("main_window/state")
+        if state is not None:
+            self.restoreState(state)
+
+        current_x, current_y, current_z = self._coerce_position(
+            self._settings.value("main_window/position", list(self.DEFAULT_POSITION)),
+            self.DEFAULT_POSITION,
+        )
+        self._sync_checkable_action(
+            self.show_grid_action,
+            self._coerce_bool(self._settings.value("main_window/show_grid", False), False),
+        )
+        self._show_grid_enabled = self.show_grid_action.isChecked()
+        self._sync_checkable_action(
+            self.ghost_higher_action,
+            self._coerce_bool(
+                self._settings.value("main_window/ghost_higher", False),
+                False,
+            ),
+        )
+        self._ghost_higher_enabled = self.ghost_higher_action.isChecked()
+        self._sync_checkable_action(
+            self.show_lower_action,
+            self._coerce_bool(self._settings.value("main_window/show_lower", True), True),
+        )
+        self._show_lower_enabled = self.show_lower_action.isChecked()
+        previous = self._settings.value("main_window/previous_position")
+        self._previous_position = (
+            self._coerce_position(previous, self.DEFAULT_POSITION)
+            if isinstance(previous, (list, tuple)) and len(previous) == 3
+            else None
+        )
+        self._set_current_position(current_x, current_y, current_z)
+
+    def _coerce_int(self, raw: object, default: int) -> int:
+        try:
+            return int(str(raw))
+        except (TypeError, ValueError):
+            return default
+
+    def _coerce_position(
+        self,
+        raw: object,
+        default: tuple[int, int, int],
+    ) -> tuple[int, int, int]:
+        if isinstance(raw, (list, tuple)) and len(raw) == 3:
+            return (
+                self._coerce_int(raw[0], default[0]),
+                self._coerce_int(raw[1], default[1]),
+                self._coerce_int(raw[2], default[2]),
+            )
+        return default
+
+    def _coerce_bool(self, raw: object, default: bool) -> bool:
+        if isinstance(raw, bool):
+            return raw
+        if isinstance(raw, str):
+            normalized = raw.strip().lower()
+            if normalized in {"1", "true", "yes", "on"}:
+                return True
+            if normalized in {"0", "false", "no", "off"}:
+                return False
+        return default
+
+    def closeEvent(self, event: QCloseEvent | None) -> None:  # noqa: N802
+        self._settings.setValue("main_window/geometry", self.saveGeometry())
+        self._settings.setValue("main_window/state", self.saveState())
+        self._settings.setValue(
+            "main_window/position",
+            [self._current_x, self._current_y, self._current_z],
+        )
+        self._settings.setValue(
+            "main_window/previous_position",
+            list(self._previous_position) if self._previous_position else None,
+        )
+        self._settings.setValue("main_window/show_grid", self._show_grid_enabled)
+        self._settings.setValue("main_window/ghost_higher", self._ghost_higher_enabled)
+        self._settings.setValue("main_window/show_lower", self._show_lower_enabled)
+        self._settings.sync()
+        super().closeEvent(event)
