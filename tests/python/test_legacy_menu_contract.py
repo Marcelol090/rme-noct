@@ -22,6 +22,17 @@ def test_legacy_top_level_menu_order_matches_cpp_contract() -> None:
 
 
 def test_phase1_action_metadata_matches_legacy_shortcuts() -> None:
+    assert PHASE1_ACTIONS["find_item"].action_id == "find_item"
+    assert PHASE1_ACTIONS["replace_items"].action_id == "replace_items"
+    assert PHASE1_ACTIONS["map_properties"].action_id == "map_properties"
+    assert PHASE1_ACTIONS["map_statistics"].action_id == "map_statistics"
+    assert PHASE1_ACTIONS["goto_position"].action_id == "goto_position"
+    assert PHASE1_ACTIONS["goto_previous_position"].action_id == "goto_previous_position"
+    assert PHASE1_ACTIONS["jump_to_brush"].action_id == "jump_to_brush"
+    assert PHASE1_ACTIONS["jump_to_item"].action_id == "jump_to_item"
+    assert PHASE1_ACTIONS["show_grid"].action_id == "show_grid"
+    assert PHASE1_ACTIONS["ghost_higher_floors"].action_id == "ghost_higher_floors"
+
     assert PHASE1_ACTIONS["find_item"].shortcut == "Ctrl+F"
     assert PHASE1_ACTIONS["replace_items"].shortcut == "Ctrl+Shift+F"
     assert PHASE1_ACTIONS["map_properties"].shortcut == "Ctrl+P"
@@ -35,6 +46,28 @@ def test_phase1_action_metadata_matches_legacy_shortcuts() -> None:
 
 
 def test_phase1_action_metadata_matches_legacy_status_tips() -> None:
+    assert PHASE1_ACTIONS["find_item"].text == "&Find Item..."
+    assert PHASE1_ACTIONS["replace_items"].text == "&Replace Items..."
+    assert PHASE1_ACTIONS["map_properties"].text == "Properties..."
+    assert PHASE1_ACTIONS["map_statistics"].text == "Statistics"
+    assert PHASE1_ACTIONS["goto_position"].text == "Go to Position..."
+    assert PHASE1_ACTIONS["goto_previous_position"].text == "Go to Previous Position"
+    assert PHASE1_ACTIONS["jump_to_brush"].text == "Jump to Brush..."
+    assert PHASE1_ACTIONS["jump_to_item"].text == "Jump to Item..."
+    assert PHASE1_ACTIONS["show_grid"].text == "Show grid"
+    assert PHASE1_ACTIONS["ghost_higher_floors"].text == "Ghost higher floors"
+
+    assert PHASE1_ACTIONS["find_item"].menu_path == ("Search",)
+    assert PHASE1_ACTIONS["replace_items"].menu_path == ("Edit",)
+    assert PHASE1_ACTIONS["map_properties"].menu_path == ("Map",)
+    assert PHASE1_ACTIONS["map_statistics"].menu_path == ("Map",)
+    assert PHASE1_ACTIONS["goto_position"].menu_path == ("Navigate",)
+    assert PHASE1_ACTIONS["goto_previous_position"].menu_path == ("Navigate",)
+    assert PHASE1_ACTIONS["jump_to_brush"].menu_path == ("Navigate",)
+    assert PHASE1_ACTIONS["jump_to_item"].menu_path == ("Navigate",)
+    assert PHASE1_ACTIONS["show_grid"].menu_path == ("View",)
+    assert PHASE1_ACTIONS["ghost_higher_floors"].menu_path == ("View",)
+
     assert PHASE1_ACTIONS["find_item"].status_tip == "Find all instances of an item type the map."
     assert PHASE1_ACTIONS["replace_items"].status_tip == "Replaces all occurrences of one item with another."
     assert PHASE1_ACTIONS["map_properties"].status_tip == "Show and change the map properties."
