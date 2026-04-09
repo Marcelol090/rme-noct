@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from pyrme.ui.legacy_menu_contract import LEGACY_TOP_LEVEL_MENUS, PHASE1_ACTIONS
 from pyrme.ui.main_window import MainWindow
 
@@ -31,7 +33,7 @@ def test_main_window_exposes_legacy_top_level_menu_tree(qtbot) -> None:
     assert _menu_titles(window) == list(LEGACY_TOP_LEVEL_MENUS)
 
 
-def test_main_window_wires_phase1_actions_by_contract(qtbot) -> None:
+def test_main_window_wires_phase1_actions_by_contract(qtbot, caplog) -> None:
     window = MainWindow()
     qtbot.addWidget(window)
 
@@ -76,3 +78,14 @@ def test_main_window_wires_phase1_actions_by_contract(qtbot) -> None:
 
     assert show_grid_action.isCheckable()
     assert ghost_higher_action.isCheckable()
+    assert not ghost_higher_action.isChecked()
+
+    with caplog.at_level(logging.WARNING, logger="pyrme.ui.main_window"):
+        ghost_higher_action.trigger()
+
+    assert ghost_higher_action.isChecked()
+    assert any(
+        record.levelno == logging.WARNING
+        and record.message == "Ghost Higher Floors ON: NotImplementedError — awaiting canvas backend"
+        for record in caplog.records
+    )

@@ -87,6 +87,7 @@ class MainWindow(QMainWindow):
         self.show_grid_action.setCheckable(True)
         self.ghost_higher_action = self._action_from_spec("ghost_higher_floors")
         self.ghost_higher_action.setCheckable(True)
+        self.ghost_higher_action.toggled.connect(self._stub_ghost_higher)
 
         phase1_action_attrs = {
             "find_item": self.find_item_action,
