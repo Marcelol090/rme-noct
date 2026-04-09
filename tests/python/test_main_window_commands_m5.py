@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 from PyQt6.QtCore import QSettings
 from PyQt6.QtWidgets import QDialog
 
-import pyrme.ui.main_window as main_window_module
 from pyrme.ui.legacy_menu_contract import PHASE1_ACTIONS
 from pyrme.ui.main_window import MainWindow
 
@@ -72,17 +71,11 @@ def test_main_window_exposes_legacy_navigation_shortcuts_and_status_tips(
 
 def test_main_window_previous_position_swaps_single_history_slot(
     qtbot,
-    monkeypatch,
     tmp_path: Path,
 ) -> None:
-    class _PositionInput:
-        def set_position(self, *_args) -> None:
-            pass
-
-    class _FakeGotoDialog:
+    class _GotoDialog:
         def __init__(self, parent=None) -> None:
             self.parent = parent
-            self.position_input = _PositionInput()
 
         def exec(self) -> int:
             return int(QDialog.DialogCode.Accepted)
@@ -90,9 +83,10 @@ def test_main_window_previous_position_swaps_single_history_slot(
         def get_position(self) -> tuple[int, int, int]:
             return (32123, 32234, 6)
 
-    monkeypatch.setattr(main_window_module, "GotoPositionDialog", _FakeGotoDialog)
-
-    window = MainWindow(settings=_build_settings(tmp_path, "previous.ini"))
+    window = MainWindow(
+        settings=_build_settings(tmp_path, "previous.ini"),
+        goto_dialog_factory=_GotoDialog,
+    )
     qtbot.addWidget(window)
 
     window._show_goto_position()
