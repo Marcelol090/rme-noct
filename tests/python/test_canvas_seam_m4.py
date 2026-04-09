@@ -66,6 +66,18 @@ def test_main_window_uses_injected_canvas_factory_and_forwards_shell_state(
     assert canvas.position == (32000, 32000, 7)
     assert canvas.floor == 7
     assert canvas.zoom_percent == 100
+    assert canvas.show_grid is False
+    assert canvas.ghost_higher is False
+    assert canvas.show_lower is True
+
+    window.show_grid_action.setChecked(True)
+    assert canvas.show_grid is True
+
+    window.ghost_higher_action.setChecked(True)
+    assert canvas.ghost_higher is True
+
+    window.show_lower_action.setChecked(False)
+    assert canvas.show_lower is False
 
     placeholder = PlaceholderCanvasWidget()
     qtbot.addWidget(placeholder)
