@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
 )
 
 from pyrme import __app_name__, __version__
+from pyrme.ui.legacy_menu_contract import LEGACY_TOP_LEVEL_MENUS, PHASE1_ACTIONS
 from pyrme.ui.dialogs import FindItemDialog, MapPropertiesDialog
 from pyrme.ui.docks import BrushPaletteDock, MinimapDock, PropertiesDock, WaypointsDock
 from pyrme.ui.styles import qss_color
@@ -54,79 +55,52 @@ class MainWindow(QMainWindow):
         """Create the main menu bar."""
         menu_bar = self.menuBar()
         assert menu_bar is not None
+        menu_bar.clear()
         menu_bar.setFont(TYPOGRAPHY.ui_label())
+        self._menus: dict[str, object] = {}
+        for title in LEGACY_TOP_LEVEL_MENUS:
+            menu = menu_bar.addMenu(self._menu_label(title))
+            assert menu is not None
+            self._menus[title] = menu
 
-        # File menu
-        file_menu = menu_bar.addMenu("&File")
-        assert file_menu is not None
-        file_menu.addAction(self._action("&New Map", "Ctrl+N"))
-        file_menu.addAction(self._action("&Open Map...", "Ctrl+O"))
-        file_menu.addSeparator()
-        file_menu.addAction(self._action("&Save", "Ctrl+S"))
-        file_menu.addAction(self._action("Save &As...", "Ctrl+Shift+S"))
-        file_menu.addSeparator()
-        file_menu.addAction(self._action("&Preferences...", "Ctrl+,"))
-        file_menu.addSeparator()
-        quit_action = self._action("&Quit", "Ctrl+Q")
-        quit_action.triggered.connect(self.close)
-        file_menu.addAction(quit_action)
+        self.find_item_action = self._action_from_spec("find_item", self._show_find_item)
+        self.replace_items_action = self._action_from_spec(
+            "replace_items", self._show_replace_items
+        )
+        self.map_properties_action = self._action_from_spec(
+            "map_properties", self._show_map_properties
+        )
+        self.map_statistics_action = self._action_from_spec(
+            "map_statistics", self._show_map_statistics
+        )
+        self.goto_previous_position_action = self._action_from_spec(
+            "goto_previous_position", self._go_to_previous_position
+        )
+        self.goto_position_action = self._action_from_spec(
+            "goto_position", self._show_goto_position
+        )
+        self.jump_to_brush_action = self._action_from_spec(
+            "jump_to_brush", self._show_jump_to_brush
+        )
+        self.jump_to_item_action = self._action_from_spec("jump_to_item", self._show_jump_to_item)
+        self.show_grid_action = self._action_from_spec("show_grid", self._toggle_show_grid)
+        self.show_grid_action.setCheckable(True)
+        self.ghost_higher_action = self._action_from_spec("ghost_higher_floors")
+        self.ghost_higher_action.setText("Ghost Higher Floors")
+        self.ghost_higher_action.setCheckable(True)
+        self.ghost_higher_action.setShortcut(PHASE1_ACTIONS["ghost_higher_floors"].shortcut)
+        self.ghost_higher_action.setStatusTip(PHASE1_ACTIONS["ghost_higher_floors"].status_tip)
 
-        # Edit menu
-        edit_menu = menu_bar.addMenu("&Edit")
-        assert edit_menu is not None
-        edit_menu.addAction(self._action("&Undo", "Ctrl+Z"))
-        edit_menu.addAction(self._action("&Redo", "Ctrl+Y"))
-        edit_menu.addSeparator()
-        edit_menu.addAction(self._action("Cu&t", "Ctrl+X"))
-        edit_menu.addAction(self._action("&Copy", "Ctrl+C"))
-        edit_menu.addAction(self._action("&Paste", "Ctrl+V"))
-        edit_menu.addAction(self._action("&Delete", "Del"))
-        edit_menu.addSeparator()
-        find_action = self._action("&Find Item...", "Ctrl+F")
-        find_action.triggered.connect(self._show_find_item)
-        edit_menu.addAction(find_action)
-        edit_menu.addAction(self._action("&Replace Items...", "Ctrl+H"))
-        edit_menu.addSeparator()
-        edit_menu.addAction(self._action("&Select All", "Ctrl+A"))
-
-        # View menu
-        view_menu = menu_bar.addMenu("&View")
-        assert view_menu is not None
-        view_menu.addAction(self._action("Zoom &In", "Ctrl+="))
-        view_menu.addAction(self._action("Zoom &Out", "Ctrl+-"))
-        view_menu.addAction(self._action("Zoom &Reset", "Ctrl+0"))
-        view_menu.addSeparator()
-        view_menu.addAction(self._action("&Go to Position...", "Ctrl+G"))
-        view_menu.addSeparator()
-        view_menu.addAction(self._action("Toggle &Grid", "G"))
-        view_menu.addAction(self._action("Toggle &Minimap", "M"))
-
-        # Map menu
-        map_menu = menu_bar.addMenu("&Map")
-        assert map_menu is not None
-
-        map_prop_action = self._action("Map &Properties...")
-        map_prop_action.triggered.connect(self._show_map_properties)
-        map_menu.addAction(map_prop_action)
-
-        map_menu.addAction(self._action("Map &Statistics..."))
-        map_menu.addSeparator()
-        map_menu.addAction(self._action("&Clean Map"))
-        map_menu.addAction(self._action("Clean &Invalid Tiles"))
-
-        # Tools menu
-        tools_menu = menu_bar.addMenu("&Tools")
-        assert tools_menu is not None
-        tools_menu.addAction(self._action("&Extension Manager..."))
-        tools_menu.addAction(self._action("&Tileset Editor..."))
-        tools_menu.addSeparator()
-        tools_menu.addAction(self._action("AI &Assistant...", "Ctrl+Shift+A"))
-
-        # Help menu
-        help_menu = menu_bar.addMenu("&Help")
-        assert help_menu is not None
-        help_menu.addAction(self._action("&About Noct Map Editor"))
-        help_menu.addAction(self._action("About &Qt"))
+        self._menus["Search"].addAction(self.find_item_action)
+        self._menus["Edit"].addAction(self.replace_items_action)
+        self._menus["Map"].addAction(self.map_properties_action)
+        self._menus["Map"].addAction(self.map_statistics_action)
+        self._menus["Navigate"].addAction(self.goto_previous_position_action)
+        self._menus["Navigate"].addAction(self.goto_position_action)
+        self._menus["Navigate"].addAction(self.jump_to_brush_action)
+        self._menus["Navigate"].addAction(self.jump_to_item_action)
+        self._menus["View"].addAction(self.show_grid_action)
+        self._menus["View"].addAction(self.ghost_higher_action)
 
     def _setup_toolbars(self) -> None:
         """Create the main toolbars."""
@@ -177,11 +151,8 @@ class MainWindow(QMainWindow):
         self.floor_toolbar.addSeparator()
 
         # Floor visibility toggle actions (checkable, stub slots)
-        self.ghost_higher_action = self._action("Ghost Higher Floors")
-        self.ghost_higher_action.setObjectName("ghost_higher_action")
-        self.ghost_higher_action.setCheckable(True)
-        self.ghost_higher_action.setToolTip("Show transparent overlay of higher floors")
         self.ghost_higher_action.toggled.connect(self._stub_ghost_higher)
+        self.ghost_higher_action.setToolTip("Show transparent overlay of higher floors")
         self.floor_toolbar.addAction(self.ghost_higher_action)
 
         self.show_lower_action = self._action("Show Lower Floors")
@@ -224,6 +195,27 @@ class MainWindow(QMainWindow):
         """Show the find item dialog."""
         dialog = FindItemDialog(self)
         dialog.exec()
+
+    def _show_replace_items(self) -> None:
+        self.statusBar().showMessage("Replace Items is not available yet.", 3000)
+
+    def _show_map_statistics(self) -> None:
+        self.statusBar().showMessage("Map Statistics is not available yet.", 3000)
+
+    def _go_to_previous_position(self) -> None:
+        self.statusBar().showMessage("No previous position stored.", 3000)
+
+    def _show_goto_position(self) -> None:
+        self.statusBar().showMessage("Go to Position is not available yet.", 3000)
+
+    def _show_jump_to_brush(self) -> None:
+        self.statusBar().showMessage("Jump to Brush is not available yet.", 3000)
+
+    def _show_jump_to_item(self) -> None:
+        self.statusBar().showMessage("Jump to Item is not available yet.", 3000)
+
+    def _toggle_show_grid(self, checked: bool) -> None:
+        self.statusBar().showMessage(f"Show Grid {'ON' if checked else 'OFF'}", 3000)
 
     def _setup_docks(self) -> None:
         """Create dock widgets for palettes and tools using Glassmorphism."""
@@ -277,6 +269,21 @@ class MainWindow(QMainWindow):
         action = QAction(text, self)
         if shortcut:
             action.setShortcut(shortcut)
+        return action
+
+    def _menu_label(self, title: str) -> str:
+        return "&About" if title == "About" else f"&{title}"
+
+    def _action_from_spec(self, spec_key: str, handler=None) -> QAction:
+        spec = PHASE1_ACTIONS[spec_key]
+        action = QAction(spec.text, self)
+        action.setObjectName(f"action_{spec.action_id}")
+        if spec.shortcut:
+            action.setShortcut(spec.shortcut)
+        if spec.status_tip:
+            action.setStatusTip(spec.status_tip)
+        if handler is not None:
+            action.triggered.connect(handler)
         return action
 
     # ── Stub slots (Tier 2: logged NotImplementedError) ──────
