@@ -86,21 +86,24 @@ class MainWindow(QMainWindow):
         self.show_grid_action = self._action_from_spec("show_grid", self._toggle_show_grid)
         self.show_grid_action.setCheckable(True)
         self.ghost_higher_action = self._action_from_spec("ghost_higher_floors")
-        self.ghost_higher_action.setText("Ghost Higher Floors")
         self.ghost_higher_action.setCheckable(True)
-        self.ghost_higher_action.setShortcut(PHASE1_ACTIONS["ghost_higher_floors"].shortcut)
-        self.ghost_higher_action.setStatusTip(PHASE1_ACTIONS["ghost_higher_floors"].status_tip)
 
-        self._menus["Search"].addAction(self.find_item_action)
-        self._menus["Edit"].addAction(self.replace_items_action)
-        self._menus["Map"].addAction(self.map_properties_action)
-        self._menus["Map"].addAction(self.map_statistics_action)
-        self._menus["Navigate"].addAction(self.goto_previous_position_action)
-        self._menus["Navigate"].addAction(self.goto_position_action)
-        self._menus["Navigate"].addAction(self.jump_to_brush_action)
-        self._menus["Navigate"].addAction(self.jump_to_item_action)
-        self._menus["View"].addAction(self.show_grid_action)
-        self._menus["View"].addAction(self.ghost_higher_action)
+        phase1_action_attrs = {
+            "find_item": self.find_item_action,
+            "replace_items": self.replace_items_action,
+            "map_properties": self.map_properties_action,
+            "map_statistics": self.map_statistics_action,
+            "goto_previous_position": self.goto_previous_position_action,
+            "goto_position": self.goto_position_action,
+            "jump_to_brush": self.jump_to_brush_action,
+            "jump_to_item": self.jump_to_item_action,
+            "show_grid": self.show_grid_action,
+            "ghost_higher_floors": self.ghost_higher_action,
+        }
+        for spec_key, spec in PHASE1_ACTIONS.items():
+            menu = self._menus[spec.menu_path[0]]
+            action = phase1_action_attrs[spec_key]
+            menu.addAction(action)
 
     def _setup_toolbars(self) -> None:
         """Create the main toolbars."""
@@ -151,9 +154,14 @@ class MainWindow(QMainWindow):
         self.floor_toolbar.addSeparator()
 
         # Floor visibility toggle actions (checkable, stub slots)
-        self.ghost_higher_action.toggled.connect(self._stub_ghost_higher)
-        self.ghost_higher_action.setToolTip("Show transparent overlay of higher floors")
-        self.floor_toolbar.addAction(self.ghost_higher_action)
+        self.floor_ghost_higher_action = self._action("Ghost Higher Floors")
+        self.floor_ghost_higher_action.setObjectName("ghost_higher_toolbar_action")
+        self.floor_ghost_higher_action.setCheckable(True)
+        self.floor_ghost_higher_action.setToolTip(
+            "Show transparent overlay of higher floors"
+        )
+        self.floor_ghost_higher_action.toggled.connect(self._stub_ghost_higher)
+        self.floor_toolbar.addAction(self.floor_ghost_higher_action)
 
         self.show_lower_action = self._action("Show Lower Floors")
         self.show_lower_action.setObjectName("show_lower_action")
