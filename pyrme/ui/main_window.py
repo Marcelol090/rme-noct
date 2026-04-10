@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime
+from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from PyQt6.QtCore import QSettings, QSize, Qt
+from PyQt6.QtCore import QSettings, QSize, QStandardPaths, Qt
 from PyQt6.QtGui import QAction, QActionGroup, QCloseEvent
 from PyQt6.QtWidgets import (
     QDialog,
@@ -265,7 +267,30 @@ class MainWindow(QMainWindow):
         self._status_bar().showMessage("Opened a new view of the current map.", 3000)
 
     def _show_take_screenshot(self) -> None:
-        self._status_bar().showMessage("Take Screenshot is not available yet.", 3000)
+        canvas = self._view_tabs.currentWidget()
+        if not isinstance(canvas, QWidget):
+            self._status_bar().showMessage("Error: No active view available.", 3000)
+            return
+
+        screenshot_dir = self._screenshot_directory()
+        screenshot_format = self._screenshot_format()
+        screenshot_dir.mkdir(parents=True, exist_ok=True)
+        screenshot_path = screenshot_dir / (
+            f"screenshot_{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}.{screenshot_format}"
+        )
+
+        pixmap = canvas.grab()
+        if pixmap.save(str(screenshot_path), screenshot_format.upper()):
+            self._status_bar().showMessage(
+                f"Took screenshot and saved as {screenshot_path.name}",
+                3000,
+            )
+            return
+
+        self._status_bar().showMessage(
+            "Error: Couldn't save image file correctly.",
+            3000,
+        )
 
     def _show_toggle_fullscreen(self) -> None:
         if self.isFullScreen():
@@ -689,6 +714,24 @@ class MainWindow(QMainWindow):
         title = self._view_title()
         for index in range(self._view_tabs.count()):
             self._view_tabs.setTabText(index, title)
+
+    def _screenshot_directory(self) -> Path:
+        configured = str(self._settings.value("graphics/screenshot_directory", "") or "").strip()
+        if configured:
+            return Path(configured)
+
+        pictures = QStandardPaths.writableLocation(
+            QStandardPaths.StandardLocation.PicturesLocation
+        )
+        base = Path(pictures) if pictures else Path.home() / "Pictures"
+        return base / "RME"
+
+    def _screenshot_format(self) -> str:
+        raw = str(self._settings.value("graphics/screenshot_format", "png") or "png").strip()
+        normalized = raw.lower().lstrip(".")
+        if normalized in {"png", "jpg", "jpeg", "bmp", "tga"}:
+            return "jpg" if normalized == "jpeg" else normalized
+        return "png"
 
     def _restore_window_state(self) -> None:
         geometry = self._settings.value("main_window/geometry")

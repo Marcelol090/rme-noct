@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+from PyQt6.QtCore import QSettings
+from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QWidget
 
 from pyrme.ui.legacy_menu_contract import (
@@ -10,11 +14,19 @@ from pyrme.ui.legacy_menu_contract import (
 )
 from pyrme.ui.main_window import MainWindow
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
+
+def _build_settings(root: Path, name: str) -> QSettings:
+    return QSettings(str(root / name), QSettings.Format.IniFormat)
+
 
 class _FakeCanvasWidget(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.zoom_percent: int | None = None
+        self.grab_calls = 0
 
     def set_position(self, x: int, y: int, z: int) -> None:
         pass
@@ -33,6 +45,12 @@ class _FakeCanvasWidget(QWidget):
 
     def set_show_lower(self, enabled: bool) -> None:
         pass
+
+    def grab(self, rectangle=None) -> QPixmap:
+        self.grab_calls += 1
+        pixmap = QPixmap(8, 8)
+        pixmap.fill()
+        return pixmap
 
 
 def _menus_by_title(window: MainWindow):
@@ -77,20 +95,36 @@ def test_main_window_exposes_editor_menu_surface_from_contract(qtbot) -> None:
         assert action.statusTip() == (spec.status_tip or "")
 
 
-def test_main_window_editor_remaining_stub_is_safe(qtbot) -> None:
-    window = MainWindow()
+def test_main_window_take_screenshot_saves_active_view_to_disk(
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    holder: dict[str, list[_FakeCanvasWidget]] = {"canvases": []}
+
+    def _canvas_factory(parent: QWidget | None = None) -> _FakeCanvasWidget:
+        canvas = _FakeCanvasWidget(parent)
+        holder["canvases"].append(canvas)
+        return canvas
+
+    settings = _build_settings(tmp_path, "screenshot.ini")
+    screenshot_dir = tmp_path / "shots"
+    settings.setValue("graphics/screenshot_directory", str(screenshot_dir))
+    settings.setValue("graphics/screenshot_format", "png")
+
+    window = MainWindow(settings=settings, canvas_factory=_canvas_factory)
     qtbot.addWidget(window)
     status_bar = window.statusBar()
     assert status_bar is not None
 
-    assert not window.isFullScreen()
-    assert window._zoom_percent == 100
-    assert window._view_tabs.count() == 1
-    assert not hasattr(window, "_last_screenshot")
+    window.new_view_action.trigger()
+    first_canvas, second_canvas = holder["canvases"]
 
     window.take_screenshot_action.trigger()
-    assert status_bar.currentMessage() == "Take Screenshot is not available yet."
-    assert not hasattr(window, "_last_screenshot")
+    assert first_canvas.grab_calls == 0
+    assert second_canvas.grab_calls == 1
+    assert status_bar.currentMessage().startswith("Took screenshot and saved as screenshot_")
+    screenshots = list(screenshot_dir.glob("screenshot_*.png"))
+    assert len(screenshots) == 1
 
 
 def test_main_window_editor_zoom_actions_drive_shell_zoom_state(qtbot) -> None:
