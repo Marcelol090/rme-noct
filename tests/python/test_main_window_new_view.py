@@ -10,6 +10,8 @@ from pyrme.ui.main_window import MainWindow
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from pyrme.ui.editor_context import EditorContext
+
 
 def _build_settings(root: Path, name: str) -> QSettings:
     return QSettings(str(root / name), QSettings.Format.IniFormat)
@@ -18,6 +20,7 @@ def _build_settings(root: Path, name: str) -> QSettings:
 class _FakeCanvasWidget(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        self.editor_context: EditorContext | None = None
         self.position: tuple[int, int, int] | None = None
         self.floor: int | None = None
         self.zoom_percent: int | None = None
@@ -42,6 +45,9 @@ class _FakeCanvasWidget(QWidget):
 
     def set_show_lower(self, enabled: bool) -> None:
         self.show_lower = enabled
+
+    def bind_editor_context(self, context: EditorContext) -> None:
+        self.editor_context = context
 
 
 def test_new_view_adds_a_shared_editor_view_tab_with_copied_shell_state(
@@ -80,6 +86,8 @@ def test_new_view_adds_a_shared_editor_view_tab_with_copied_shell_state(
     second_view = window._views[1]
     assert second_view.editor_context is first_view.editor_context
     assert second_view.editor_context.map_document is first_view.editor_context.map_document
+    assert canvases[0].editor_context is first_view.editor_context
+    assert canvases[1].editor_context is first_view.editor_context
     assert second_view.shell_state.current_x == 32123
     assert second_view.shell_state.current_y == 32145
     assert second_view.shell_state.current_z == 5

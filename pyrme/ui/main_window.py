@@ -612,6 +612,8 @@ class MainWindow(QMainWindow):
 
     def _add_view_tab(self, title: str, shell_state: ShellStateSnapshot) -> int:
         canvas = cast("CanvasWidgetProtocol", self._canvas_factory(self._view_tabs))
+        if hasattr(canvas, "bind_editor_context"):
+            canvas.bind_editor_context(self._editor_context)
         record = EditorViewRecord(
             canvas=canvas,
             editor_context=self._editor_context,

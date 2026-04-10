@@ -11,6 +11,8 @@ from pyrme.ui.main_window import MainWindow
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from pyrme.ui.editor_context import EditorContext
+
 
 def _build_settings(tmp_path: Path, name: str) -> QSettings:
     return QSettings(str(tmp_path / name), QSettings.Format.IniFormat)
@@ -19,6 +21,7 @@ def _build_settings(tmp_path: Path, name: str) -> QSettings:
 class _FakeCanvasWidget(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        self.editor_context: EditorContext | None = None
         self.position: tuple[int, int, int] | None = None
         self.floor: int | None = None
         self.zoom_percent: int | None = None
@@ -44,6 +47,9 @@ class _FakeCanvasWidget(QWidget):
     def set_show_lower(self, enabled: bool) -> None:
         self.show_lower = enabled
 
+    def bind_editor_context(self, context: EditorContext) -> None:
+        self.editor_context = context
+
 
 def test_main_window_uses_injected_canvas_factory_and_forwards_shell_state(
     qtbot, tmp_path: Path
@@ -64,6 +70,7 @@ def test_main_window_uses_injected_canvas_factory_and_forwards_shell_state(
     canvas = holder["canvas"]
     assert window._view_tabs.currentWidget() is canvas
     assert window._canvas is canvas
+    assert canvas.editor_context is window._editor_context
     assert canvas.position == (32000, 32000, 7)
     assert canvas.floor == 7
     assert canvas.zoom_percent == 100
@@ -82,4 +89,6 @@ def test_main_window_uses_injected_canvas_factory_and_forwards_shell_state(
 
     placeholder = PlaceholderCanvasWidget()
     qtbot.addWidget(placeholder)
+    placeholder.bind_editor_context(window._editor_context)
+    assert placeholder.editor_context is window._editor_context
     assert placeholder.position == (32000, 32000, 7)

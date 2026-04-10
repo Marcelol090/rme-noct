@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QLabel, QVBoxLayout, QWidget
@@ -8,8 +8,12 @@ from PyQt6.QtWidgets import QLabel, QVBoxLayout, QWidget
 from pyrme import __app_name__
 from pyrme.ui.theme import TYPOGRAPHY
 
+if TYPE_CHECKING:
+    from pyrme.ui.editor_context import EditorContext
+
 
 class CanvasWidgetProtocol(Protocol):
+    def bind_editor_context(self, context: EditorContext) -> None: ...
     def set_position(self, x: int, y: int, z: int) -> None: ...
     def set_floor(self, z: int) -> None: ...
     def set_zoom(self, percent: int) -> None: ...
@@ -21,6 +25,7 @@ class CanvasWidgetProtocol(Protocol):
 class PlaceholderCanvasWidget(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        self.editor_context: EditorContext | None = None
         self.position = (32000, 32000, 7)
         self.floor = 7
         self.zoom_percent = 100
@@ -33,6 +38,10 @@ class PlaceholderCanvasWidget(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self._label)
+        self._refresh_label()
+
+    def bind_editor_context(self, context: EditorContext) -> None:
+        self.editor_context = context
         self._refresh_label()
 
     def set_position(self, x: int, y: int, z: int) -> None:
@@ -62,10 +71,16 @@ class PlaceholderCanvasWidget(QWidget):
 
     def _refresh_label(self) -> None:
         x, y, z = self.position
+        title = (
+            self.editor_context.map_document.name
+            if self.editor_context is not None
+            else "Untitled"
+        )
         self._label.setText(
             f"🗺️ {__app_name__} Canvas\n\n"
             "Rust-backed wgpu renderer will be integrated in Milestone 4.\n"
             "This placeholder keeps shell state flowing through a stable widget seam.\n\n"
+            f"Document: {title}\n"
             f"Position: {x}, {y}, {z:02d}\n"
             f"Zoom: {self.zoom_percent}%\n"
             f"Grid: {'On' if self.show_grid else 'Off'}\n"
