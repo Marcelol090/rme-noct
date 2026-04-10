@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
     QDialog,
     QLabel,
     QMainWindow,
+    QMenu,
     QStatusBar,
     QToolBar,
     QWidget,
@@ -84,7 +85,7 @@ class MainWindow(QMainWindow):
         assert menu_bar is not None
         menu_bar.clear()
         menu_bar.setFont(TYPOGRAPHY.ui_label())
-        self._menus: dict[str, object] = {}
+        self._menus: dict[str, QMenu] = {}
         for title in LEGACY_TOP_LEVEL_MENUS:
             menu = menu_bar.addMenu(self._menu_label(title))
             assert menu is not None
@@ -223,10 +224,10 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     def _show_replace_items(self) -> None:
-        self.statusBar().showMessage("Replace Items is not available yet.", 3000)
+        self._status_bar().showMessage("Replace Items is not available yet.", 3000)
 
     def _show_map_statistics(self) -> None:
-        self.statusBar().showMessage("Map Statistics is not available yet.", 3000)
+        self._status_bar().showMessage("Map Statistics is not available yet.", 3000)
 
     def _go_to_previous_position(self) -> None:
         if self._previous_position is None:
@@ -260,15 +261,15 @@ class MainWindow(QMainWindow):
             )
 
     def _show_jump_to_brush(self) -> None:
-        self.statusBar().showMessage("Jump to Brush is not available yet.", 3000)
+        self._status_bar().showMessage("Jump to Brush is not available yet.", 3000)
 
     def _show_jump_to_item(self) -> None:
-        self.statusBar().showMessage("Jump to Item is not available yet.", 3000)
+        self._status_bar().showMessage("Jump to Item is not available yet.", 3000)
 
     def _toggle_show_grid(self, checked: bool) -> None:
         self._show_grid_enabled = checked
         self._canvas.set_show_grid(checked)
-        self.statusBar().showMessage(f"Show Grid {'ON' if checked else 'OFF'}", 3000)
+        self._status_bar().showMessage(f"Show Grid {'ON' if checked else 'OFF'}", 3000)
 
     def _setup_docks(self) -> None:
         """Create dock widgets for palettes and tools using Glassmorphism."""

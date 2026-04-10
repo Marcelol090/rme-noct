@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
 from pyrme.ui.legacy_menu_contract import LEGACY_TOP_LEVEL_MENUS, PHASE1_ACTIONS
 from pyrme.ui.main_window import MainWindow
+
+if TYPE_CHECKING:
+    from PyQt6.QtWidgets import QMenu
 
 
 def _menu_titles(window: MainWindow) -> list[str]:
@@ -12,17 +16,18 @@ def _menu_titles(window: MainWindow) -> list[str]:
     return [action.text().replace("&", "") for action in menu_bar.actions()]
 
 
-def _menus_by_title(window: MainWindow) -> dict[str, object]:
+def _menus_by_title(window: MainWindow) -> dict[str, QMenu]:
     menu_bar = window.menuBar()
     assert menu_bar is not None
-    return {
-        action.text().replace("&", ""): action.menu()
-        for action in menu_bar.actions()
-        if action.menu() is not None
-    }
+    menus: dict[str, QMenu] = {}
+    for action in menu_bar.actions():
+        menu = action.menu()
+        if menu is not None:
+            menus[action.text().replace("&", "")] = menu
+    return menus
 
 
-def _menu_action_texts(menu) -> list[str]:
+def _menu_action_texts(menu: QMenu) -> list[str]:
     return [action.text() for action in menu.actions() if action.text()]
 
 
@@ -71,7 +76,9 @@ def test_main_window_wires_phase1_actions_by_contract(qtbot, caplog) -> None:
     assert "Show grid" in _menu_action_texts(view_menu)
     assert "Ghost higher floors" in _menu_action_texts(view_menu)
 
-    show_grid_action = next(action for action in view_menu.actions() if action.text() == "Show grid")
+    show_grid_action = next(
+        action for action in view_menu.actions() if action.text() == "Show grid"
+    )
     ghost_higher_action = next(
         action for action in view_menu.actions() if action.text() == "Ghost higher floors"
     )
@@ -86,6 +93,9 @@ def test_main_window_wires_phase1_actions_by_contract(qtbot, caplog) -> None:
     assert ghost_higher_action.isChecked()
     assert any(
         record.levelno == logging.WARNING
-        and record.message == "Ghost Higher Floors ON: NotImplementedError — awaiting canvas backend"
+        and (
+            record.message
+            == "Ghost Higher Floors ON: NotImplementedError — awaiting canvas backend"
+        )
         for record in caplog.records
     )

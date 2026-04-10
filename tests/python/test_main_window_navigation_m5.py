@@ -51,6 +51,7 @@ def test_main_window_goto_position_updates_shell_state(
     assert window._previous_position == (32000, 32000, 7)
     assert window.floor_actions[6].isChecked()
     assert not window.floor_actions[7].isChecked()
+    assert window.minimap_dock is not None
     assert window.minimap_dock.pos_label.text() == "Z: 06"
 
 
@@ -61,6 +62,7 @@ def test_main_window_floor_navigation_and_visibility_actions_drive_shell_state(
     window = MainWindow(settings=_build_settings(tmp_path, "navigation.ini"))
     qtbot.addWidget(window)
 
+    assert window.minimap_dock is not None
     assert window.toggle_minimap_action is not None
     assert window.toggle_floors_toolbar_action is not None
     assert window.show_lower_action.isCheckable()
@@ -100,6 +102,7 @@ def test_main_window_persists_shell_state_with_qsettings(
     window = MainWindow(settings=settings)
     qtbot.addWidget(window)
 
+    assert window.toggle_floors_toolbar_action is not None
     window.floor_down_action.trigger()
     window.show_grid_action.trigger()
     window.ghost_higher_action.trigger()
