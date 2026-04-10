@@ -29,6 +29,11 @@ LEGACY_TOP_LEVEL_MENUS = (
 )
 
 
+EDITOR_ACTION_ORDER = ("new_view", "toggle_fullscreen", "take_screenshot")
+EDITOR_ZOOM_MENU_TITLE = "Zoom"
+EDITOR_ZOOM_ACTION_ORDER = ("zoom_in", "zoom_out", "zoom_normal")
+
+
 PHASE1_ACTIONS: dict[str, ActionSpec] = {
     "find_item": ActionSpec(
         action_id="find_item",
@@ -99,5 +104,51 @@ PHASE1_ACTIONS: dict[str, ActionSpec] = {
         menu_path=("View",),
         shortcut="Ctrl+L",
         status_tip="Ghost floors.",
+    ),
+}
+
+
+EDITOR_ACTIONS: dict[str, ActionSpec] = {
+    "new_view": ActionSpec(
+        action_id="new_view",
+        text="New View",
+        menu_path=("Editor",),
+        shortcut="Ctrl+Shift+N",
+        status_tip="Creates a new view of the current map.",
+    ),
+    "toggle_fullscreen": ActionSpec(
+        action_id="toggle_fullscreen",
+        text="Enter Fullscreen",
+        menu_path=("Editor",),
+        shortcut="F11",
+        status_tip="Changes between fullscreen mode and windowed mode.",
+    ),
+    "take_screenshot": ActionSpec(
+        action_id="take_screenshot",
+        text="Take Screenshot",
+        menu_path=("Editor",),
+        shortcut="F10",
+        status_tip="Saves the current view to the disk.",
+    ),
+    "zoom_in": ActionSpec(
+        action_id="zoom_in",
+        text="Zoom In",
+        menu_path=("Editor", EDITOR_ZOOM_MENU_TITLE),
+        shortcut="Ctrl++",
+        status_tip="Increase the zoom.",
+    ),
+    "zoom_out": ActionSpec(
+        action_id="zoom_out",
+        text="Zoom Out",
+        menu_path=("Editor", EDITOR_ZOOM_MENU_TITLE),
+        shortcut="Ctrl+-",
+        status_tip="Decrease the zoom.",
+    ),
+    "zoom_normal": ActionSpec(
+        action_id="zoom_normal",
+        text="Zoom Normal",
+        menu_path=("Editor", EDITOR_ZOOM_MENU_TITLE),
+        shortcut="Ctrl+0",
+        status_tip="Normal zoom(100%).",
     ),
 }
