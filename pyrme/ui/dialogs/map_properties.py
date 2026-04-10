@@ -6,7 +6,7 @@ Follows the Noct Map Editor Design System (DESIGN.md) for dialog styling.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import replace
 
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtWidgets import (
@@ -23,27 +23,9 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from pyrme.editor.model import MapPropertiesState
 from pyrme.ui.styles import dialog_base_qss, ghost_button_qss, primary_button_qss
 from pyrme.ui.theme import TYPOGRAPHY
-
-DEFAULT_MAP_VERSION = "OTServ 0.6.1"
-DEFAULT_CLIENT_VERSION = "10.98"
-DEFAULT_MAP_WIDTH = 256
-DEFAULT_MAP_HEIGHT = 256
-
-
-@dataclass(slots=True)
-class MapPropertiesState:
-    """Local state object for the Map Properties dialog."""
-
-    description: str = ""
-    map_version: str = DEFAULT_MAP_VERSION
-    client_version: str = DEFAULT_CLIENT_VERSION
-    width: int = DEFAULT_MAP_WIDTH
-    height: int = DEFAULT_MAP_HEIGHT
-    house_file: str = ""
-    spawn_file: str = ""
-    waypoint_file: str = ""
 
 
 class MapPropertiesDialog(QDialog):

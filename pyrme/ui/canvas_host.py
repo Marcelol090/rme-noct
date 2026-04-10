@@ -20,6 +20,8 @@ class CanvasWidgetProtocol(Protocol):
     def set_show_grid(self, enabled: bool) -> None: ...
     def set_ghost_higher(self, enabled: bool) -> None: ...
     def set_show_lower(self, enabled: bool) -> None: ...
+    def fit_to_map(self) -> tuple[int, int, int] | None: ...
+    def refresh_map_view(self) -> None: ...
 
 
 class PlaceholderCanvasWidget(QWidget):
@@ -68,6 +70,12 @@ class PlaceholderCanvasWidget(QWidget):
     def set_show_lower(self, enabled: bool) -> None:
         self.show_lower = enabled
         self._refresh_label()
+
+    def fit_to_map(self) -> tuple[int, int, int]:
+        return self.position
+
+    def refresh_map_view(self) -> None:
+        self.update()
 
     def _refresh_label(self) -> None:
         x, y, z = self.position

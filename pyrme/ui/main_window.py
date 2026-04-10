@@ -250,10 +250,12 @@ class MainWindow(QMainWindow):
 
     def _show_map_properties(self) -> None:
         """Show the map properties dialog."""
-        dialog = MapPropertiesDialog(self, state=self._editor_context.session.document.properties)
+        document = self._editor_context.session.document
+        dialog = MapPropertiesDialog(self, state=document.properties)
         if dialog.exec() == int(QDialog.DialogCode.Accepted):
-            self._editor_context.session.document.properties = dialog.state()
-            self._editor_context.session.document.is_dirty = True
+            dimensions_changed = document.update_properties(dialog.state())
+            if dimensions_changed:
+                self._fit_active_view_to_map()
             self._refresh_view_titles()
             self._refresh_canvas_context_bindings()
 
@@ -773,6 +775,29 @@ class MainWindow(QMainWindow):
         for view in self._views:
             if hasattr(view.canvas, "bind_editor_context"):
                 view.canvas.bind_editor_context(self._editor_context)
+
+    def _fit_active_view_to_map(self) -> None:
+        canvas = self._active_view().canvas
+        fit_to_map = getattr(canvas, "fit_to_map", None)
+        if callable(fit_to_map):
+            fitted_position = fit_to_map()
+            if fitted_position is not None:
+                x, y, z = self._coerce_position(
+                    fitted_position,
+                    (self._current_x, self._current_y, self._current_z),
+                )
+                self._set_current_position(x, y, z)
+        self._refresh_active_map_view()
+        self._persist_active_view_state()
+
+    def _refresh_active_map_view(self) -> None:
+        canvas = self._active_view().canvas
+        refresh_map_view = getattr(canvas, "refresh_map_view", None)
+        if callable(refresh_map_view):
+            refresh_map_view()
+            return
+        if isinstance(canvas, QWidget):
+            canvas.update()
 
     def _screenshot_directory(self) -> Path:
         configured = str(self._settings.value("graphics/screenshot_directory", "") or "").strip()

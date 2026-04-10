@@ -3,8 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QSettings
-from PyQt6.QtWidgets import QWidget
+from PyQt6.QtWidgets import QDialog, QWidget
 
+from pyrme.editor import MapPropertiesState
 from pyrme.ui.main_window import MainWindow
 
 if TYPE_CHECKING:
@@ -27,6 +28,9 @@ class _FakeCanvasWidget(QWidget):
         self.show_grid: bool | None = None
         self.ghost_higher: bool | None = None
         self.show_lower: bool | None = None
+        self.fit_to_map_calls = 0
+        self.refresh_map_view_calls = 0
+        self.fit_to_map_result: tuple[int, int, int] | None = None
 
     def set_position(self, x: int, y: int, z: int) -> None:
         self.position = (x, y, z)
@@ -48,6 +52,13 @@ class _FakeCanvasWidget(QWidget):
 
     def bind_editor_context(self, context: EditorContext) -> None:
         self.editor_context = context
+
+    def fit_to_map(self) -> tuple[int, int, int] | None:
+        self.fit_to_map_calls += 1
+        return self.fit_to_map_result
+
+    def refresh_map_view(self) -> None:
+        self.refresh_map_view_calls += 1
 
 
 def test_new_view_adds_a_shared_editor_view_tab_with_copied_shell_state(
@@ -88,6 +99,14 @@ def test_new_view_adds_a_shared_editor_view_tab_with_copied_shell_state(
     assert second_view.editor_context is first_view.editor_context
     assert second_view.editor_context.session is first_view.editor_context.session
     assert second_view.editor_context.session.document is first_view.editor_context.session.document
+    assert (
+        second_view.editor_context.session.editor
+        is first_view.editor_context.session.editor
+    )
+    assert (
+        second_view.editor_context.session.document.map_model
+        is first_view.editor_context.session.document.map_model
+    )
     assert second_view.editor_context.session.mode == "selection"
     assert canvases[0].editor_context is first_view.editor_context
     assert canvases[1].editor_context is first_view.editor_context
@@ -120,6 +139,84 @@ def test_new_view_adds_a_shared_editor_view_tab_with_copied_shell_state(
     window._refresh_view_titles()
     assert window._view_tabs.tabText(0) == "Kazordoon*"
     assert window._view_tabs.tabText(1) == "Kazordoon*"
+
+
+def test_map_properties_updates_shared_map_backend_across_new_view(
+    qtbot,
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    class _MapPropertiesDialog:
+        def __init__(self, parent=None, state=None) -> None:
+            self.parent = parent
+            self.initial_state = state
+
+        def exec(self) -> int:
+            return int(QDialog.DialogCode.Accepted)
+
+        def state(self) -> MapPropertiesState:
+            return MapPropertiesState(
+                description="Shared backend",
+                width=512,
+                height=1024,
+                house_file="houses.xml",
+                spawn_file="spawns.xml",
+                waypoint_file="waypoints.xml",
+            )
+
+    monkeypatch.setattr(
+        "pyrme.ui.main_window.MapPropertiesDialog",
+        _MapPropertiesDialog,
+    )
+    canvases: list[_FakeCanvasWidget] = []
+
+    def _canvas_factory(parent: QWidget | None = None) -> _FakeCanvasWidget:
+        canvas = _FakeCanvasWidget(parent)
+        canvases.append(canvas)
+        return canvas
+
+    window = MainWindow(
+        settings=_build_settings(tmp_path, "properties.ini"),
+        canvas_factory=_canvas_factory,
+        enable_docks=False,
+    )
+    qtbot.addWidget(window)
+    window._set_current_position(32100, 32200, 5, track_history=True)
+    window.new_view_action.trigger()
+
+    first_view = window._views[0]
+    second_view = window._views[1]
+    shared_map = window._editor_context.session.document.map_model
+    initial_generation = shared_map.generation
+    canvases[1].fit_to_map_result = (32042, 32084, 5)
+
+    window.map_properties_action.trigger()
+
+    assert first_view.editor_context.session.document.map_model is shared_map
+    assert second_view.editor_context.session.document.map_model is shared_map
+    assert shared_map.properties.description == "Shared backend"
+    assert shared_map.properties.width == 512
+    assert shared_map.properties.height == 1024
+    assert shared_map.properties.house_file == "houses.xml"
+    assert shared_map.properties.spawn_file == "spawns.xml"
+    assert shared_map.properties.waypoint_file == "waypoints.xml"
+    assert shared_map.is_dirty is False
+    assert shared_map.generation == initial_generation
+    assert canvases[0].fit_to_map_calls == 0
+    assert canvases[1].fit_to_map_calls == 1
+    assert canvases[0].refresh_map_view_calls == 0
+    assert canvases[1].refresh_map_view_calls == 1
+    assert window._view_tabs.tabText(0) == "Untitled"
+    assert window._view_tabs.tabText(1) == "Untitled"
+    assert window._view_tabs.currentIndex() == 1
+    assert (window._current_x, window._current_y, window._current_z) == (
+        32042,
+        32084,
+        5,
+    )
+    assert second_view.viewport.center_x == 32042
+    assert second_view.viewport.center_y == 32084
+    assert second_view.viewport.floor == 5
 
 
 def test_new_view_keeps_shell_state_independent_between_tabs(

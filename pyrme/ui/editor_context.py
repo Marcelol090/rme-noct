@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
-from pyrme.ui.dialogs.map_properties import MapPropertiesState
+from pyrme.editor.model import EditorModel, MapModel, MapPropertiesState
 
 if TYPE_CHECKING:
     from pyrme.ui.canvas_host import CanvasWidgetProtocol
@@ -12,9 +12,38 @@ if TYPE_CHECKING:
 
 @dataclass(slots=True)
 class MapDocumentState:
-    name: str = "Untitled"
-    is_dirty: bool = False
-    properties: MapPropertiesState = field(default_factory=MapPropertiesState)
+    editor: EditorModel = field(default_factory=EditorModel)
+
+    @property
+    def map_model(self) -> MapModel:
+        return self.editor.map_model
+
+    @property
+    def name(self) -> str:
+        return self.map_model.name
+
+    @name.setter
+    def name(self, value: str) -> None:
+        self.map_model.name = value
+
+    @property
+    def is_dirty(self) -> bool:
+        return self.map_model.is_dirty
+
+    @is_dirty.setter
+    def is_dirty(self, value: bool) -> None:
+        self.map_model.is_dirty = value
+
+    @property
+    def properties(self) -> MapPropertiesState:
+        return self.map_model.properties
+
+    @properties.setter
+    def properties(self, value: MapPropertiesState) -> None:
+        self.map_model.update_properties(value)
+
+    def update_properties(self, value: MapPropertiesState) -> bool:
+        return self.map_model.update_properties(value)
 
 
 @dataclass(slots=True)
@@ -37,6 +66,10 @@ class EditorSessionState:
     mode: str = "drawing"
     active_brush_id: str | None = None
     active_item_id: int | None = None
+
+    @property
+    def editor(self) -> EditorModel:
+        return self.document.editor
 
 
 @dataclass(slots=True)
