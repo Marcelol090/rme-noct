@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from PyQt6.QtWidgets import QWidget
+
 from pyrme.ui.legacy_menu_contract import (
     EDITOR_ACTION_ORDER,
     EDITOR_ACTIONS,
@@ -7,6 +9,30 @@ from pyrme.ui.legacy_menu_contract import (
     EDITOR_ZOOM_MENU_TITLE,
 )
 from pyrme.ui.main_window import MainWindow
+
+
+class _FakeCanvasWidget(QWidget):
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.zoom_percent: int | None = None
+
+    def set_position(self, x: int, y: int, z: int) -> None:
+        pass
+
+    def set_floor(self, z: int) -> None:
+        pass
+
+    def set_zoom(self, percent: int) -> None:
+        self.zoom_percent = percent
+
+    def set_show_grid(self, enabled: bool) -> None:
+        pass
+
+    def set_ghost_higher(self, enabled: bool) -> None:
+        pass
+
+    def set_show_lower(self, enabled: bool) -> None:
+        pass
 
 
 def _menus_by_title(window: MainWindow):
@@ -74,14 +100,39 @@ def test_main_window_editor_actions_are_safe_stubs(qtbot) -> None:
     assert not window.isFullScreen()
     assert status_bar.currentMessage() == "Enter Fullscreen is not available yet."
 
-    window.zoom_in_action.trigger()
+
+def test_main_window_editor_zoom_actions_drive_shell_zoom_state(qtbot) -> None:
+    holder: dict[str, _FakeCanvasWidget] = {}
+
+    def _canvas_factory(parent: QWidget | None = None) -> _FakeCanvasWidget:
+        canvas = _FakeCanvasWidget(parent)
+        holder["canvas"] = canvas
+        return canvas
+
+    window = MainWindow(canvas_factory=_canvas_factory)
+    qtbot.addWidget(window)
+    status_bar = window.statusBar()
+    assert status_bar is not None
+
+    canvas = holder["canvas"]
     assert window._zoom_percent == 100
-    assert status_bar.currentMessage() == "Zoom In is not available yet."
+    assert window._zoom_label.text() == "100%"
+    assert canvas.zoom_percent == 100
+
+    window.zoom_in_action.trigger()
+    assert window._zoom_percent == 110
+    assert window._zoom_label.text() == "110%"
+    assert canvas.zoom_percent == 110
+    assert status_bar.currentMessage() == "Zoom set to 110%"
 
     window.zoom_out_action.trigger()
     assert window._zoom_percent == 100
-    assert status_bar.currentMessage() == "Zoom Out is not available yet."
+    assert window._zoom_label.text() == "100%"
+    assert canvas.zoom_percent == 100
+    assert status_bar.currentMessage() == "Zoom set to 100%"
 
     window.zoom_normal_action.trigger()
     assert window._zoom_percent == 100
-    assert status_bar.currentMessage() == "Zoom Normal is not available yet."
+    assert window._zoom_label.text() == "100%"
+    assert canvas.zoom_percent == 100
+    assert status_bar.currentMessage() == "Zoom reset to 100%"

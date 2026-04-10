@@ -248,13 +248,13 @@ class MainWindow(QMainWindow):
         self._status_bar().showMessage("Enter Fullscreen is not available yet.", 3000)
 
     def _show_zoom_in(self) -> None:
-        self._status_bar().showMessage("Zoom In is not available yet.", 3000)
+        self._set_zoom_percent(self._zoom_percent + 10)
 
     def _show_zoom_out(self) -> None:
-        self._status_bar().showMessage("Zoom Out is not available yet.", 3000)
+        self._set_zoom_percent(self._zoom_percent - 10)
 
     def _show_zoom_normal(self) -> None:
-        self._status_bar().showMessage("Zoom Normal is not available yet.", 3000)
+        self._set_zoom_percent(100, reset=True)
 
     def _go_to_previous_position(self) -> None:
         if self._previous_position is None:
@@ -539,6 +539,15 @@ class MainWindow(QMainWindow):
         self._canvas.set_show_grid(self._show_grid_enabled)
         self._canvas.set_ghost_higher(self._ghost_higher_enabled)
         self._canvas.set_show_lower(self._show_lower_enabled)
+
+    def _set_zoom_percent(self, percent: int, *, reset: bool = False) -> None:
+        self._zoom_percent = max(10, min(800, percent))
+        self._zoom_label.setText(f"{self._zoom_percent}%")
+        self._canvas.set_zoom(self._zoom_percent)
+        if reset:
+            self._status_bar().showMessage(f"Zoom reset to {self._zoom_percent}%", 3000)
+            return
+        self._status_bar().showMessage(f"Zoom set to {self._zoom_percent}%", 3000)
 
     def _sync_floor_actions(self, floor: int) -> None:
         floor = max(0, min(15, floor))
