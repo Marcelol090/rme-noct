@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import QSettings, QSize, Qt
 from PyQt6.QtGui import QAction, QActionGroup, QCloseEvent
@@ -12,14 +13,16 @@ from PyQt6.QtWidgets import (
     QMainWindow,
     QMenu,
     QStatusBar,
+    QTabWidget,
     QToolBar,
     QWidget,
 )
 
 from pyrme import __app_name__, __version__
-from pyrme.ui.canvas_host import CanvasWidgetProtocol, PlaceholderCanvasWidget
+from pyrme.ui.canvas_host import PlaceholderCanvasWidget
 from pyrme.ui.dialogs import FindItemDialog, GotoPositionDialog, MapPropertiesDialog
 from pyrme.ui.docks import BrushPaletteDock, MinimapDock, PropertiesDock, WaypointsDock
+from pyrme.ui.editor_context import EditorContext, EditorViewRecord, ShellStateSnapshot
 from pyrme.ui.legacy_menu_contract import (
     EDITOR_ACTION_ORDER,
     EDITOR_ACTIONS,
@@ -30,6 +33,9 @@ from pyrme.ui.legacy_menu_contract import (
 )
 from pyrme.ui.styles import qss_color
 from pyrme.ui.theme import THEME, TYPOGRAPHY
+
+if TYPE_CHECKING:
+    from pyrme.ui.canvas_host import CanvasWidgetProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -50,12 +56,16 @@ class MainWindow(QMainWindow):
         goto_dialog_factory=None,
         canvas_factory=None,
         enable_docks: bool | None = None,
+        editor_context: EditorContext | None = None,
     ) -> None:
         super().__init__(parent)
         self._settings = settings or QSettings("Noct Map Editor", "Noct")
         self._goto_dialog_factory = goto_dialog_factory or GotoPositionDialog
         self._canvas_factory = canvas_factory or PlaceholderCanvasWidget
         self._enable_docks = True if enable_docks is None else enable_docks
+        self._editor_context = editor_context or EditorContext()
+        self._views: list[EditorViewRecord] = []
+        self._active_view_index = 0
         self.brush_palette_dock: BrushPaletteDock | None = None
         self.minimap_dock: MinimapDock | None = None
         self.properties_dock: PropertiesDock | None = None
@@ -76,6 +86,7 @@ class MainWindow(QMainWindow):
             self._setup_docks()
         self._setup_status_bar()
         self._restore_window_state()
+        self._persist_active_view_state()
         self._sync_canvas_shell_state()
 
     def _setup_window(self) -> None:
@@ -221,14 +232,21 @@ class MainWindow(QMainWindow):
 
     def _setup_central_widget(self) -> None:
         """Set up the central canvas area."""
-        self._canvas: CanvasWidgetProtocol = self._canvas_factory(self)
-        self.setCentralWidget(self._canvas)
+        self._view_tabs = QTabWidget(self)
+        self._view_tabs.setObjectName("editor_view_tabs")
+        self.setCentralWidget(self._view_tabs)
+        self._add_view_tab(self._view_title(), self._default_shell_state())
+        self._view_tabs.currentChanged.connect(self._on_view_changed)
+        self._canvas = self._active_view().canvas
         self._sync_canvas_shell_state()
 
     def _show_map_properties(self) -> None:
         """Show the map properties dialog."""
-        dialog = MapPropertiesDialog(self)
-        dialog.exec()
+        dialog = MapPropertiesDialog(self, state=self._editor_context.map_document.properties)
+        if dialog.exec() == int(QDialog.DialogCode.Accepted):
+            self._editor_context.map_document.properties = dialog.state()
+            self._editor_context.map_document.is_dirty = True
+            self._refresh_view_titles()
 
     def _show_find_item(self) -> None:
         """Show the find item dialog."""
@@ -242,7 +260,9 @@ class MainWindow(QMainWindow):
         self._status_bar().showMessage("Map Statistics is not available yet.", 3000)
 
     def _show_new_view(self) -> None:
-        self._status_bar().showMessage("New View is not available yet.", 3000)
+        index = self._add_view_tab(self._view_title(), self._capture_shell_state())
+        self._view_tabs.setCurrentIndex(index)
+        self._status_bar().showMessage("Opened a new view of the current map.", 3000)
 
     def _show_take_screenshot(self) -> None:
         self._status_bar().showMessage("Take Screenshot is not available yet.", 3000)
@@ -304,6 +324,7 @@ class MainWindow(QMainWindow):
     def _toggle_show_grid(self, checked: bool) -> None:
         self._show_grid_enabled = checked
         self._canvas.set_show_grid(checked)
+        self._persist_active_view_state()
         self._status_bar().showMessage(f"Show Grid {'ON' if checked else 'OFF'}", 3000)
 
     def _setup_docks(self) -> None:
@@ -461,7 +482,9 @@ class MainWindow(QMainWindow):
 
     def _stub_ghost_higher(self, checked: bool) -> None:
         self._ghost_higher_enabled = checked
+        self._sync_floor_visibility_actions()
         self._canvas.set_ghost_higher(checked)
+        self._persist_active_view_state()
         logger.warning(
             "Ghost Higher Floors %s: NotImplementedError — awaiting canvas backend",
             "ON" if checked else "OFF",
@@ -469,7 +492,9 @@ class MainWindow(QMainWindow):
 
     def _stub_show_lower(self, checked: bool) -> None:
         self._show_lower_enabled = checked
+        self._sync_floor_visibility_actions()
         self._canvas.set_show_lower(checked)
+        self._persist_active_view_state()
         logger.warning(
             "Show Lower Floors %s: NotImplementedError — awaiting canvas backend",
             "ON" if checked else "OFF",
@@ -507,8 +532,7 @@ class MainWindow(QMainWindow):
         self._items_label.setText(
             f"Floor {self._current_z} ({self._describe_floor(self._current_z)})"
         )
-        if self.minimap_dock is not None:
-            self.minimap_dock.pos_label.setText(f"Z: {self._current_z:02d}")
+        self._sync_minimap_state()
 
         self._sync_floor_actions(self._current_z)
         self._sync_canvas_shell_state()
@@ -519,6 +543,7 @@ class MainWindow(QMainWindow):
                 f"{self._current_x}, {self._current_y}, {self._current_z:02d}",
                 3000,
             )
+        self._persist_active_view_state()
 
     def _select_floor(self, floor: int) -> None:
         self._set_current_position(
@@ -548,10 +573,85 @@ class MainWindow(QMainWindow):
         self._canvas.set_ghost_higher(self._ghost_higher_enabled)
         self._canvas.set_show_lower(self._show_lower_enabled)
 
+    def _default_shell_state(self) -> ShellStateSnapshot:
+        return ShellStateSnapshot(
+            current_x=self.DEFAULT_POSITION[0],
+            current_y=self.DEFAULT_POSITION[1],
+            current_z=self.DEFAULT_POSITION[2],
+            previous_position=None,
+            zoom_percent=100,
+            show_grid_enabled=False,
+            ghost_higher_enabled=False,
+            show_lower_enabled=True,
+        )
+
+    def _add_view_tab(self, title: str, shell_state: ShellStateSnapshot) -> int:
+        canvas = cast("CanvasWidgetProtocol", self._canvas_factory(self._view_tabs))
+        record = EditorViewRecord(
+            canvas=canvas,
+            editor_context=self._editor_context,
+            shell_state=shell_state,
+        )
+        self._views.append(record)
+        index = self._view_tabs.addTab(cast("QWidget", canvas), title)
+        return index
+
+    def _active_view(self) -> EditorViewRecord:
+        return self._views[self._active_view_index]
+
+    def _persist_active_view_state(self) -> None:
+        if not self._views:
+            return
+        self._active_view().shell_state = self._capture_shell_state()
+
+    def _on_view_changed(self, index: int) -> None:
+        if index < 0 or index >= len(self._views):
+            return
+        self._persist_active_view_state()
+        self._active_view_index = index
+        self._canvas = self._active_view().canvas
+        self._apply_shell_state(self._active_view().shell_state)
+
+    def _capture_shell_state(self) -> ShellStateSnapshot:
+        return ShellStateSnapshot(
+            current_x=self._current_x,
+            current_y=self._current_y,
+            current_z=self._current_z,
+            previous_position=self._previous_position,
+            zoom_percent=self._zoom_percent,
+            show_grid_enabled=self._show_grid_enabled,
+            ghost_higher_enabled=self._ghost_higher_enabled,
+            show_lower_enabled=self._show_lower_enabled,
+        )
+
+    def _apply_shell_state(self, shell_state: ShellStateSnapshot) -> None:
+        self._previous_position = shell_state.previous_position
+        self._current_x = shell_state.current_x
+        self._current_y = shell_state.current_y
+        self._current_z = shell_state.current_z
+        self._zoom_percent = shell_state.zoom_percent
+        self._show_grid_enabled = shell_state.show_grid_enabled
+        self._ghost_higher_enabled = shell_state.ghost_higher_enabled
+        self._show_lower_enabled = shell_state.show_lower_enabled
+
+        self._coord_label.setText(
+            f"Pos: (X: {self._current_x}, Y: {self._current_y}, Z: {self._current_z:02d})"
+        )
+        self._items_label.setText(
+            f"Floor {self._current_z} ({self._describe_floor(self._current_z)})"
+        )
+        self._zoom_label.setText(f"{self._zoom_percent}%")
+
+        self._sync_floor_visibility_actions()
+        self._sync_minimap_state()
+        self._sync_floor_actions(self._current_z)
+        self._sync_canvas_shell_state()
+
     def _set_zoom_percent(self, percent: int, *, reset: bool = False) -> None:
         self._zoom_percent = max(10, min(800, percent))
         self._zoom_label.setText(f"{self._zoom_percent}%")
         self._canvas.set_zoom(self._zoom_percent)
+        self._persist_active_view_state()
         if reset:
             self._status_bar().showMessage(f"Zoom reset to {self._zoom_percent}%", 3000)
             return
@@ -569,6 +669,27 @@ class MainWindow(QMainWindow):
             self.minimap_dock.z_up_btn.setEnabled(floor > 0)
             self.minimap_dock.z_down_btn.setEnabled(floor < 15)
 
+    def _sync_floor_visibility_actions(self) -> None:
+        self._sync_checkable_action(self.show_grid_action, self._show_grid_enabled)
+        self._sync_checkable_action(self.ghost_higher_action, self._ghost_higher_enabled)
+        self._sync_checkable_action(
+            self.floor_ghost_higher_action, self._ghost_higher_enabled
+        )
+        self._sync_checkable_action(self.show_lower_action, self._show_lower_enabled)
+
+    def _sync_minimap_state(self) -> None:
+        if self.minimap_dock is not None:
+            self.minimap_dock.pos_label.setText(f"Z: {self._current_z:02d}")
+
+    def _view_title(self) -> str:
+        document = self._editor_context.map_document
+        return f"{document.name}{'*' if document.is_dirty else ''}"
+
+    def _refresh_view_titles(self) -> None:
+        title = self._view_title()
+        for index in range(self._view_tabs.count()):
+            self._view_tabs.setTabText(index, title)
+
     def _restore_window_state(self) -> None:
         geometry = self._settings.value("main_window/geometry")
         if geometry is not None:
@@ -582,24 +703,17 @@ class MainWindow(QMainWindow):
             self._settings.value("main_window/position", list(self.DEFAULT_POSITION)),
             self.DEFAULT_POSITION,
         )
-        self._sync_checkable_action(
-            self.show_grid_action,
-            self._coerce_bool(self._settings.value("main_window/show_grid", False), False),
+        self._show_grid_enabled = self._coerce_bool(
+            self._settings.value("main_window/show_grid", False), False
         )
-        self._show_grid_enabled = self.show_grid_action.isChecked()
-        self._sync_checkable_action(
-            self.ghost_higher_action,
-            self._coerce_bool(
-                self._settings.value("main_window/ghost_higher", False),
-                False,
-            ),
+        self._ghost_higher_enabled = self._coerce_bool(
+            self._settings.value("main_window/ghost_higher", False),
+            False,
         )
-        self._ghost_higher_enabled = self.ghost_higher_action.isChecked()
-        self._sync_checkable_action(
-            self.show_lower_action,
-            self._coerce_bool(self._settings.value("main_window/show_lower", True), True),
+        self._show_lower_enabled = self._coerce_bool(
+            self._settings.value("main_window/show_lower", True), True
         )
-        self._show_lower_enabled = self.show_lower_action.isChecked()
+        self._sync_floor_visibility_actions()
         previous = self._settings.value("main_window/previous_position")
         self._previous_position = (
             self._coerce_position(previous, self.DEFAULT_POSITION)

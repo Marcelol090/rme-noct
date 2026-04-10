@@ -77,7 +77,7 @@ def test_main_window_exposes_editor_menu_surface_from_contract(qtbot) -> None:
         assert action.statusTip() == (spec.status_tip or "")
 
 
-def test_main_window_editor_actions_are_safe_stubs(qtbot) -> None:
+def test_main_window_editor_remaining_stub_is_safe(qtbot) -> None:
     window = MainWindow()
     qtbot.addWidget(window)
     status_bar = window.statusBar()
@@ -85,12 +85,8 @@ def test_main_window_editor_actions_are_safe_stubs(qtbot) -> None:
 
     assert not window.isFullScreen()
     assert window._zoom_percent == 100
-    assert not hasattr(window, "_child_views")
+    assert window._view_tabs.count() == 1
     assert not hasattr(window, "_last_screenshot")
-
-    window.new_view_action.trigger()
-    assert status_bar.currentMessage() == "New View is not available yet."
-    assert not hasattr(window, "_child_views")
 
     window.take_screenshot_action.trigger()
     assert status_bar.currentMessage() == "Take Screenshot is not available yet."

@@ -62,7 +62,8 @@ def test_main_window_uses_injected_canvas_factory_and_forwards_shell_state(
     qtbot.addWidget(window)
 
     canvas = holder["canvas"]
-    assert window.centralWidget() is canvas
+    assert window._view_tabs.currentWidget() is canvas
+    assert window._canvas is canvas
     assert canvas.position == (32000, 32000, 7)
     assert canvas.floor == 7
     assert canvas.zoom_percent == 100
