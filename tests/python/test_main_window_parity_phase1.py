@@ -40,12 +40,42 @@ def _top_level_menu_names(root: ET.Element) -> tuple[str, ...]:
     return tuple(menu.attrib["name"] for menu in root.findall("./menu"))
 
 
-def _shortcut_for_action(root: ET.Element, action_name: str) -> str:
-    for menu in root.findall(".//menu"):
-        for item in menu:
-            if item.tag == "item" and item.attrib.get("action") == action_name:
-                return item.attrib.get("hotkey", "")
+def _find_action(
+    menu: ET.Element, action_name: str, path: tuple[str, ...]
+) -> tuple[ET.Element, tuple[str, ...]] | None:
+    for child in menu:
+        if child.tag == "item" and child.attrib.get("action") == action_name:
+            return child, path
+        if child.tag == "menu":
+            found = _find_action(
+                child,
+                action_name,
+                (*path, child.attrib["name"]),
+            )
+            if found is not None:
+                return found
+    return None
+
+
+def _action_metadata(root: ET.Element, action_name: str) -> tuple[str, str, str, tuple[str, ...]]:
+    for menu in root.findall("./menu"):
+        found = _find_action(menu, action_name, (menu.attrib["name"],))
+        if found is None:
+            continue
+
+        action, menu_path = found
+        return (
+            action.attrib["name"],
+            action.attrib.get("help", ""),
+            action.attrib.get("hotkey", ""),
+            menu_path,
+        )
+
     raise AssertionError(f"Could not find XML action {action_name!r}")
+
+
+def _normalize_label(text: str) -> str:
+    return text.replace("&", "")
 
 
 def test_legacy_top_level_menu_order_matches_xml() -> None:
@@ -58,4 +88,17 @@ def test_legacy_top_level_menu_order_matches_xml() -> None:
 def test_phase1_shortcuts_match_xml(xml_action_name: str, spec_key: str) -> None:
     root = _legacy_menu_root()
 
-    assert PHASE1_ACTIONS[spec_key].shortcut == _shortcut_for_action(root, xml_action_name)
+    _, _, shortcut, _ = _action_metadata(root, xml_action_name)
+
+    assert PHASE1_ACTIONS[spec_key].shortcut == shortcut
+
+
+@pytest.mark.parametrize("xml_action_name,spec_key", PHASE1_SHORTCUT_ACTIONS)
+def test_phase1_contract_metadata_matches_xml(xml_action_name: str, spec_key: str) -> None:
+    root = _legacy_menu_root()
+    xml_name, xml_help, _, xml_menu_path = _action_metadata(root, xml_action_name)
+    action = PHASE1_ACTIONS[spec_key]
+
+    assert _normalize_label(action.text) == xml_name
+    assert action.status_tip == xml_help
+    assert action.menu_path == xml_menu_path
