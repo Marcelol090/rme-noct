@@ -49,11 +49,13 @@ class MainWindow(QMainWindow):
         settings: QSettings | None = None,
         goto_dialog_factory=None,
         canvas_factory=None,
+        enable_docks: bool | None = None,
     ) -> None:
         super().__init__(parent)
         self._settings = settings or QSettings("Noct Map Editor", "Noct")
         self._goto_dialog_factory = goto_dialog_factory or GotoPositionDialog
         self._canvas_factory = canvas_factory or PlaceholderCanvasWidget
+        self._enable_docks = True if enable_docks is None else enable_docks
         self.brush_palette_dock: BrushPaletteDock | None = None
         self.minimap_dock: MinimapDock | None = None
         self.properties_dock: PropertiesDock | None = None
@@ -70,7 +72,8 @@ class MainWindow(QMainWindow):
         self._setup_menu_bar()
         self._setup_toolbars()
         self._setup_central_widget()
-        self._setup_docks()
+        if self._enable_docks:
+            self._setup_docks()
         self._setup_status_bar()
         self._restore_window_state()
         self._sync_canvas_shell_state()
@@ -245,7 +248,12 @@ class MainWindow(QMainWindow):
         self._status_bar().showMessage("Take Screenshot is not available yet.", 3000)
 
     def _show_toggle_fullscreen(self) -> None:
-        self._status_bar().showMessage("Enter Fullscreen is not available yet.", 3000)
+        if self.isFullScreen():
+            self.showNormal()
+            self._status_bar().showMessage("Exited fullscreen mode.", 3000)
+            return
+        self.showFullScreen()
+        self._status_bar().showMessage("Entered fullscreen mode.", 3000)
 
     def _show_zoom_in(self) -> None:
         self._set_zoom_percent(self._zoom_percent + 10)

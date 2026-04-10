@@ -96,10 +96,6 @@ def test_main_window_editor_actions_are_safe_stubs(qtbot) -> None:
     assert status_bar.currentMessage() == "Take Screenshot is not available yet."
     assert not hasattr(window, "_last_screenshot")
 
-    window.toggle_fullscreen_action.trigger()
-    assert not window.isFullScreen()
-    assert status_bar.currentMessage() == "Enter Fullscreen is not available yet."
-
 
 def test_main_window_editor_zoom_actions_drive_shell_zoom_state(qtbot) -> None:
     holder: dict[str, _FakeCanvasWidget] = {}
@@ -136,3 +132,22 @@ def test_main_window_editor_zoom_actions_drive_shell_zoom_state(qtbot) -> None:
     assert window._zoom_label.text() == "100%"
     assert canvas.zoom_percent == 100
     assert status_bar.currentMessage() == "Zoom reset to 100%"
+
+
+def test_main_window_editor_fullscreen_action_toggles_window_mode(qtbot) -> None:
+    window = MainWindow(enable_docks=False)
+    qtbot.addWidget(window)
+    status_bar = window.statusBar()
+    assert status_bar is not None
+
+    window.show()
+    qtbot.waitExposed(window)
+    assert not window.isFullScreen()
+
+    window.toggle_fullscreen_action.trigger()
+    qtbot.waitUntil(window.isFullScreen)
+    assert status_bar.currentMessage() == "Entered fullscreen mode."
+
+    window.toggle_fullscreen_action.trigger()
+    qtbot.waitUntil(lambda: not window.isFullScreen())
+    assert status_bar.currentMessage() == "Exited fullscreen mode."
