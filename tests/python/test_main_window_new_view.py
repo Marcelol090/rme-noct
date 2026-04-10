@@ -73,6 +73,7 @@ def test_new_view_adds_a_shared_editor_view_tab_with_copied_shell_state(
     window.show_grid_action.setChecked(True)
     window.ghost_higher_action.setChecked(True)
     window.show_lower_action.setChecked(False)
+    window._editor_context.session.mode = "selection"
 
     window.new_view_action.trigger()
 
@@ -85,7 +86,9 @@ def test_new_view_adds_a_shared_editor_view_tab_with_copied_shell_state(
     first_view = window._views[0]
     second_view = window._views[1]
     assert second_view.editor_context is first_view.editor_context
-    assert second_view.editor_context.map_document is first_view.editor_context.map_document
+    assert second_view.editor_context.session is first_view.editor_context.session
+    assert second_view.editor_context.session.document is first_view.editor_context.session.document
+    assert second_view.editor_context.session.mode == "selection"
     assert canvases[0].editor_context is first_view.editor_context
     assert canvases[1].editor_context is first_view.editor_context
     assert second_view.shell_state.current_x == 32123
@@ -96,6 +99,12 @@ def test_new_view_adds_a_shared_editor_view_tab_with_copied_shell_state(
     assert second_view.shell_state.show_grid_enabled is True
     assert second_view.shell_state.ghost_higher_enabled is True
     assert second_view.shell_state.show_lower_enabled is False
+    assert second_view.viewport.center_x == 32123
+    assert second_view.viewport.center_y == 32145
+    assert second_view.viewport.floor == 5
+    assert second_view.minimap_viewport.center_x == 32123
+    assert second_view.minimap_viewport.center_y == 32145
+    assert second_view.minimap_viewport.zoom_percent == 110
 
     second_canvas = canvases[-1]
     assert window._view_tabs.currentWidget() is second_canvas
@@ -106,8 +115,8 @@ def test_new_view_adds_a_shared_editor_view_tab_with_copied_shell_state(
     assert second_canvas.ghost_higher is True
     assert second_canvas.show_lower is False
 
-    window._editor_context.map_document.name = "Kazordoon"
-    window._editor_context.map_document.is_dirty = True
+    window._editor_context.session.document.name = "Kazordoon"
+    window._editor_context.session.document.is_dirty = True
     window._refresh_view_titles()
     assert window._view_tabs.tabText(0) == "Kazordoon*"
     assert window._view_tabs.tabText(1) == "Kazordoon*"
@@ -144,6 +153,12 @@ def test_new_view_keeps_shell_state_independent_between_tabs(
         second_view.shell_state.current_z,
     ) == (33000, 33010, 4)
     assert second_view.shell_state.show_grid_enabled is False
+    assert second_view.viewport.center_x == 33000
+    assert second_view.viewport.center_y == 33010
+    assert second_view.viewport.floor == 4
+    assert second_view.minimap_viewport.center_x == 33000
+    assert second_view.minimap_viewport.center_y == 33010
+    assert second_view.minimap_viewport.zoom_percent == 120
 
     window._view_tabs.setCurrentIndex(0)
     assert window._zoom_percent == 110
@@ -159,6 +174,12 @@ def test_new_view_keeps_shell_state_independent_between_tabs(
         first_view.shell_state.current_y,
         first_view.shell_state.current_z,
     ) == (32010, 32020, 7)
+    assert first_view.viewport.center_x == 32010
+    assert first_view.viewport.center_y == 32020
+    assert first_view.viewport.floor == 7
+    assert first_view.minimap_viewport.center_x == 32010
+    assert first_view.minimap_viewport.center_y == 32020
+    assert first_view.minimap_viewport.zoom_percent == 100
 
     window._view_tabs.setCurrentIndex(1)
     assert window._zoom_percent == 120

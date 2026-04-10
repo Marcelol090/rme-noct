@@ -24,7 +24,13 @@ from pyrme import __app_name__, __version__
 from pyrme.ui.canvas_host import PlaceholderCanvasWidget
 from pyrme.ui.dialogs import FindItemDialog, GotoPositionDialog, MapPropertiesDialog
 from pyrme.ui.docks import BrushPaletteDock, MinimapDock, PropertiesDock, WaypointsDock
-from pyrme.ui.editor_context import EditorContext, EditorViewRecord, ShellStateSnapshot
+from pyrme.ui.editor_context import (
+    EditorContext,
+    EditorViewportState,
+    EditorViewRecord,
+    MinimapViewportState,
+    ShellStateSnapshot,
+)
 from pyrme.ui.legacy_menu_contract import (
     EDITOR_ACTION_ORDER,
     EDITOR_ACTIONS,
@@ -244,11 +250,12 @@ class MainWindow(QMainWindow):
 
     def _show_map_properties(self) -> None:
         """Show the map properties dialog."""
-        dialog = MapPropertiesDialog(self, state=self._editor_context.map_document.properties)
+        dialog = MapPropertiesDialog(self, state=self._editor_context.session.document.properties)
         if dialog.exec() == int(QDialog.DialogCode.Accepted):
-            self._editor_context.map_document.properties = dialog.state()
-            self._editor_context.map_document.is_dirty = True
+            self._editor_context.session.document.properties = dialog.state()
+            self._editor_context.session.document.is_dirty = True
             self._refresh_view_titles()
+            self._refresh_canvas_context_bindings()
 
     def _show_find_item(self) -> None:
         """Show the find item dialog."""
@@ -262,7 +269,12 @@ class MainWindow(QMainWindow):
         self._status_bar().showMessage("Map Statistics is not available yet.", 3000)
 
     def _show_new_view(self) -> None:
-        index = self._add_view_tab(self._view_title(), self._capture_shell_state())
+        index = self._add_view_tab(
+            self._view_title(),
+            self._capture_shell_state(),
+            viewport=self._capture_viewport_state(),
+            minimap_viewport=self._capture_minimap_viewport_state(),
+        )
         self._view_tabs.setCurrentIndex(index)
         self._status_bar().showMessage("Opened a new view of the current map.", 3000)
 
@@ -610,7 +622,28 @@ class MainWindow(QMainWindow):
             show_lower_enabled=True,
         )
 
-    def _add_view_tab(self, title: str, shell_state: ShellStateSnapshot) -> int:
+    def _default_viewport_state(self) -> EditorViewportState:
+        return EditorViewportState(
+            center_x=self.DEFAULT_POSITION[0],
+            center_y=self.DEFAULT_POSITION[1],
+            floor=self.DEFAULT_POSITION[2],
+        )
+
+    def _default_minimap_viewport_state(self) -> MinimapViewportState:
+        return MinimapViewportState(
+            center_x=self.DEFAULT_POSITION[0],
+            center_y=self.DEFAULT_POSITION[1],
+            zoom_percent=100,
+        )
+
+    def _add_view_tab(
+        self,
+        title: str,
+        shell_state: ShellStateSnapshot,
+        *,
+        viewport: EditorViewportState | None = None,
+        minimap_viewport: MinimapViewportState | None = None,
+    ) -> int:
         canvas = cast("CanvasWidgetProtocol", self._canvas_factory(self._view_tabs))
         if hasattr(canvas, "bind_editor_context"):
             canvas.bind_editor_context(self._editor_context)
@@ -618,6 +651,8 @@ class MainWindow(QMainWindow):
             canvas=canvas,
             editor_context=self._editor_context,
             shell_state=shell_state,
+            viewport=viewport or self._default_viewport_state(),
+            minimap_viewport=minimap_viewport or self._default_minimap_viewport_state(),
         )
         self._views.append(record)
         index = self._view_tabs.addTab(cast("QWidget", canvas), title)
@@ -629,7 +664,10 @@ class MainWindow(QMainWindow):
     def _persist_active_view_state(self) -> None:
         if not self._views:
             return
-        self._active_view().shell_state = self._capture_shell_state()
+        view = self._active_view()
+        view.shell_state = self._capture_shell_state()
+        view.viewport = self._capture_viewport_state()
+        view.minimap_viewport = self._capture_minimap_viewport_state()
 
     def _on_view_changed(self, index: int) -> None:
         if index < 0 or index >= len(self._views):
@@ -649,6 +687,20 @@ class MainWindow(QMainWindow):
             show_grid_enabled=self._show_grid_enabled,
             ghost_higher_enabled=self._ghost_higher_enabled,
             show_lower_enabled=self._show_lower_enabled,
+        )
+
+    def _capture_viewport_state(self) -> EditorViewportState:
+        return EditorViewportState(
+            center_x=self._current_x,
+            center_y=self._current_y,
+            floor=self._current_z,
+        )
+
+    def _capture_minimap_viewport_state(self) -> MinimapViewportState:
+        return MinimapViewportState(
+            center_x=self._current_x,
+            center_y=self._current_y,
+            zoom_percent=self._zoom_percent,
         )
 
     def _apply_shell_state(self, shell_state: ShellStateSnapshot) -> None:
@@ -709,13 +761,18 @@ class MainWindow(QMainWindow):
             self.minimap_dock.pos_label.setText(f"Z: {self._current_z:02d}")
 
     def _view_title(self) -> str:
-        document = self._editor_context.map_document
+        document = self._editor_context.session.document
         return f"{document.name}{'*' if document.is_dirty else ''}"
 
     def _refresh_view_titles(self) -> None:
         title = self._view_title()
         for index in range(self._view_tabs.count()):
             self._view_tabs.setTabText(index, title)
+
+    def _refresh_canvas_context_bindings(self) -> None:
+        for view in self._views:
+            if hasattr(view.canvas, "bind_editor_context"):
+                view.canvas.bind_editor_context(self._editor_context)
 
     def _screenshot_directory(self) -> Path:
         configured = str(self._settings.value("graphics/screenshot_directory", "") or "").strip()

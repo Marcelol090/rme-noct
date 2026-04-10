@@ -18,10 +18,31 @@ class MapDocumentState:
 
 
 @dataclass(slots=True)
+class EditorViewportState:
+    center_x: int = 32000
+    center_y: int = 32000
+    floor: int = 7
+
+
+@dataclass(slots=True)
+class MinimapViewportState:
+    center_x: int = 32000
+    center_y: int = 32000
+    zoom_percent: int = 100
+
+
+@dataclass(slots=True)
+class EditorSessionState:
+    document: MapDocumentState = field(default_factory=MapDocumentState)
+    mode: str = "drawing"
+    active_brush_id: str | None = None
+    active_item_id: int | None = None
+
+
+@dataclass(slots=True)
 class EditorContext:
     document_id: str = field(default_factory=lambda: f"map-{uuid4().hex}")
-    map_document: MapDocumentState = field(default_factory=MapDocumentState)
-    editor_mode: str = "drawing"
+    session: EditorSessionState = field(default_factory=EditorSessionState)
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,3 +62,5 @@ class EditorViewRecord:
     canvas: CanvasWidgetProtocol
     editor_context: EditorContext
     shell_state: ShellStateSnapshot
+    viewport: EditorViewportState = field(default_factory=EditorViewportState)
+    minimap_viewport: MinimapViewportState = field(default_factory=MinimapViewportState)

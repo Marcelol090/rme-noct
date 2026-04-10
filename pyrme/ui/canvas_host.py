@@ -72,7 +72,7 @@ class PlaceholderCanvasWidget(QWidget):
     def _refresh_label(self) -> None:
         x, y, z = self.position
         title = (
-            self.editor_context.map_document.name
+            self.editor_context.session.document.name
             if self.editor_context is not None
             else "Untitled"
         )
