@@ -20,7 +20,14 @@ from pyrme import __app_name__, __version__
 from pyrme.ui.canvas_host import CanvasWidgetProtocol, PlaceholderCanvasWidget
 from pyrme.ui.dialogs import FindItemDialog, GotoPositionDialog, MapPropertiesDialog
 from pyrme.ui.docks import BrushPaletteDock, MinimapDock, PropertiesDock, WaypointsDock
-from pyrme.ui.legacy_menu_contract import LEGACY_TOP_LEVEL_MENUS, PHASE1_ACTIONS
+from pyrme.ui.legacy_menu_contract import (
+    EDITOR_ACTION_ORDER,
+    EDITOR_ACTIONS,
+    EDITOR_ZOOM_ACTION_ORDER,
+    EDITOR_ZOOM_MENU_TITLE,
+    LEGACY_TOP_LEVEL_MENUS,
+    PHASE1_ACTIONS,
+)
 from pyrme.ui.styles import qss_color
 from pyrme.ui.theme import THEME, TYPOGRAPHY
 
@@ -135,6 +142,8 @@ class MainWindow(QMainWindow):
             action = phase1_action_attrs[spec_key]
             menu.addAction(action)
 
+        self._setup_editor_menu()
+
     def _setup_toolbars(self) -> None:
         """Create the main toolbars."""
         # Drawing tools toolbar
@@ -228,6 +237,24 @@ class MainWindow(QMainWindow):
 
     def _show_map_statistics(self) -> None:
         self._status_bar().showMessage("Map Statistics is not available yet.", 3000)
+
+    def _show_new_view(self) -> None:
+        self._status_bar().showMessage("New View is not available yet.", 3000)
+
+    def _show_take_screenshot(self) -> None:
+        self._status_bar().showMessage("Take Screenshot is not available yet.", 3000)
+
+    def _show_toggle_fullscreen(self) -> None:
+        self._status_bar().showMessage("Enter Fullscreen is not available yet.", 3000)
+
+    def _show_zoom_in(self) -> None:
+        self._status_bar().showMessage("Zoom In is not available yet.", 3000)
+
+    def _show_zoom_out(self) -> None:
+        self._status_bar().showMessage("Zoom Out is not available yet.", 3000)
+
+    def _show_zoom_normal(self) -> None:
+        self._status_bar().showMessage("Zoom Normal is not available yet.", 3000)
 
     def _go_to_previous_position(self) -> None:
         if self._previous_position is None:
@@ -339,8 +366,7 @@ class MainWindow(QMainWindow):
     def _menu_label(self, title: str) -> str:
         return "&About" if title == "About" else f"&{title}"
 
-    def _action_from_spec(self, spec_key: str, handler=None) -> QAction:
-        spec = PHASE1_ACTIONS[spec_key]
+    def _action_from_contract_spec(self, spec, handler=None) -> QAction:
         action = QAction(spec.text, self)
         action.setObjectName(f"action_{spec.action_id}")
         if spec.shortcut:
@@ -350,6 +376,67 @@ class MainWindow(QMainWindow):
         if handler is not None:
             action.triggered.connect(handler)
         return action
+
+    def _action_from_spec(self, spec_key: str, handler=None) -> QAction:
+        spec = PHASE1_ACTIONS[spec_key]
+        return self._action_from_contract_spec(spec, handler)
+
+    def _setup_editor_menu(self) -> None:
+        editor_menu = self._menus["Editor"]
+
+        editor_handlers = {
+            "new_view": self._show_new_view,
+            "toggle_fullscreen": self._show_toggle_fullscreen,
+            "take_screenshot": self._show_take_screenshot,
+            "zoom_in": self._show_zoom_in,
+            "zoom_out": self._show_zoom_out,
+            "zoom_normal": self._show_zoom_normal,
+        }
+
+        self.new_view_action = self._action_from_contract_spec(
+            EDITOR_ACTIONS["new_view"],
+            editor_handlers["new_view"],
+        )
+        self.toggle_fullscreen_action = self._action_from_contract_spec(
+            EDITOR_ACTIONS["toggle_fullscreen"],
+            editor_handlers["toggle_fullscreen"],
+        )
+        self.take_screenshot_action = self._action_from_contract_spec(
+            EDITOR_ACTIONS["take_screenshot"],
+            editor_handlers["take_screenshot"],
+        )
+        self.zoom_in_action = self._action_from_contract_spec(
+            EDITOR_ACTIONS["zoom_in"],
+            editor_handlers["zoom_in"],
+        )
+        self.zoom_out_action = self._action_from_contract_spec(
+            EDITOR_ACTIONS["zoom_out"],
+            editor_handlers["zoom_out"],
+        )
+        self.zoom_normal_action = self._action_from_contract_spec(
+            EDITOR_ACTIONS["zoom_normal"],
+            editor_handlers["zoom_normal"],
+        )
+
+        editor_top_level_actions = {
+            "new_view": self.new_view_action,
+            "toggle_fullscreen": self.toggle_fullscreen_action,
+            "take_screenshot": self.take_screenshot_action,
+        }
+        for action_key in EDITOR_ACTION_ORDER:
+            editor_menu.addAction(editor_top_level_actions[action_key])
+
+        editor_menu.addSeparator()
+
+        zoom_menu = editor_menu.addMenu(EDITOR_ZOOM_MENU_TITLE)
+        assert zoom_menu is not None
+        editor_zoom_actions = {
+            "zoom_in": self.zoom_in_action,
+            "zoom_out": self.zoom_out_action,
+            "zoom_normal": self.zoom_normal_action,
+        }
+        for action_key in EDITOR_ZOOM_ACTION_ORDER:
+            zoom_menu.addAction(editor_zoom_actions[action_key])
 
     def _sync_checkable_action(self, action: QAction, checked: bool) -> None:
         was_blocked = action.blockSignals(True)
