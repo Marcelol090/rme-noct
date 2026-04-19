@@ -38,10 +38,10 @@ class GSDConfig:
     mode: str = "solo"  # "solo" or "team"
     models: dict[str, str] = field(
         default_factory=lambda: {
-            "research": "gpt-5.4-mini",
-            "planning": "gpt-5.4",
-            "execution": "gpt-5.4-mini",
-            "completion": "gpt-5.4-mini",
+            "research": "ollama/qwen3-8b-gsd",
+            "planning": "ollama/qwen3-8b-gsd",
+            "execution": "ollama/qwen3-8b-gsd",
+            "completion": "ollama/qwen3-8b-gsd",
         }
     )
 
@@ -120,7 +120,7 @@ class GSDConfig:
         ]
 
     def list_global_skills(self) -> list[str]:
-        """List all global skills in ~/.agents/skills/."""
+        """List all global skills in ~/.gsd/agent/skills/."""
         if not self.user_skills_dir.exists():
             return []
         return [

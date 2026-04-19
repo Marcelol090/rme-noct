@@ -114,9 +114,7 @@ class SkillsLoader:
         )
         self.user_skills_dir = user_skills_dir or (home_dir / ".gsd" / "agent" / "skills")
         self.codex_skills_dir = codex_skills_dir or (home_dir / ".codex" / "skills")
-        self.superpowers_dir = superpowers_dir or (
-            home_dir / ".codex" / "superpowers" / "skills"
-        )
+        self.superpowers_dir = superpowers_dir or (home_dir / ".codex" / "superpowers" / "skills")
 
     def find_skills(self, max_depth: int = 3) -> list[Skill]:
         """Find all available skills in precedence order."""
