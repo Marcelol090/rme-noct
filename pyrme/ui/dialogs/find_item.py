@@ -317,6 +317,14 @@ class FindItemDialog(QDialog):
         """Return the currently selected result."""
         return replace(self._selected_result) if self._selected_result is not None else None
 
+    def last_search_map_query(self) -> FindItemQuery | None:
+        """Return the last query captured by the Search on Map seam."""
+        return (
+            self._clone_query(self._last_search_map_query)
+            if self._last_search_map_query is not None
+            else None
+        )
+
     def set_catalog(self, catalog: list[FindItemResult] | tuple[FindItemResult, ...]) -> None:
         """Replace the local in-memory catalog and refresh results."""
         self._catalog = [replace(result) for result in catalog]
