@@ -2,15 +2,24 @@
 version: 1
 
 # ── Model Selection ──────────────────────────────────────────
-# Codex-first runtime: prefer OpenAI models for all default phases
+# Local-first runtime: prefer the installed lightweight Ollama coder model for default phases
 models:
-  research: gpt-5.4-mini
-  planning: gpt-5.4
-  execution: gpt-5.4-mini
-  completion: gpt-5.4-mini
+  research: ollama/qwen3-8b-gsd
+  planning: ollama/qwen3-8b-gsd
+  execution: ollama/qwen3-8b-gsd
+  completion: ollama/qwen3-8b-gsd
+
+# Keep search local when the planner needs web-style lookup
+search_provider: ollama
+
+# Keep milestone planning lean and local-first
+phases:
+  skip_research: true
+  skip_slice_research: true
+  skip_reassess: true
 
 # ── Token Optimization ──────────────────────────────────────
-token_profile: balanced
+token_profile: budget
 
 # ── Budget ───────────────────────────────────────────────────
 budget_ceiling: 50.00
@@ -31,13 +40,17 @@ git:
   commit_docs: true
 
 # ── Skill Management ────────────────────────────────────────
-skill_discovery: suggest
+skill_discovery: off
 skill_staleness_days: 60
 unique_milestone_ids: true
 always_use_skills:
   - debug-like-expert
 prefer_skills:
+  - superpowers
   - frontend-design
+  - caveman-commit
+  - caveman-review
+  - compress
 avoid_skills:
   - aggressive-refactor
 skill_rules:
@@ -53,6 +66,12 @@ skill_rules:
     use: [debug-like-expert]
   - when: task involves cross-instance clipboard
     use: [binary-formats, systems-programming]
+  - when: preparing commit messages or branch closeout
+    use: [caveman-commit]
+  - when: reviewing diffs or PR findings
+    use: [caveman-review]
+  - when: compressing memory files or workflow docs
+    use: [compress]
 
 # ── Verification Commands (Python + Rust) ────────────────────
 # Per GSD-2 docs: these run after each task completion
@@ -83,7 +102,7 @@ post_unit_hooks:
     prompt: "Run ruff and mypy on changed files."
 ---
 
-# PyRME – GSD-2 Project Preferences
+# PyRME - GSD-2 Project Preferences
 
 ## Project Context
 - **Stack**: Python 3.12+ / PyQt6 / Rust (PyO3 + maturin)
@@ -99,6 +118,17 @@ post_unit_hooks:
 - TDD-first approach via Superpowers skills
 - Context7 MCP for all documentation lookups
 - Stitch for UI mockups before implementation
+
+## Workflow Checklist
+- Read `README.md`, `PLAN.md`, active spec/plan docs, and `.gsd/STATE.md` before changing scope.
+- Confirm slice stop condition before coding.
+- Add or tighten tests before implementation.
+- Keep delta narrow and contract-first.
+- Verify narrow slice first, then adjacent regressions if the seam changed.
+- Use `superpowers` for plan/execution discipline.
+- Use `caveman-review` for terse review closeout.
+- Use `caveman-commit` for commit messages.
+- Use `caveman-compress` only for workflow/docs compression.
 
 ## Key Architecture Decisions
 - All performance-critical code in Rust (canvas, parsing, spatial hash, hashing)
