@@ -22,8 +22,8 @@ class PropertiesDock(GlassDockWidget):
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__("TILE PROPERTIES", parent)
-        self.setObjectName("tile_properties_dock")
+        super().__init__("PROPERTIES", parent)
+        self.setObjectName("properties_dock")
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -31,7 +31,7 @@ class PropertiesDock(GlassDockWidget):
         layout.setContentsMargins(12, 12, 12, 12)
 
         # Heading
-        heading = QLabel("Tile Properties")
+        heading = QLabel("Selection Properties")
         heading.setFont(TYPOGRAPHY.ui_label())
         heading.setStyleSheet(f"color: {THEME.ash_lavender.name()}; font-weight: 600;")
         layout.addWidget(heading)

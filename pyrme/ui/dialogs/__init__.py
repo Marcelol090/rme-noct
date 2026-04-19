@@ -1,6 +1,5 @@
 """Dialog windows for Noct Map Editor."""
 
-from pyrme.ui.dialogs.about import AboutDialog
 from pyrme.ui.dialogs.find_item import (
     FindItemDialog,
     FindItemQuery,
@@ -9,11 +8,8 @@ from pyrme.ui.dialogs.find_item import (
 )
 from pyrme.ui.dialogs.goto_position import GotoPositionDialog
 from pyrme.ui.dialogs.map_properties import MapPropertiesDialog, MapPropertiesState
-from pyrme.ui.dialogs.preferences import PreferencesDialog
-from pyrme.ui.dialogs.town_manager import TownData, TownManagerDialog
 
 __all__ = [
-    "AboutDialog",
     "FindItemDialog",
     "FindItemQuery",
     "FindItemResult",
@@ -21,7 +17,4 @@ __all__ = [
     "GotoPositionDialog",
     "MapPropertiesDialog",
     "MapPropertiesState",
-    "PreferencesDialog",
-    "TownData",
-    "TownManagerDialog",
 ]
