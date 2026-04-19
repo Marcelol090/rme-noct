@@ -1,0 +1,422 @@
+{
+  "version": 1,
+  "project": "remeres-map-editor-redux",
+  "updated_at": "2026-04-07T17:49:05-03:00",
+  "tasks": [
+    {
+      "id": "GSD-RUNTIME-NODE22",
+      "title": "Align GSD runtime to Node 22",
+      "category": "infrastructure",
+      "status": "verified",
+      "milestone": "GSD",
+      "slice": "runtime",
+      "summary": "Local GSD scripts were aligned to Node 22 and the repository documentation now reflects the local install flow.",
+      "done_criteria": [
+        "npm run gsd:* resolves to the installed local binary",
+        "Node 22+ is the documented runtime baseline",
+        "Contract tests enforce the package and README expectations"
+      ],
+      "scope": [
+        "package.json",
+        "README.md",
+        "scripts/setup-devtools.sh",
+        "pyrme/tools/ai_assistant.py",
+        "tests/python/test_gsd_project_contract.py",
+        ".nvmrc"
+      ],
+      "files_modified": [
+        "package.json",
+        "README.md",
+        "scripts/setup-devtools.sh",
+        "pyrme/tools/ai_assistant.py",
+        "tests/python/test_gsd_project_contract.py",
+        ".nvmrc"
+      ],
+      "tests_run": [
+        "pytest tests/python/test_gsd_project_contract.py -v --tb=short",
+        "npm install",
+        "npm run gsd:status"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "postinstall hook executed successfully",
+          "GSD binary resolved locally from node_modules/.bin",
+          "GSD status query returned the expected snapshot"
+        ]
+      },
+      "notes": [
+        "This task established the Node 22 baseline used by the later Tier 2 and Codex-first workflow work."
+      ],
+      "recorded_at": "2026-04-07T00:00:00-03:00",
+      "updated_at": "2026-04-07T00:00:00-03:00",
+      "completed_at": "2026-04-07T00:00:00-03:00"
+    },
+    {
+      "id": "GSD-RUNTIME-LOCAL-HOME",
+      "title": "Force repo-local GSD home",
+      "category": "infrastructure",
+      "status": "verified",
+      "milestone": "GSD",
+      "slice": "runtime",
+      "summary": "GSD runtime state was redirected to the repository-local .gsd directory so status and planning do not hit the read-only home sync path.",
+      "done_criteria": [
+        "GSD commands use the repo-local GSD_HOME helper",
+        "The runtime no longer depends on the read-only global sync path",
+        "Status queries continue to work after install/reinstall"
+      ],
+      "scope": [
+        "pyrme/devtools/gsd/runtime.py",
+        "scripts/run-gsd.mjs",
+        "package.json",
+        "README.md",
+        ".gitignore",
+        "tests/python/test_gsd_runtime_env.py",
+        "tests/python/test_gsd_project_contract.py"
+      ],
+      "files_modified": [
+        "pyrme/devtools/gsd/runtime.py",
+        "scripts/run-gsd.mjs",
+        "package.json",
+        "README.md",
+        ".gitignore",
+        "tests/python/test_gsd_runtime_env.py",
+        "tests/python/test_gsd_project_contract.py"
+      ],
+      "tests_run": [
+        "pytest tests/python/test_gsd_runtime_env.py -v --tb=short",
+        "pytest tests/python/test_gsd_project_contract.py -v --tb=short",
+        "npm run gsd:status"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "Repo-local GSD_HOME helper was used by the runtime wrapper",
+          "Status queries no longer hit the previous EROFS sync failure"
+        ]
+      },
+      "notes": [
+        "This task made GSD reproducible in this workspace and prevented future state writes from leaking to the host home directory."
+      ],
+      "recorded_at": "2026-04-07T00:00:00-03:00",
+      "updated_at": "2026-04-07T00:00:00-03:00",
+      "completed_at": "2026-04-07T00:00:00-03:00"
+    },
+    {
+      "id": "CODEX-SUPERPOWERS-GSD-CONTRACT",
+      "title": "Codex-first Superpowers + GSD workflow contract",
+      "category": "workflow",
+      "status": "verified",
+      "milestone": "Workflow",
+      "slice": "contract",
+      "summary": "The repo's workflow contract now treats Codex as the runtime, Superpowers as process discipline, Context7 as evidence, and GSD as orchestration.",
+      "done_criteria": [
+        "Repo docs separate runtime, process, evidence, and orchestration responsibilities",
+        "GSD preferences use OpenAI models and local skill routing",
+        "Superpowers skill names in wrappers match the installed skills"
+      ],
+      "scope": [
+        "docs/superpowers/workflows/2026-04-06-codex-first-superpowers-gsd.md",
+        ".gsd/preferences.md",
+        "pyrme/devtools/gsd/config.py",
+        "pyrme/devtools/superpowers/skills_loader.py",
+        "pyrme/tools/ai_assistant.py",
+        "README.md",
+        "tests/python/test_superpowers_loader.py",
+        "tests/python/test_gsd_project_contract.py"
+      ],
+      "files_modified": [
+        "docs/superpowers/workflows/2026-04-06-codex-first-superpowers-gsd.md",
+        ".gsd/preferences.md",
+        "pyrme/devtools/gsd/config.py",
+        "pyrme/devtools/superpowers/skills_loader.py",
+        "pyrme/tools/ai_assistant.py",
+        "README.md",
+        "tests/python/test_superpowers_loader.py",
+        "tests/python/test_gsd_project_contract.py"
+      ],
+      "tests_run": [
+        "pytest tests/python/test_superpowers_loader.py tests/python/test_gsd_project_contract.py -v --tb=short",
+        "npm run gsd:status"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "The workflow contract now points at real installed Superpowers skills",
+          "GSD remained a routing/orchestration layer rather than a runtime replacement"
+        ]
+      },
+      "notes": [
+        "This task is the canonical contract for future Codex-first work in this repo."
+      ],
+      "recorded_at": "2026-04-07T00:00:00-03:00",
+      "updated_at": "2026-04-07T00:00:00-03:00",
+      "completed_at": "2026-04-07T00:00:00-03:00"
+    },
+    {
+      "id": "GSD-TASK-REGISTRY",
+      "title": "Create durable GSD task registry",
+      "category": "workflow",
+      "status": "verified",
+      "milestone": "GSD",
+      "slice": "registry",
+      "summary": "A writable task registry schema and JSON store were added under .gsd so future sessions can record completed work and read it before planning the next slice.",
+      "done_criteria": [
+        "A JSON Schema exists for task records",
+        "A writable task registry exists under .gsd",
+        "GSD workflow docs read the registry after .gsd/STATE.md",
+        "Contract tests enforce the registry shape"
+      ],
+      "scope": [
+        ".gsd/task-registry.schema.json",
+        ".gsd/task-registry.json",
+        ".gsd/agent/GSD-WORKFLOW.md",
+        "docs/superpowers/workflows/2026-04-06-codex-first-superpowers-gsd.md",
+        "tests/python/test_gsd_task_registry.py"
+      ],
+      "files_modified": [
+        ".gsd/task-registry.schema.json",
+        ".gsd/task-registry.json",
+        ".gsd/agent/GSD-WORKFLOW.md",
+        "docs/superpowers/workflows/2026-04-06-codex-first-superpowers-gsd.md",
+        "tests/python/test_gsd_task_registry.py"
+      ],
+      "tests_run": [
+        "pytest tests/python/test_gsd_task_registry.py -v --tb=short",
+        "pytest tests/python -v --tb=short",
+        "ruff check tests/python/ pyrme/",
+        "mypy tests/python/ --ignore-missing-imports"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "The registry file now records previously completed GSD slices and workflow contracts.",
+          "The registry contract is enforced by a dedicated Python test."
+        ]
+      },
+      "notes": [
+        "This entry makes the registry durable and self-describing so later sessions can reconstruct prior work quickly."
+      ],
+      "recorded_at": "2026-04-07T00:00:00-03:00",
+      "updated_at": "2026-04-07T00:00:00-03:00",
+      "completed_at": "2026-04-07T00:00:00-03:00"
+    },
+    {
+      "id": "TIER2-DIALOGS-DOCKS",
+      "title": "Complete Tier 2 dialogs and dock regressions",
+      "category": "feature",
+      "status": "verified",
+      "milestone": "Tier 2",
+      "slice": "dialogs-docks",
+      "summary": "Map Properties, Find Item, Waypoints, Layers, and the PropertiesDock regression guard were implemented and tested.",
+      "done_criteria": [
+        "Map Properties loads and returns local state",
+        "Find Item supports local catalog search with list and grid modes",
+        "WaypointsDock keeps a local model with selection and editing actions",
+        "Layers toolbar exposes stable actions and defaults",
+        "PropertiesDock instantiates all value widgets"
+      ],
+      "scope": [
+        "pyrme/ui/dialogs/map_properties.py",
+        "pyrme/ui/dialogs/find_item.py",
+        "pyrme/ui/docks/waypoints.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_map_properties_tier2.py",
+        "tests/python/test_find_item_tier2.py",
+        "tests/python/test_waypoints_layers_tier2.py",
+        "tests/python/test_properties_dock_tier2.py"
+      ],
+      "files_modified": [
+        "pyrme/ui/dialogs/map_properties.py",
+        "pyrme/ui/dialogs/find_item.py",
+        "pyrme/ui/docks/waypoints.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_map_properties_tier2.py",
+        "tests/python/test_find_item_tier2.py",
+        "tests/python/test_waypoints_layers_tier2.py",
+        "tests/python/test_properties_dock_tier2.py"
+      ],
+      "tests_run": [
+        "pytest tests/python -v --tb=short",
+        "ruff check pyrme/",
+        "mypy pyrme/ --ignore-missing-imports"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "Qt widget tests covered state round-trips and selection behavior",
+          "Layer toolbar defaults remained stable under regression test"
+        ]
+      },
+      "notes": [
+        "This slice filled the Tier 2 UI parity gap for dialogs, docks, toolbar actions, and the PropertiesDock regression."
+      ],
+      "recorded_at": "2026-04-07T00:00:00-03:00",
+      "updated_at": "2026-04-07T00:00:00-03:00",
+      "completed_at": "2026-04-07T00:00:00-03:00"
+    },
+    {
+      "id": "TIER2-QSS-NORMALIZATION",
+      "title": "Normalize Tier 2 QSS and token contracts",
+      "category": "feature",
+      "status": "verified",
+      "milestone": "Tier 2",
+      "slice": "qss",
+      "summary": "Shared stylesheet helpers now centralize Tier 2 dialog, dock, button, and item-view styling with alpha-safe color serialization.",
+      "done_criteria": [
+        "Alpha-aware QColor serialization is used for translucent theme tokens",
+        "Shared QSS helpers are reused across Tier 2 dialogs and docks",
+        "The dock title and toolbar token contract matches DESIGN.md"
+      ],
+      "scope": [
+        "pyrme/ui/styles/contracts.py",
+        "pyrme/ui/styles/__init__.py",
+        "pyrme/ui/styles/dark_theme.qss",
+        "pyrme/ui/dialogs/map_properties.py",
+        "pyrme/ui/dialogs/find_item.py",
+        "pyrme/ui/dialogs/goto_position.py",
+        "pyrme/ui/docks/waypoints.py",
+        "pyrme/ui/components/glass.py",
+        "pyrme/ui/components/position_input.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_tier2_style_contract.py"
+      ],
+      "files_modified": [
+        "pyrme/ui/styles/contracts.py",
+        "pyrme/ui/styles/__init__.py",
+        "pyrme/ui/styles/dark_theme.qss",
+        "pyrme/ui/dialogs/map_properties.py",
+        "pyrme/ui/dialogs/find_item.py",
+        "pyrme/ui/dialogs/goto_position.py",
+        "pyrme/ui/docks/waypoints.py",
+        "pyrme/ui/components/glass.py",
+        "pyrme/ui/components/position_input.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_tier2_style_contract.py"
+      ],
+      "tests_run": [
+        "pytest tests/python/test_tier2_style_contract.py -v --tb=short",
+        "pytest tests/python -v --tb=short",
+        "ruff check pyrme/",
+        "mypy pyrme/ --ignore-missing-imports"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "The new test suite confirmed alpha preservation and helper reuse",
+          "The full Python test suite remained green after the refactor"
+        ]
+      },
+      "notes": [
+        "This slice removed repeated inline style blocks from the Tier 2 surface area."
+      ],
+      "recorded_at": "2026-04-07T00:00:00-03:00",
+      "updated_at": "2026-04-07T00:00:00-03:00",
+      "completed_at": "2026-04-07T00:00:00-03:00"
+    },
+    {
+      "id": "M2-RUST-FOUNDATION",
+      "title": "Position + Tile PyO3 foundation",
+      "category": "feature",
+      "status": "verified",
+      "milestone": "M2",
+      "slice": "rust-core",
+      "summary": "Position and Tile were exposed through PyO3 with validated bounds and ordered stack semantics, then fully verified in the m2-position-tile worktree.",
+      "done_criteria": [
+        "Position and Tile exist as PyO3 classes in the rme_core module",
+        "Tile preserves ordered item stack behavior",
+        "Python stubs and py.typed markers exist for the module"
+      ],
+      "scope": [
+        "crates/rme_core/Cargo.toml",
+        "crates/rme_core/src/lib.rs",
+        "crates/rme_core/src/error.rs",
+        "crates/rme_core/src/position.rs",
+        "crates/rme_core/src/tile.rs",
+        "pyproject.toml",
+        "pyrme/rme_core.pyi",
+        "pyrme/py.typed",
+        "tests/python/test_rme_core_types.py"
+      ],
+      "files_modified": [
+        "crates/rme_core/Cargo.toml",
+        "crates/rme_core/src/lib.rs",
+        "crates/rme_core/src/error.rs",
+        "crates/rme_core/src/position.rs",
+        "crates/rme_core/src/tile.rs",
+        "pyproject.toml",
+        "pyrme/rme_core.pyi",
+        "pyrme/py.typed",
+        "tests/python/test_rme_core_types.py"
+      ],
+      "tests_run": [
+        "PYO3_PYTHON=\"$PWD/.venv-m2/bin/python\" LD_LIBRARY_PATH=\"/home/marcelo/.local/share/uv/python/cpython-3.12.12-linux-x86_64-gnu/lib\" cargo test --manifest-path crates/rme_core/Cargo.toml",
+        "PYO3_PYTHON=\"$PWD/.venv-m2/bin/python\" LD_LIBRARY_PATH=\"/home/marcelo/.local/share/uv/python/cpython-3.12.12-linux-x86_64-gnu/lib\" .venv-m2/bin/python -m pytest tests/python/test_rme_core_types.py -v --tb=short",
+        "PYO3_PYTHON=\"$PWD/.venv-m2/bin/python\" LD_LIBRARY_PATH=\"/home/marcelo/.local/share/uv/python/cpython-3.12.12-linux-x86_64-gnu/lib\" .venv-m2/bin/python -m pytest tests/python -v --tb=short",
+        "ruff check pyrme/ tests/python/ crates/rme_core/src",
+        "mypy tests/python/ --ignore-missing-imports"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "Full Rust and Python verification passed in the feat-m2-position-tile worktree using the .venv-m2 Python 3.12 environment",
+          "Worktree closeout commit: 7f974f4"
+        ]
+      },
+      "notes": [
+        "The canonical closeout path uses .venv-m2 with explicit PYO3_PYTHON and LD_LIBRARY_PATH so cargo test and Python integration tests run against the same Python 3.12 runtime."
+      ],
+      "recorded_at": "2026-04-07T00:00:00-03:00",
+      "updated_at": "2026-04-07T15:40:03-03:00",
+      "completed_at": "2026-04-07T15:40:03-03:00"
+    },
+    {
+      "id": "M5-SHELL-NAVIGATION",
+      "title": "Wire main window shell navigation state",
+      "category": "feature",
+      "status": "verified",
+      "milestone": "M5",
+      "slice": "shell-navigation",
+      "summary": "MainWindow now drives real shell navigation state, view visibility actions, and persisted layout without depending on the canvas backend.",
+      "done_criteria": [
+        "Go To Position updates the active shell position and floor state",
+        "Floor actions and minimap Z controls mutate shell state instead of logging stubs",
+        "Dock and toolbar visibility actions are exposed through the View menu",
+        "Window geometry, layout, floor, and visibility toggles persist through QSettings"
+      ],
+      "scope": [
+        "pyrme/ui/main_window.py",
+        "pyrme/ui/components/glass.py",
+        "pyrme/ui/dialogs/__init__.py",
+        "tests/python/test_main_window_navigation_m5.py"
+      ],
+      "files_modified": [
+        "pyrme/ui/main_window.py",
+        "pyrme/ui/components/glass.py",
+        "pyrme/ui/dialogs/__init__.py",
+        "tests/python/test_main_window_navigation_m5.py"
+      ],
+      "tests_run": [
+        "pytest tests/python/test_main_window_navigation_m5.py -v --tb=short",
+        "pytest tests/python -v --tb=short",
+        "ruff check pyrme/ tests/python/",
+        "mypy pyrme/ tests/python/ --ignore-missing-imports"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "The shell navigation slice was verified in the feat-m5-shell-navigation worktree",
+          "Worktree closeout commit: 28f458c",
+          "GSD status remained available, but headless new-milestone did not materialize milestone files in this environment"
+        ]
+      },
+      "notes": [
+        "This slice keeps canvas rendering out of scope and uses QSettings plus QMainWindow state APIs to persist the editor shell.",
+        "The new shell tests intentionally avoid top-level show() calls to keep offscreen Qt verification stable."
+      ],
+      "recorded_at": "2026-04-07T17:49:05-03:00",
+      "updated_at": "2026-04-07T17:49:05-03:00",
+      "completed_at": "2026-04-07T17:49:05-03:00"
+    }
+  ]
+}

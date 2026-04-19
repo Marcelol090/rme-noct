@@ -1,0 +1,86 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+.venv/
+venv/
+ENV/
+
+# Rust
+target/
+**/*.rs.bk
+Cargo.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.vs/
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# PyRME specific
+*.otbm
+*.otb
+*.dat
+*.spr
+*.map
+
+# Maturin
+*.whl
+
+# Coverage
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local git worktrees
+.worktrees/
+
+# ── GSD-2: Runtime / Ephemeral (per official docs) ──────────
+.gsd/auto.lock
+.gsd/completed-units.json
+.gsd/STATE.md
+.gsd/metrics.json
+.gsd/gsd.db
+.gsd/agent/
+.gsd/extensions/
+.gsd/sessions/
+.gsd/web-server.pid
+.gsd/web-preferences.json
+.gsd/activity/
+.gsd/runtime/
+.gsd/worktrees/
+.gsd/DISCUSSION-MANIFEST.json
+.gsd/milestones/**/*-CONTINUE.md
+.gsd/milestones/**/continue.md
+
+# Superpowers skills (cloned from git, not tracked)
+.superpowers/
+.codex
+*.log
+*_errors.txt
+
+# Legacy reference (do not commit)
+remeres-map-editor-redux/

@@ -1,0 +1,25 @@
+{
+  "name": "pyrme-devtools",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DevTools dependencies for PyRME (GSD-2 integration)",
+  "scripts": {
+    "setup": "bash scripts/setup-devtools.sh",
+    "gsd": "node scripts/run-gsd.mjs",
+    "gsd:patch": "node scripts/patch-gsd-pi.mjs",
+    "gsd:auto": "node scripts/run-gsd-auto.mjs",
+    "gsd:plan": "node scripts/run-gsd.mjs headless new-milestone --context-text",
+    "gsd:status": "node scripts/run-gsd.mjs headless query",
+    "stack": "python3 -m pyrme stack",
+    "preflight": "npm run stack",
+    "stack:json": "python3 -m pyrme stack --json",
+    "dev:check": "npm run preflight && python3 -m ruff check pyrme && python3 -m mypy pyrme",
+    "postinstall": "node scripts/patch-gsd-pi.mjs"
+  },
+  "devDependencies": {
+    "gsd-pi": "2.64.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
