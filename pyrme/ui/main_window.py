@@ -224,7 +224,7 @@ class MainWindow(QMainWindow):
         if not implements_canvas_widget_protocol(raw_canvas):
             raise TypeError("canvas_factory must return a canvas protocol widget")
         self._canvas: CanvasWidgetProtocol = raw_canvas
-        self.setCentralWidget(cast(QWidget, raw_canvas))
+        self.setCentralWidget(cast("QWidget", raw_canvas))
 
     def _setup_docks(self) -> None:
         """Create dock widgets for palettes and tools."""
