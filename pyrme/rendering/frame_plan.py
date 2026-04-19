@@ -68,4 +68,4 @@ def _contains_tile(
     position: MapPosition,
 ) -> bool:
     min_x, min_y, width, height = visible_rect
-    return min_x <= position.x < min_x + width and min_y <= position.y < min_y + height
+    return bool(min_x <= position.x < min_x + width and min_y <= position.y < min_y + height)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from typing import cast
 
 from PyQt6.QtCore import QSettings, QSize, Qt
 from PyQt6.QtGui import QAction, QActionGroup, QCloseEvent
@@ -11,13 +12,18 @@ from PyQt6.QtWidgets import (
     QDialog,
     QLabel,
     QMainWindow,
+    QMenu,
     QStatusBar,
     QToolBar,
     QWidget,
 )
 
 from pyrme import __app_name__, __version__
-from pyrme.ui.canvas_host import PlaceholderCanvasWidget
+from pyrme.ui.canvas_host import (
+    CanvasWidgetProtocol,
+    PlaceholderCanvasWidget,
+    implements_canvas_widget_protocol,
+)
 from pyrme.ui.dialogs import FindItemDialog, GotoPositionDialog, MapPropertiesDialog
 from pyrme.ui.docks import BrushPaletteDock, MinimapDock, PropertiesDock, WaypointsDock
 from pyrme.ui.legacy_menu_contract import LEGACY_TOP_LEVEL_MENUS, PHASE1_ACTIONS
@@ -90,7 +96,7 @@ class MainWindow(QMainWindow):
         assert menu_bar is not None
         menu_bar.clear()
         menu_bar.setFont(TYPOGRAPHY.ui_label())
-        self._menus: dict[str, object] = {}
+        self._menus: dict[str, QMenu] = {}
         for title in LEGACY_TOP_LEVEL_MENUS:
             menu = menu_bar.addMenu(self._menu_label(title))
             assert menu is not None
@@ -214,8 +220,11 @@ class MainWindow(QMainWindow):
 
     def _setup_central_widget(self) -> None:
         """Set up the central canvas area."""
-        self._canvas: QWidget = self._canvas_factory(self)
-        self.setCentralWidget(self._canvas)
+        raw_canvas = self._canvas_factory(self)
+        if not implements_canvas_widget_protocol(raw_canvas):
+            raise TypeError("canvas_factory must return a canvas protocol widget")
+        self._canvas: CanvasWidgetProtocol = raw_canvas
+        self.setCentralWidget(cast(QWidget, raw_canvas))
 
     def _setup_docks(self) -> None:
         """Create dock widgets for palettes and tools."""

@@ -405,7 +405,7 @@ class _CanvasShellStateMixin:
     def _document_name(self) -> str:
         if self.editor_context is None:
             return "Untitled"
-        return self.editor_context.session.document.name
+        return str(self.editor_context.session.document.name)
 
     def _state_changed(self) -> None:
         raise NotImplementedError
