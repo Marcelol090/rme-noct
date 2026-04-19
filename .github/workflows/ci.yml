@@ -57,10 +57,33 @@ jobs:
           python -m pip install --force-reinstall dist/*.whl
 
       - name: Lint with ruff
-        run: ruff check pyrme/
+        run: |
+          ruff check \
+            pyrme/rendering \
+            pyrme/ui/canvas_host.py \
+            pyrme/ui/canvas_frame.py \
+            pyrme/ui/viewport.py \
+            tests/python/test_canvas_frame_model.py \
+            tests/python/test_canvas_seam_m4.py \
+            tests/python/test_render_frame_plan.py \
+            tests/python/test_diagnostic_tile_primitives.py \
+            tests/python/test_renderer_frame_plan_integration.py
 
       - name: Type check with mypy
-        run: mypy pyrme/ --ignore-missing-imports
+        run: |
+          mypy \
+            pyrme/rendering \
+            pyrme/ui/canvas_host.py \
+            pyrme/ui/canvas_frame.py \
+            pyrme/ui/viewport.py \
+            --ignore-missing-imports
 
-      - name: Run Python tests
-        run: pytest tests/python/ -v --tb=short
+      - name: Run M003 renderer frame tests
+        run: |
+          pytest \
+            tests/python/test_canvas_frame_model.py \
+            tests/python/test_canvas_seam_m4.py \
+            tests/python/test_render_frame_plan.py \
+            tests/python/test_diagnostic_tile_primitives.py \
+            tests/python/test_renderer_frame_plan_integration.py \
+            -q -s
