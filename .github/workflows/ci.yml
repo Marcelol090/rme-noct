@@ -47,7 +47,9 @@ jobs:
           pip install -e ".[dev]"
 
       - name: Build Rust core
-        run: maturin develop
+        run: |
+          maturin build --release --out dist
+          python -m pip install --force-reinstall dist/*.whl
 
       - name: Lint with ruff
         run: ruff check pyrme/
