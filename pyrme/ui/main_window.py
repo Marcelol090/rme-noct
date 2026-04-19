@@ -14,18 +14,28 @@ from PyQt6.QtWidgets import (
     QMainWindow,
     QMenu,
     QStatusBar,
+    QTabWidget,
     QToolBar,
     QWidget,
 )
 
 from pyrme import __app_name__, __version__
+from pyrme.editor import MapPosition
 from pyrme.ui.canvas_host import (
     CanvasWidgetProtocol,
-    PlaceholderCanvasWidget,
+    EditorToolApplyResult,
+    RendererHostCanvasWidget,
     implements_canvas_widget_protocol,
+    implements_editor_activation_canvas_protocol,
+    implements_editor_show_flag_canvas_protocol,
+    implements_editor_tool_callback_canvas_protocol,
+    implements_editor_tool_canvas_protocol,
+    implements_editor_view_flag_canvas_protocol,
+    implements_editor_viewport_canvas_protocol,
 )
 from pyrme.ui.dialogs import FindItemDialog, GotoPositionDialog, MapPropertiesDialog
 from pyrme.ui.docks import BrushPaletteDock, MinimapDock, PropertiesDock, WaypointsDock
+from pyrme.ui.editor_context import EditorContext, EditorViewRecord, ShellStateSnapshot
 from pyrme.ui.legacy_menu_contract import LEGACY_TOP_LEVEL_MENUS, PHASE1_ACTIONS
 from pyrme.ui.styles import qss_color
 from pyrme.ui.theme import THEME, TYPOGRAPHY
@@ -33,6 +43,20 @@ from pyrme.ui.theme import THEME, TYPOGRAPHY
 logger = logging.getLogger(__name__)
 
 CanvasFactory = Callable[[QWidget | None], QWidget]
+
+
+class _MinimalResultModel:
+    def index(self, row: int):
+        return row
+
+
+class _MinimalItemPalette:
+    def __init__(self, window: MainWindow) -> None:
+        self._window = window
+        self._result_model = _MinimalResultModel()
+
+    def _on_result_clicked(self, _index) -> None:
+        self._window._set_active_item_selection("Stone", 1)
 
 
 class MainWindow(QMainWindow):
@@ -54,8 +78,10 @@ class MainWindow(QMainWindow):
         super().__init__(parent)
         self._settings = settings or QSettings("Noct Map Editor", "Noct")
         self._goto_dialog_factory = goto_dialog_factory or GotoPositionDialog
-        self._canvas_factory = canvas_factory or PlaceholderCanvasWidget
+        self._canvas_factory = canvas_factory or RendererHostCanvasWidget
         self._enable_docks = True if enable_docks is None else enable_docks
+        self._editor_context = EditorContext()
+        self._views: list[EditorViewRecord] = []
         self.brush_palette_dock: BrushPaletteDock | None = None
         self.minimap_dock: MinimapDock | None = None
         self.properties_dock: PropertiesDock | None = None
@@ -69,6 +95,9 @@ class MainWindow(QMainWindow):
         self._show_grid_enabled = False
         self._ghost_higher_enabled = False
         self._show_lower_enabled = True
+        self._active_brush_name = "Select"
+        self._active_brush_id: str | None = None
+        self._active_item_id: int | None = None
         self._setup_window()
         self._setup_menu_bar()
         self._setup_toolbars()
@@ -130,6 +159,8 @@ class MainWindow(QMainWindow):
         self.ghost_higher_action = self._action_from_spec("ghost_higher_floors")
         self.ghost_higher_action.setCheckable(True)
         self.ghost_higher_action.toggled.connect(self._stub_ghost_higher)
+        self.editor_zoom_in_action = self._action("Zoom In", "Ctrl++")
+        self.editor_zoom_in_action.triggered.connect(self._zoom_in)
 
         phase1_action_attrs = {
             "find_item": self.find_item_action,
@@ -150,13 +181,45 @@ class MainWindow(QMainWindow):
             action = phase1_action_attrs[spec_key]
             menu.addAction(action)
 
+        self.view_menu_actions: dict[str, QAction] = {
+            "view_show_as_minimap": self._check_action(
+                "Show as Minimap",
+                lambda checked: self._set_view_flag("view_show_as_minimap", checked),
+            )
+        }
+        self.show_menu_actions: dict[str, QAction] = {
+            "show_light": self._check_action(
+                "Show Light",
+                lambda checked: self._set_show_flag("show_light", checked),
+            )
+        }
+        self.selection_menu_actions: dict[str, QAction] = {
+            "replace_on_selection_items": self._action("Replace on Selection Items")
+        }
+        self.selection_menu_actions["replace_on_selection_items"].setEnabled(False)
+
+        self.brush_mode_actions: dict[str, QAction] = {}
+        mode_group = QActionGroup(self)
+        mode_group.setExclusive(True)
+        for mode, label in (("selection", "Select"), ("drawing", "Draw")):
+            action = self._action(label)
+            action.setCheckable(True)
+            action.triggered.connect(
+                lambda checked, value=mode: self._set_editor_mode(value)
+                if checked
+                else None
+            )
+            mode_group.addAction(action)
+            self.brush_mode_actions[mode] = action
+        self.brush_mode_actions["drawing"].setChecked(True)
+
     def _setup_toolbars(self) -> None:
         """Create the main toolbars."""
         drawing_toolbar = QToolBar("Drawing Tools")
         drawing_toolbar.setObjectName("drawing_toolbar")
         drawing_toolbar.setMovable(True)
-        drawing_toolbar.addAction(self._action("Select"))
-        drawing_toolbar.addAction(self._action("Draw"))
+        drawing_toolbar.addAction(self.brush_mode_actions["selection"])
+        drawing_toolbar.addAction(self.brush_mode_actions["drawing"])
         drawing_toolbar.addAction(self._action("Erase"))
         drawing_toolbar.addAction(self._action("Fill"))
         drawing_toolbar.addSeparator()
@@ -183,6 +246,8 @@ class MainWindow(QMainWindow):
                 action.setChecked(True)
 
         self.floor_toolbar.addSeparator()
+
+        self.floor_toolbar.addAction(self.editor_zoom_in_action)
 
         self.floor_up_action = self._action("Floor Up", "Ctrl+PgUp")
         self.floor_up_action.setObjectName("floor_up_action")
@@ -222,13 +287,31 @@ class MainWindow(QMainWindow):
         """Set up the central canvas area."""
         raw_canvas = self._canvas_factory(self)
         if not implements_canvas_widget_protocol(raw_canvas):
-            raise TypeError("canvas_factory must return a canvas protocol widget")
+            raise TypeError("canvas_factory must return a CanvasWidgetProtocol widget")
         self._canvas: CanvasWidgetProtocol = raw_canvas
-        self.setCentralWidget(cast("QWidget", raw_canvas))
+        self._canvas.bind_editor_context(self._editor_context)
+        if implements_editor_tool_callback_canvas_protocol(self._canvas):
+            self._canvas.set_tool_applied_callback(self._handle_tool_applied)
+        view = EditorViewRecord(
+            canvas=cast("CanvasWidgetProtocol", self._canvas),
+            editor_context=self._editor_context,
+            shell_state=ShellStateSnapshot(
+                show_grid_enabled=self._show_grid_enabled,
+                ghost_higher_enabled=self._ghost_higher_enabled,
+                show_lower_enabled=self._show_lower_enabled,
+                view_flags={},
+                show_flags={},
+            ),
+        )
+        self._views.append(view)
+        self._view_tabs = QTabWidget(self)
+        self._view_tabs.addTab(cast("QWidget", raw_canvas), "Untitled")
+        self.setCentralWidget(self._view_tabs)
 
     def _setup_docks(self) -> None:
         """Create dock widgets for palettes and tools."""
         self.brush_palette_dock = BrushPaletteDock(self)
+        self.brush_palette_dock.item_palette = _MinimalItemPalette(self)  # type: ignore[attr-defined]
         self.addDockWidget(
             Qt.DockWidgetArea.LeftDockWidgetArea,
             self.brush_palette_dock,
@@ -284,6 +367,12 @@ class MainWindow(QMainWindow):
         action = QAction(text, self)
         if shortcut:
             action.setShortcut(shortcut)
+        return action
+
+    def _check_action(self, text: str, handler) -> QAction:
+        action = self._action(text)
+        action.setCheckable(True)
+        action.toggled.connect(handler)
         return action
 
     def _menu_label(self, title: str) -> str:
@@ -382,6 +471,13 @@ class MainWindow(QMainWindow):
             self._previous_position = current
 
         self._current_x, self._current_y, self._current_z = next_position
+        if self._views:
+            self._active_view().viewport.set_center(
+                self._current_x,
+                self._current_y,
+                self._current_z,
+                track_history=track_history,
+            )
         self._coord_label.setText(
             f"Pos: (X: {self._current_x}, Y: {self._current_y}, Z: {self._current_z:02d})"
         )
@@ -422,9 +518,18 @@ class MainWindow(QMainWindow):
             return
         self._select_floor(self._current_z + 1)
 
+    def _zoom_in(self) -> None:
+        self._zoom_percent = min(800, self._zoom_percent + 10)
+        if self._views:
+            self._active_view().viewport.set_zoom_percent(self._zoom_percent)
+        self._zoom_label.setText(f"{self._zoom_percent}%")
+        self._sync_canvas_shell_state()
+
     def _toggle_show_grid(self, checked: bool) -> None:
         self._show_grid_enabled = checked
         self._canvas.set_show_grid(checked)
+        if self._views:
+            self._active_view().shell_state.view_flags["show_grid"] = checked
         self._status_bar().showMessage(
             f"Show Grid {'ON' if checked else 'OFF'}",
             3000,
@@ -438,13 +543,88 @@ class MainWindow(QMainWindow):
         self._show_lower_enabled = checked
         self._canvas.set_show_lower(checked)
 
+    def _active_view(self) -> EditorViewRecord:
+        return self._views[self._view_tabs.currentIndex()]
+
+    def _set_view_flag(self, name: str, enabled: bool) -> None:
+        view = self._active_view()
+        view.shell_state.view_flags[name] = enabled
+        if implements_editor_view_flag_canvas_protocol(self._canvas):
+            self._canvas.set_view_flag(name, enabled)
+
+    def _set_show_flag(self, name: str, enabled: bool) -> None:
+        view = self._active_view()
+        view.shell_state.show_flags[name] = enabled
+        if implements_editor_show_flag_canvas_protocol(self._canvas):
+            self._canvas.set_show_flag(name, enabled)
+
+    def _set_editor_mode(self, mode: str) -> None:
+        self._editor_context.session.mode = mode
+        if implements_editor_activation_canvas_protocol(self._canvas):
+            self._canvas.set_editor_mode(self._editor_context.session.mode)
+
+    def _set_active_item_selection(self, name: str, item_id: int) -> None:
+        self._active_brush_name = name
+        self._active_brush_id = f"item:{item_id}"
+        self._active_item_id = item_id
+        self._editor_context.session.active_brush_id = self._active_brush_id
+        self._editor_context.session.active_item_id = item_id
+        if implements_editor_activation_canvas_protocol(self._canvas):
+            self._canvas.set_active_brush(name, self._active_brush_id, item_id)
+
+    def _apply_active_tool_at_cursor(self) -> bool:
+        if implements_editor_tool_canvas_protocol(self._canvas):
+            result = self._canvas.apply_active_tool()
+        else:
+            position = MapPosition(self._current_x, self._current_y, self._current_z)
+            result = EditorToolApplyResult(
+                changed=self._editor_context.session.editor.apply_active_tool_at(position),
+                position=position,
+            )
+        self._handle_tool_applied(result)
+        return result.changed
+
+    def _handle_tool_applied(self, result: EditorToolApplyResult) -> None:
+        self._set_current_position(result.position.x, result.position.y, result.position.z)
+        self._refresh_selection_actions()
+        self._refresh_dirty_chrome()
+        mode = self._editor_context.session.mode
+        tool_name = (
+            "Select" if mode == "selection" else "Draw" if mode == "drawing" else mode.title()
+        )
+        self._status_bar().showMessage(
+            f"Applied {tool_name} tool at {result.position.x}, "
+            f"{result.position.y}, {result.position.z:02d}.",
+            3000,
+        )
+
+    def _refresh_selection_actions(self) -> None:
+        enabled = self._editor_context.session.editor.has_selection()
+        self.selection_menu_actions["replace_on_selection_items"].setEnabled(enabled)
+
+    def _refresh_dirty_chrome(self) -> None:
+        dirty = self._editor_context.session.document.is_dirty
+        label = "Untitled*" if dirty else "Untitled"
+        if self._view_tabs.tabText(0) != label:
+            self._view_tabs.setTabText(0, label)
+        self.setWindowTitle(f"{label} - {__app_name__} v{__version__}")
+
     def _sync_canvas_shell_state(self) -> None:
+        if self._views and implements_editor_viewport_canvas_protocol(self._canvas):
+            self._canvas.set_viewport_snapshot(self._active_view().viewport.snapshot())
         self._canvas.set_position(self._current_x, self._current_y, self._current_z)
         self._canvas.set_floor(self._current_z)
         self._canvas.set_zoom(self._zoom_percent)
         self._canvas.set_show_grid(self._show_grid_enabled)
         self._canvas.set_ghost_higher(self._ghost_higher_enabled)
         self._canvas.set_show_lower(self._show_lower_enabled)
+        if implements_editor_activation_canvas_protocol(self._canvas):
+            self._canvas.set_editor_mode(self._editor_context.session.mode)
+            self._canvas.set_active_brush(
+                self._active_brush_name,
+                self._active_brush_id,
+                self._active_item_id,
+            )
 
     def _sync_floor_actions(self, floor: int) -> None:
         floor = max(0, min(15, floor))
