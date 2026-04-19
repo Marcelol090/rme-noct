@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from os import cpu_count
 from typing import Any
 
-
 VIEW_FLAG_DEFAULTS: dict[str, bool] = {
     "show_all_floors": False,
     "show_as_minimap": False,

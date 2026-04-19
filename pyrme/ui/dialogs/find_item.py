@@ -7,7 +7,7 @@ Provides item/creature search with type and property filters.
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
-from enum import Enum
+from enum import StrEnum
 
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtWidgets import (
@@ -40,7 +40,7 @@ from pyrme.ui.styles import (
 from pyrme.ui.theme import TYPOGRAPHY
 
 
-class FindItemResultMode(str, Enum):
+class FindItemResultMode(StrEnum):
     """Supported local result presentation modes."""
 
     LIST = "list"
