@@ -4,9 +4,9 @@
 **Active Slice:** none
 **Active Task:** none
 **Phase:** complete
-**Next Action:** Expose sprite draw command counts/diagnostics through the renderer host without painting pixels yet.
-**Last Updated:** 2026-04-20T17:04:57-03:00
-**Requirements Status:** 0 active · 24 validated · 0 deferred · 3 out of scope
+**Next Action:** Connect sprite draw plan generation to live canvas frame data with fixture catalog and atlas inputs, still without real pixel painting.
+**Last Updated:** 2026-04-20T17:25:58-03:00
+**Requirements Status:** 0 active · 25 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
@@ -33,6 +33,7 @@
 - `CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER` is complete: DAT-like item sprite records now build `SpriteCatalog` entries with adapter-owned metadata while frame planning remains free of DAT adapter imports.
 - `CANVAS-80-SPR-FRAME-METADATA` is complete: SPR-like frame records now attach sorted frame metadata to matching `SpriteCatalog` entries without parsing files, decoding pixels, or planning atlas placement.
 - `CANVAS-90-SPRITE-DRAW-COMMAND-PLAN` is complete: resolved sprite-frame data now converts into deterministic atlas-backed draw commands with source/destination rectangles and missing draw-input reporting, without painting pixels.
+- `CANVAS-100-SPRITE-DRAW-DIAGNOSTICS` is complete: the canvas host now accepts sprite draw plans and reports command counts plus unresolved sprite ids in diagnostics, without painting sprites.
 
 ## Blockers
 
