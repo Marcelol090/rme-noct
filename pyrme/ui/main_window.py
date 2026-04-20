@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import QSettings, QSize, Qt
 from PyQt6.QtGui import QAction, QActionGroup, QCloseEvent
@@ -40,23 +40,12 @@ from pyrme.ui.legacy_menu_contract import LEGACY_TOP_LEVEL_MENUS, PHASE1_ACTIONS
 from pyrme.ui.styles import qss_color
 from pyrme.ui.theme import THEME, TYPOGRAPHY
 
+if TYPE_CHECKING:
+    from pyrme.ui.models.item_palette_types import ItemEntry
+
 logger = logging.getLogger(__name__)
 
 CanvasFactory = Callable[[QWidget | None], QWidget]
-
-
-class _MinimalResultModel:
-    def index(self, row: int):
-        return row
-
-
-class _MinimalItemPalette:
-    def __init__(self, window: MainWindow) -> None:
-        self._window = window
-        self._result_model = _MinimalResultModel()
-
-    def _on_result_clicked(self, _index) -> None:
-        self._window._set_active_item_selection("Stone", 1)
 
 
 class MainWindow(QMainWindow):
@@ -311,7 +300,7 @@ class MainWindow(QMainWindow):
     def _setup_docks(self) -> None:
         """Create dock widgets for palettes and tools."""
         self.brush_palette_dock = BrushPaletteDock(self)
-        self.brush_palette_dock.item_palette = _MinimalItemPalette(self)  # type: ignore[attr-defined]
+        self.brush_palette_dock.item_selected.connect(self._handle_item_palette_selection)
         self.addDockWidget(
             Qt.DockWidgetArea.LeftDockWidgetArea,
             self.brush_palette_dock,
@@ -440,10 +429,25 @@ class MainWindow(QMainWindow):
         )
 
     def _show_jump_to_brush(self) -> None:
-        self._status_bar().showMessage("Jump to Brush is not available yet.", 3000)
+        if self.brush_palette_dock is None:
+            self._status_bar().showMessage("Brush palette is not available.", 3000)
+            return
+        if self._active_item_id is not None:
+            self.brush_palette_dock.focus_item_palette(self._active_brush_name)
+            self._status_bar().showMessage(
+                f"Item palette focused for {self._active_brush_name}.",
+                3000,
+            )
+            return
+        self.brush_palette_dock.show()
+        self._status_bar().showMessage("Brush palette focused.", 3000)
 
     def _show_jump_to_item(self) -> None:
-        self._status_bar().showMessage("Jump to Item is not available yet.", 3000)
+        if self.brush_palette_dock is None:
+            self._status_bar().showMessage("Item palette is not available.", 3000)
+            return
+        self.brush_palette_dock.focus_item_palette()
+        self._status_bar().showMessage("Item palette focused.", 3000)
 
     def _describe_floor(self, z: int) -> str:
         if z < 7:
@@ -562,6 +566,13 @@ class MainWindow(QMainWindow):
         self._editor_context.session.mode = mode
         if implements_editor_activation_canvas_protocol(self._canvas):
             self._canvas.set_editor_mode(self._editor_context.session.mode)
+
+    def _handle_item_palette_selection(self, item: ItemEntry) -> None:
+        self._set_active_item_selection(item.name, item.item_id)
+        self._status_bar().showMessage(
+            f"Selected item {item.name} (#{item.item_id}).",
+            3000,
+        )
 
     def _set_active_item_selection(self, name: str, item_id: int) -> None:
         self._active_brush_name = name

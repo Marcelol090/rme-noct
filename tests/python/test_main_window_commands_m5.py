@@ -113,7 +113,48 @@ def test_main_window_stub_navigation_commands_report_status(
     assert _status_message(window) == "No previous position stored."
 
     window.jump_to_brush_action.trigger()
-    assert _status_message(window) == "Jump to Brush is not available yet."
+    assert window.brush_palette_dock is not None
+    assert _status_message(window) == "Brush palette focused."
 
     window.jump_to_item_action.trigger()
-    assert _status_message(window) == "Jump to Item is not available yet."
+    assert window.brush_palette_dock.current_palette() == "Item"
+    assert _status_message(window) == "Item palette focused."
+
+
+def test_main_window_item_palette_selection_updates_active_brush(
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    window = MainWindow(settings=_build_settings(tmp_path, "item-selection.ini"))
+    qtbot.addWidget(window)
+
+    assert window.brush_palette_dock is not None
+    palette = window.brush_palette_dock.item_palette
+    assert palette is not None
+
+    palette._on_result_clicked(palette._result_model.index(0))
+
+    assert window._active_brush_name == "Stone"
+    assert window._editor_context.session.active_item_id == 1
+    assert window._editor_context.session.active_brush_id == "item:1"
+    assert _status_message(window) == "Selected item Stone (#1)."
+
+
+def test_main_window_jump_to_brush_focuses_selected_item(
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    window = MainWindow(settings=_build_settings(tmp_path, "jump-item.ini"))
+    qtbot.addWidget(window)
+
+    assert window.brush_palette_dock is not None
+    palette = window.brush_palette_dock.item_palette
+    assert palette is not None
+    palette._on_result_clicked(palette._result_model.index(0))
+
+    window.brush_palette_dock.select_palette("RAW")
+    window.jump_to_brush_action.trigger()
+
+    assert window.brush_palette_dock.current_palette() == "Item"
+    assert window.brush_palette_dock._search_bar.text() == "Stone"
+    assert _status_message(window) == "Item palette focused for Stone."
