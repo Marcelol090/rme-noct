@@ -10,6 +10,17 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 ## Validated
 
+### R046 - Sprite catalog must accept DAT-like adapter records
+- Class: core-capability
+- Status: validated
+- Description: The renderer-facing sprite catalog must be constructible from DAT-like item sprite records without forcing renderer frame planning to import DAT adapter types.
+- Why it matters: Real client asset integration needs a bridge from item metadata to sprite lookup, but renderer planning must stay testable and independent from file parsing.
+- Source: execution
+- Primary owning slice: CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER
+- Supporting slices: CANVAS-60-SPRITE-CATALOG-SEAM
+- Validation: validated
+- Notes: Verified by `tests/python/test_sprite_catalog_adapter.py`; `DatSpriteRecord` feeds `SpriteCatalog` entries with deterministic adapter-owned metadata, and `build_sprite_frame` continues to report unresolved IDs through the catalog seam.
+
 ### R045 - Renderer host must consume frame plans as diagnostic draw primitives
 - Class: core-capability
 - Status: validated

@@ -4,9 +4,9 @@
 **Active Slice:** none
 **Active Task:** none
 **Phase:** complete
-**Next Action:** Choose the next renderer slice: DAT/SPR adapter into `SpriteCatalog` or atlas/sprite draw command planning.
-**Last Updated:** 2026-04-20T16:17:41-03:00
-**Requirements Status:** 0 active · 21 validated · 0 deferred · 3 out of scope
+**Next Action:** Choose the next renderer slice: SPR frame extraction metadata or atlas/sprite draw command planning.
+**Last Updated:** 2026-04-20T16:35:20-03:00
+**Requirements Status:** 0 active · 22 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
@@ -30,6 +30,7 @@
 - Workflow health remediation is complete: `npm run preflight` now reflects the integrated Codex session, optional local agent TOML files, optional standalone Context7 CLI, and Windows `.venv` Python runtime.
 - `M005/S01` starts as a planning slice for a sprite catalog seam; metadata stays `None` by default, `build_sprite_frame` must not read metadata in this milestone, and `DatDatabase` remains adapter-level only.
 - `CANVAS-60-SPRITE-CATALOG-SEAM` is complete: `SpriteCatalog`, `SpriteCatalogEntry`, and `build_sprite_frame` now resolve frame-plan item ids and report deterministic unresolved ids without reading metadata or importing DAT/SPR adapter types.
+- `CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER` is complete: DAT-like item sprite records now build `SpriteCatalog` entries with adapter-owned metadata while frame planning remains free of DAT adapter imports.
 
 ## Blockers
 
