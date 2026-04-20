@@ -9,11 +9,23 @@ from pyrme.rendering.frame_plan import (
     RenderTileCommand,
     build_render_frame_plan,
 )
+from pyrme.rendering.sprite_frame import (
+    SpriteCatalog,
+    SpriteCatalogEntry,
+    SpriteFrame,
+    SpriteTileCommand,
+    build_sprite_frame,
+)
 
 __all__ = [
     "DiagnosticTilePrimitive",
     "RenderFramePlan",
     "RenderTileCommand",
+    "SpriteCatalog",
+    "SpriteCatalogEntry",
+    "SpriteFrame",
+    "SpriteTileCommand",
     "build_diagnostic_tile_primitives",
     "build_render_frame_plan",
+    "build_sprite_frame",
 ]

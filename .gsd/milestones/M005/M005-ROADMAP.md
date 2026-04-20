@@ -2,7 +2,7 @@
 
 | Slice | Status | Goal |
 |---|---|---|
-| S01 — CANVAS-60-SPRITE-CATALOG-SEAM | Planning | Define sprite catalog entries, build sprite-aware frame data, and report unresolved item IDs. |
+| S01 — CANVAS-60-SPRITE-CATALOG-SEAM | Complete | Define sprite catalog entries, build sprite-aware frame data, and report unresolved item IDs. |
 
 ## Stop Condition
 
