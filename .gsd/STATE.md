@@ -4,9 +4,9 @@
 **Active Slice:** none
 **Active Task:** none
 **Phase:** complete
-**Next Action:** Plan atlas/sprite draw commands from resolved sprite metadata without drawing pixels yet.
-**Last Updated:** 2026-04-20T16:48:49-03:00
-**Requirements Status:** 0 active · 23 validated · 0 deferred · 3 out of scope
+**Next Action:** Expose sprite draw command counts/diagnostics through the renderer host without painting pixels yet.
+**Last Updated:** 2026-04-20T17:04:57-03:00
+**Requirements Status:** 0 active · 24 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
@@ -32,6 +32,7 @@
 - `CANVAS-60-SPRITE-CATALOG-SEAM` is complete: `SpriteCatalog`, `SpriteCatalogEntry`, and `build_sprite_frame` now resolve frame-plan item ids and report deterministic unresolved ids without reading metadata or importing DAT/SPR adapter types.
 - `CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER` is complete: DAT-like item sprite records now build `SpriteCatalog` entries with adapter-owned metadata while frame planning remains free of DAT adapter imports.
 - `CANVAS-80-SPR-FRAME-METADATA` is complete: SPR-like frame records now attach sorted frame metadata to matching `SpriteCatalog` entries without parsing files, decoding pixels, or planning atlas placement.
+- `CANVAS-90-SPRITE-DRAW-COMMAND-PLAN` is complete: resolved sprite-frame data now converts into deterministic atlas-backed draw commands with source/destination rectangles and missing draw-input reporting, without painting pixels.
 
 ## Blockers
 
