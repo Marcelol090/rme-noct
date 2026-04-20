@@ -4,9 +4,9 @@
 **Active Slice:** none
 **Active Task:** none
 **Phase:** complete
-**Next Action:** Choose the next renderer slice: SPR frame extraction metadata or atlas/sprite draw command planning.
-**Last Updated:** 2026-04-20T16:35:20-03:00
-**Requirements Status:** 0 active · 22 validated · 0 deferred · 3 out of scope
+**Next Action:** Plan atlas/sprite draw commands from resolved sprite metadata without drawing pixels yet.
+**Last Updated:** 2026-04-20T16:48:49-03:00
+**Requirements Status:** 0 active · 23 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
@@ -31,6 +31,7 @@
 - `M005/S01` starts as a planning slice for a sprite catalog seam; metadata stays `None` by default, `build_sprite_frame` must not read metadata in this milestone, and `DatDatabase` remains adapter-level only.
 - `CANVAS-60-SPRITE-CATALOG-SEAM` is complete: `SpriteCatalog`, `SpriteCatalogEntry`, and `build_sprite_frame` now resolve frame-plan item ids and report deterministic unresolved ids without reading metadata or importing DAT/SPR adapter types.
 - `CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER` is complete: DAT-like item sprite records now build `SpriteCatalog` entries with adapter-owned metadata while frame planning remains free of DAT adapter imports.
+- `CANVAS-80-SPR-FRAME-METADATA` is complete: SPR-like frame records now attach sorted frame metadata to matching `SpriteCatalog` entries without parsing files, decoding pixels, or planning atlas placement.
 
 ## Blockers
 

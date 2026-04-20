@@ -10,6 +10,17 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 ## Validated
 
+### R047 - Sprite catalog must carry SPR-like frame metadata
+- Class: core-capability
+- Status: validated
+- Description: The renderer-facing sprite catalog must support deterministic SPR-like frame metadata by `sprite_id` before atlas placement or real drawing begins.
+- Why it matters: Real sprite rendering needs frame dimensions and offsets, but renderer planning must keep file parsing, pixel decoding, and atlas placement separate from catalog metadata.
+- Source: execution
+- Primary owning slice: CANVAS-80-SPR-FRAME-METADATA
+- Supporting slices: CANVAS-60-SPRITE-CATALOG-SEAM, CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER
+- Validation: validated
+- Notes: Verified by `tests/python/test_sprite_catalog_adapter.py`; `SprFrameRecord` attaches sorted `sprite_frames` metadata to matching `SpriteCatalogEntry` values while DAT-only records receive empty frame metadata.
+
 ### R046 - Sprite catalog must accept DAT-like adapter records
 - Class: core-capability
 - Status: validated
