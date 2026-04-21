@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from PyQt6.QtCore import QSettings
 from PyQt6.QtWidgets import QDialog
 
+from pyrme.ui.dialogs import FindItemQuery
 from pyrme.ui.legacy_menu_contract import PHASE1_ACTIONS
 from pyrme.ui.main_window import MainWindow
 
@@ -106,14 +107,192 @@ def test_main_window_stub_navigation_commands_report_status(
     qtbot,
     tmp_path: Path,
 ) -> None:
-    window = MainWindow(settings=_build_settings(tmp_path, "status.ini"))
+    class _CancelDialog:
+        def __init__(self, parent=None) -> None:
+            self.parent = parent
+
+        def exec(self) -> int:
+            return int(QDialog.DialogCode.Rejected)
+
+        def selected_result(self):
+            return None
+
+        def last_search_map_query(self):
+            return None
+
+    window = MainWindow(
+        settings=_build_settings(tmp_path, "status.ini"),
+        jump_to_brush_dialog_factory=_CancelDialog,
+        jump_to_item_dialog_factory=_CancelDialog,
+    )
     qtbot.addWidget(window)
 
     window.goto_previous_position_action.trigger()
     assert _status_message(window) == "No previous position stored."
 
     window.jump_to_brush_action.trigger()
-    assert _status_message(window) == "Jump to Brush is not available yet."
+    assert window._active_brush_id is None
+    assert window._active_item_id is None
 
     window.jump_to_item_action.trigger()
-    assert _status_message(window) == "Jump to Item is not available yet."
+    assert window._active_brush_id is None
+    assert window._active_item_id is None
+
+
+def test_main_window_find_item_selection_updates_session_state(
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    class _FindItemDialog:
+        def __init__(self, parent=None) -> None:
+            self.parent = parent
+
+        def exec(self) -> int:
+            return int(QDialog.DialogCode.Accepted)
+
+        def selected_result(self):
+            class _Result:
+                name = "Gold Coin"
+                server_id = 2148
+
+            return _Result()
+
+    window = MainWindow(
+        settings=_build_settings(tmp_path, "find-item-selection.ini"),
+        find_item_dialog_factory=_FindItemDialog,
+    )
+    qtbot.addWidget(window)
+
+    window._show_find_item()
+
+    assert window._active_brush_name == "Gold Coin"
+    assert window._editor_context.session.active_item_id == 2148
+    assert window._editor_context.session.active_brush_id == "item:2148"
+    assert _status_message(window) == "Selected item Gold Coin (#2148)."
+
+
+def test_main_window_jump_to_item_action_updates_session_state(
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    class _JumpToItemDialog:
+        def __init__(self, parent=None) -> None:
+            self.parent = parent
+
+        def exec(self) -> int:
+            return int(QDialog.DialogCode.Accepted)
+
+        def selected_result(self):
+            class _Result:
+                name = "Gold Coin"
+                server_id = 2148
+
+            return _Result()
+
+    window = MainWindow(
+        settings=_build_settings(tmp_path, "jump-to-item-selection.ini"),
+        jump_to_item_dialog_factory=_JumpToItemDialog,
+    )
+    qtbot.addWidget(window)
+
+    window.jump_to_item_action.trigger()
+
+    assert window._active_brush_name == "Gold Coin"
+    assert window._editor_context.session.active_item_id == 2148
+    assert window._editor_context.session.active_brush_id == "item:2148"
+    assert _status_message(window) == "Selected item Gold Coin (#2148)."
+
+
+def test_main_window_jump_to_item_reports_search_map_gap(
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    class _JumpToItemDialog:
+        def __init__(self, parent=None) -> None:
+            self.parent = parent
+
+        def exec(self) -> int:
+            return int(QDialog.DialogCode.Rejected)
+
+        def selected_result(self):
+            return None
+
+        def last_search_map_query(self):
+            return FindItemQuery(search_text="coin")
+
+    window = MainWindow(
+        settings=_build_settings(tmp_path, "jump-to-item-search-map.ini"),
+        jump_to_item_dialog_factory=_JumpToItemDialog,
+    )
+    qtbot.addWidget(window)
+
+    window.jump_to_item_action.trigger()
+
+    assert _status_message(window) == "Search on map for 'coin' is not available yet."
+
+
+def test_main_window_jump_to_brush_action_selects_palette_result(
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    class _JumpToBrushDialog:
+        def __init__(self, parent=None) -> None:
+            self.parent = parent
+
+        def exec(self) -> int:
+            return int(QDialog.DialogCode.Accepted)
+
+        def selected_result(self):
+            class _Result:
+                kind = "palette"
+                name = "RAW"
+                palette_name = "RAW"
+
+            return _Result()
+
+    window = MainWindow(
+        settings=_build_settings(tmp_path, "jump-to-brush-palette.ini"),
+        jump_to_brush_dialog_factory=_JumpToBrushDialog,
+    )
+    qtbot.addWidget(window)
+
+    window.jump_to_brush_action.trigger()
+
+    assert window.brush_palette_dock is not None
+    assert window.brush_palette_dock.current_palette() == "RAW"
+    assert window._editor_context.session.active_brush_id == "palette:raw"
+    assert window._editor_context.session.active_item_id is None
+    assert _status_message(window) == "Palette switched to RAW."
+
+
+def test_main_window_jump_to_brush_action_selects_item_result(
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    class _JumpToBrushDialog:
+        def __init__(self, parent=None) -> None:
+            self.parent = parent
+
+        def exec(self) -> int:
+            return int(QDialog.DialogCode.Accepted)
+
+        def selected_result(self):
+            class _Result:
+                kind = "item"
+                name = "Stone"
+                item_id = 1
+
+            return _Result()
+
+    window = MainWindow(
+        settings=_build_settings(tmp_path, "jump-to-brush-item.ini"),
+        jump_to_brush_dialog_factory=_JumpToBrushDialog,
+    )
+    qtbot.addWidget(window)
+
+    window.jump_to_brush_action.trigger()
+
+    assert window._active_brush_name == "Stone"
+    assert window._editor_context.session.active_item_id == 1
+    assert window._editor_context.session.active_brush_id == "item:1"
+    assert _status_message(window) == "Selected item Stone (#1)."

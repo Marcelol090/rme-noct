@@ -33,7 +33,12 @@ from pyrme.ui.canvas_host import (
     implements_editor_view_flag_canvas_protocol,
     implements_editor_viewport_canvas_protocol,
 )
-from pyrme.ui.dialogs import FindItemDialog, GotoPositionDialog, MapPropertiesDialog
+from pyrme.ui.dialogs import (
+    FindBrushDialog,
+    FindItemDialog,
+    GotoPositionDialog,
+    MapPropertiesDialog,
+)
 from pyrme.ui.docks import BrushPaletteDock, MinimapDock, PropertiesDock, WaypointsDock
 from pyrme.ui.editor_context import EditorContext, EditorViewRecord, ShellStateSnapshot
 from pyrme.ui.legacy_menu_contract import LEGACY_TOP_LEVEL_MENUS, PHASE1_ACTIONS
@@ -72,12 +77,22 @@ class MainWindow(QMainWindow):
         *,
         settings: QSettings | None = None,
         goto_dialog_factory=None,
+        jump_to_brush_dialog_factory=None,
+        jump_to_item_dialog_factory=None,
+        find_item_dialog_factory=None,
         canvas_factory: CanvasFactory | None = None,
         enable_docks: bool | None = None,
     ) -> None:
         super().__init__(parent)
         self._settings = settings or QSettings("Noct Map Editor", "Noct")
         self._goto_dialog_factory = goto_dialog_factory or GotoPositionDialog
+        self._jump_to_brush_dialog_factory = (
+            jump_to_brush_dialog_factory or FindBrushDialog
+        )
+        self._jump_to_item_dialog_factory = jump_to_item_dialog_factory or (
+            lambda parent=None: FindItemDialog(parent, window_title="Jump to Item")
+        )
+        self._find_item_dialog_factory = find_item_dialog_factory or FindItemDialog
         self._canvas_factory = canvas_factory or RendererHostCanvasWidget
         self._enable_docks = True if enable_docks is None else enable_docks
         self._editor_context = EditorContext()
@@ -400,8 +415,38 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     def _show_find_item(self) -> None:
-        dialog = FindItemDialog(self)
-        dialog.exec()
+        dialog = self._find_item_dialog_factory(self)
+        if dialog.exec() == int(QDialog.DialogCode.Accepted):
+            self._apply_item_dialog_selection(dialog)
+            return
+
+        query = (
+            dialog.last_search_map_query()
+            if hasattr(dialog, "last_search_map_query")
+            else None
+        )
+        if query is not None:
+            self._status_bar().showMessage(
+                f"Search on map for '{query.search_text}' is not available yet.",
+                3000,
+            )
+
+    def _apply_item_dialog_selection(self, dialog: object) -> bool:
+        selected = dialog.selected_result() if hasattr(dialog, "selected_result") else None
+        if selected is None:
+            return False
+        try:
+            item_id = selected.server_id
+        except AttributeError:
+            item_id = selected.item_id
+        if item_id is None:
+            item_id = selected.item_id
+        self._set_active_item_selection(selected.name, int(item_id))
+        self._status_bar().showMessage(
+            f"Selected item {selected.name} (#{int(item_id)}).",
+            3000,
+        )
+        return True
 
     def _show_replace_items(self) -> None:
         self._status_bar().showMessage("Replace Items is not available yet.", 3000)
@@ -440,10 +485,55 @@ class MainWindow(QMainWindow):
         )
 
     def _show_jump_to_brush(self) -> None:
-        self._status_bar().showMessage("Jump to Brush is not available yet.", 3000)
+        dialog = self._jump_to_brush_dialog_factory(self)
+        if dialog.exec() != int(QDialog.DialogCode.Accepted):
+            return
+        selected = dialog.selected_result() if hasattr(dialog, "selected_result") else None
+        if selected is None:
+            return
+        if getattr(selected, "kind", None) == "item":
+            item_id = getattr(selected, "item_id", None)
+            if item_id is not None:
+                self._set_active_item_selection(selected.name, int(item_id))
+                self._status_bar().showMessage(
+                    f"Selected item {selected.name} (#{int(item_id)}).",
+                    3000,
+                )
+            return
+        palette_name = getattr(selected, "palette_name", None)
+        if palette_name is not None:
+            self._show_palette(palette_name)
 
     def _show_jump_to_item(self) -> None:
-        self._status_bar().showMessage("Jump to Item is not available yet.", 3000)
+        dialog = self._jump_to_item_dialog_factory(self)
+        if dialog.exec() == int(QDialog.DialogCode.Accepted):
+            self._apply_item_dialog_selection(dialog)
+            return
+        query = (
+            dialog.last_search_map_query()
+            if hasattr(dialog, "last_search_map_query")
+            else None
+        )
+        if query is not None:
+            self._status_bar().showMessage(
+                f"Search on map for '{query.search_text}' is not available yet.",
+                3000,
+            )
+
+    def _show_palette(self, name: str) -> None:
+        if self.brush_palette_dock is None:
+            self._status_bar().showMessage("Brush palette is not available.", 3000)
+            return
+        self.brush_palette_dock.show()
+        self.brush_palette_dock.select_palette(name)
+        self.brush_palette_dock.clear_search()
+        self._active_brush_name = name
+        self._active_brush_id = f"palette:{name.casefold()}"
+        self._active_item_id = None
+        self._editor_context.session.active_brush_id = self._active_brush_id
+        self._editor_context.session.active_item_id = None
+        self._sync_canvas_shell_state()
+        self._status_bar().showMessage(f"Palette switched to {name}.", 3000)
 
     def _describe_floor(self, z: int) -> str:
         if z < 7:

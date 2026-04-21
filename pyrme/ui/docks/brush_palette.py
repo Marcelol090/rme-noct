@@ -27,6 +27,20 @@ class BrushPaletteDock(GlassDockWidget):
         self.setObjectName("brush_palette_dock")
         self._setup_ui()
 
+    def current_palette(self) -> str:
+        return self.tabs.tabText(self.tabs.currentIndex())
+
+    def select_palette(self, name: str) -> bool:
+        for index in range(self.tabs.count()):
+            if self.tabs.tabText(index) == name:
+                self.tabs.setCurrentIndex(index)
+                return True
+        return False
+
+    def clear_search(self) -> None:
+        """No-op until the shared brush search bar lands in the dock."""
+        return
+
     def _setup_ui(self) -> None:
         layout = QVBoxLayout()
         layout.setContentsMargins(4, 4, 4, 4)
@@ -62,6 +76,7 @@ class BrushPaletteDock(GlassDockWidget):
         self.tabs.addTab(self._create_brush_list(), "Doodads")
         self.tabs.addTab(self._create_brush_list(), "Item")
         self.tabs.addTab(self._create_brush_list(), "Creature")
+        self.tabs.addTab(self._create_brush_list(), "RAW")
 
         layout.addWidget(self.tabs)
         self.set_inner_layout(layout)
