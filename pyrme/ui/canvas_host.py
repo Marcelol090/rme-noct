@@ -19,7 +19,14 @@ from PyQt6.QtWidgets import QLabel, QWidget
 from pyrme import __app_name__
 from pyrme.core_bridge import create_editor_shell_state
 from pyrme.editor import MapPosition
-from pyrme.rendering import DiagnosticTilePrimitive
+from pyrme.rendering import (
+    DiagnosticTilePrimitive,
+    SpriteResourceDiagnostics,
+    SpriteResourceResolver,
+    build_frame_sprite_resources,
+    build_render_frame_plan,
+    build_sprite_resource_diagnostics,
+)
 from pyrme.ui.canvas_frame import CanvasFrame, build_canvas_frame
 from pyrme.ui.styles import qss_color
 from pyrme.ui.theme import THEME, TYPOGRAPHY
@@ -195,6 +202,13 @@ class _CanvasShellStateMixin:
         self._canvas_frame = build_canvas_frame(None, self._viewport)
         self._frame_summary = self._canvas_frame.summary()
         self._frame_primitives: tuple[DiagnosticTilePrimitive, ...] = ()
+        self._sprite_resource_resolver = SpriteResourceResolver(items={})
+        self._sprite_resource_diagnostics = SpriteResourceDiagnostics(
+            total=0,
+            resolved=0,
+            missing_item=0,
+            missing_sprite=0,
+        )
         self._core_mode = "native" if self._shell_core.is_native() else "python-fallback"
         self._editor_mode = "drawing"
         self._active_brush_name = "Select"
@@ -353,6 +367,10 @@ class _CanvasShellStateMixin:
         self._frame_primitives = tuple(primitives)
         self._state_changed()
 
+    def set_sprite_resource_resolver(self, resolver: SpriteResourceResolver) -> None:
+        self._sprite_resource_resolver = resolver
+        self._state_changed()
+
     def frame_primitive_count(self) -> int:
         return len(self._frame_primitives)
 
@@ -396,7 +414,8 @@ class _CanvasShellStateMixin:
             f"Visible Tiles: {self._canvas_frame.tile_count}\n"
             f"Map Generation: {self._canvas_frame.map_generation}\n"
             f"Visible Rect: {_format_visible_rect(self._canvas_frame.visible_rect)}\n"
-            f"Tile Primitives: {self.frame_primitive_count()}"
+            f"Tile Primitives: {self.frame_primitive_count()}\n"
+            f"{self._sprite_resource_diagnostics.summary()}"
         )
 
     def _diagnostic_intro(self) -> str:
@@ -422,10 +441,37 @@ class _CanvasShellStateMixin:
                 )
                 for tile in self._canvas_frame.tiles
             )
+            map_model = getattr(
+                getattr(getattr(self.editor_context, "session", None), "document", None),
+                "map_model",
+                None,
+            )
+            if map_model is None:
+                self._sprite_resource_diagnostics = SpriteResourceDiagnostics(
+                    total=0,
+                    resolved=0,
+                    missing_item=0,
+                    missing_sprite=0,
+                )
+                return
+            frame_plan = build_render_frame_plan(map_model, self._viewport)
+            frame_resources = build_frame_sprite_resources(
+                frame_plan,
+                self._sprite_resource_resolver,
+            )
+            self._sprite_resource_diagnostics = build_sprite_resource_diagnostics(
+                frame_resources
+            )
         except Exception as exc:
             self._canvas_frame = build_canvas_frame(None, self._viewport)
             self._frame_summary = f"frame plan unavailable: {exc}"
             self._frame_primitives = ()
+            self._sprite_resource_diagnostics = SpriteResourceDiagnostics(
+                total=0,
+                resolved=0,
+                missing_item=0,
+                missing_sprite=0,
+            )
 
 
 class PlaceholderCanvasWidget(_CanvasShellStateMixin, QLabel):
