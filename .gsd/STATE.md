@@ -4,8 +4,8 @@
 **Active Slice:** none
 **Active Task:** none
 **Phase:** complete
-**Next Action:** Selectively stage and commit completed M006 Item Palette scope without mixing unrelated dirty worktree changes; do not rebase until the worktree is clean.
-**Last Updated:** 2026-04-20T22:12:03-03:00
+**Next Action:** Separate and review pending UI-shell command wiring before any broad `pyrme/ui/main_window.py` commit; do not rebase until the worktree is clean.
+**Last Updated:** 2026-04-20T22:46:13-03:00
 **Requirements Status:** 0 active · 21 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
@@ -52,11 +52,17 @@
 - `ITEM-10-MODEL-VIEW-PALETTE/T04` is complete: 50k-item load/search/category/cache performance assumptions and adjacent brush palette behavior are verified.
 - `ITEM-10-MODEL-VIEW-PALETTE/T05` is complete: caveman-review gap on empty-state alignment was fixed with RED/GREEN test evidence.
 - `ITEM-10-MODEL-VIEW-PALETTE` is complete: S01 verified item palette model/view behavior with 49 targeted Python tests passing, 261 full Python tests passing, preflight passing, and ruff clean.
+- `M007-brush-activation-backend` was completed in manual GSD mode: backend mode, active brush id, active item id, and tool application behavior are covered without mixing pending UI-shell changes.
+- `BRUSH-10-ACTIVATION-BACKEND-CONTRACT/T01` is complete: session activation fields delegate to `EditorModel`.
+- `BRUSH-10-ACTIVATION-BACKEND-CONTRACT/T02` is complete: backend activation commands and invalid mode normalization are covered.
+- `BRUSH-10-ACTIVATION-BACKEND-CONTRACT/T03` is complete: selection, drawing, erasing, preserved stack, and unsupported/no-active-item no-op paths are tested.
+- `BRUSH-10-ACTIVATION-BACKEND-CONTRACT/T04` is complete: M007 closeout recorded verification and kept UI-shell dirty work unstaged.
+- `BRUSH-10-ACTIVATION-BACKEND-CONTRACT` is complete: S01 verified backend activation behavior with 9 targeted Python tests passing, 261 full Python tests passing, preflight passing, and ruff clean.
 
 ## Blockers
 
 - `GSD auto` still stalls with the installed local `qwen2.5-coder:3b` model: it completes with 0 tool calls while planning `M001-1pt4oy/S12`. Manual materialization was used for S12-S15 after local verification.
 - `QOpenGLWidget` under `QT_QPA_PLATFORM=offscreen` still reports invalid contexts locally, so slice verification relies on protocol behavior and honest diagnostics rather than requiring a live GL context in CI.
-- Local network/socket health is restored: `git fetch origin` works and Ollama `/v1/models` responds. Branch remains `ahead 3, behind 6` with a dirty worktree, so do not rebase or publish until scoped changes are staged and committed cleanly.
-- Current dirty worktree mixes M006 Item Palette changes with older legacy-shell/tooling changes. Do not stage `pyrme/ui/main_window.py` file-wide without reviewing mixed hunks.
+- Local network/socket health is restored: `git fetch origin` works and Ollama `/v1/models` responds. Branch remains `ahead 5, behind 6` with a dirty worktree after the M007 local commit, so do not rebase or publish until scoped changes are staged and committed cleanly.
+- Current dirty worktree mixes older legacy-shell/tooling changes. Do not stage `pyrme/ui/main_window.py` file-wide without reviewing mixed hunks.
 - GSD status works in degraded filesystem mode on Windows; native addon/registry warnings remain non-blocking for manual GSD updates.
