@@ -134,9 +134,10 @@ class FindItemDialog(QDialog):
         *,
         catalog: list[FindItemResult] | tuple[FindItemResult, ...] | None = None,
         query: FindItemQuery | None = None,
+        window_title: str = "Find Item",
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Find Item")
+        self.setWindowTitle(window_title)
         self.setFixedSize(self.DIALOG_SIZE)
         self.setWindowFlags(
             self.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint
@@ -171,7 +172,7 @@ class FindItemDialog(QDialog):
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
 
-        heading = QLabel("Find Item")
+        heading = QLabel(self.windowTitle())
         heading.setFont(TYPOGRAPHY.dialog_heading())
         layout.addWidget(heading)
 
@@ -292,7 +293,7 @@ class FindItemDialog(QDialog):
 
         self.btn_search_map = QPushButton("Search on Map")
         self.btn_search_map.setStyleSheet(ghost_button_qss())
-        self.btn_search_map.clicked.connect(self._capture_search_map_query)
+        self.btn_search_map.clicked.connect(self._start_search_on_map)
         footer.addWidget(self.btn_search_map)
 
         footer.addStretch()
@@ -316,6 +317,14 @@ class FindItemDialog(QDialog):
     def selected_result(self) -> FindItemResult | None:
         """Return the currently selected result."""
         return replace(self._selected_result) if self._selected_result is not None else None
+
+    def last_search_map_query(self) -> FindItemQuery | None:
+        """Return the most recent Search on Map query, if any."""
+        return (
+            self._clone_query(self._last_search_map_query)
+            if self._last_search_map_query is not None
+            else None
+        )
 
     def set_catalog(self, catalog: list[FindItemResult] | tuple[FindItemResult, ...]) -> None:
         """Replace the local in-memory catalog and refresh results."""
@@ -440,6 +449,11 @@ class FindItemDialog(QDialog):
     def _capture_search_map_query(self) -> None:
         """Record the current query for the Search Map seam."""
         self._last_search_map_query = self.current_query()
+
+    def _start_search_on_map(self) -> None:
+        """Capture the current query and close so the caller can handle the seam."""
+        self._capture_search_map_query()
+        self.reject()
 
     def _sync_selected_result(self) -> None:
         """Synchronize the cached selection with the widget selection."""
