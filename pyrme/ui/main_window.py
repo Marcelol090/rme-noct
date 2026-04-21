@@ -254,6 +254,7 @@ class MainWindow(QMainWindow):
             action = phase1_action_attrs[spec_key]
             menu.addAction(action)
 
+        self._setup_file_menu()
         self._setup_edit_menu()
 
         self.view_menu_actions: dict[str, QAction] = {
@@ -287,6 +288,87 @@ class MainWindow(QMainWindow):
             mode_group.addAction(action)
             self.brush_mode_actions[mode] = action
         self.brush_mode_actions["drawing"].setChecked(True)
+
+    def _setup_file_menu(self) -> None:
+        menu = self._menus["File"]
+        self.file_new_action = self._action_from_spec(
+            "file_new", lambda: self._show_unavailable("New")
+        )
+        self.file_open_action = self._action_from_spec(
+            "file_open", lambda: self._show_unavailable("Open")
+        )
+        self.file_save_action = self._action_from_spec(
+            "file_save", lambda: self._show_unavailable("Save")
+        )
+        self.file_save_as_action = self._action_from_spec(
+            "file_save_as", lambda: self._show_unavailable("Save As")
+        )
+        self.file_generate_map_action = self._action_from_spec(
+            "file_generate_map", lambda: self._show_unavailable("Generate Map")
+        )
+        self.file_close_action = self._action_from_spec(
+            "file_close", lambda: self._show_unavailable("Close")
+        )
+        menu.addActions(
+            [
+                self.file_new_action,
+                self.file_open_action,
+                self.file_save_action,
+                self.file_save_as_action,
+                self.file_generate_map_action,
+                self.file_close_action,
+            ]
+        )
+        menu.addSeparator()
+
+        import_menu = menu.addMenu("Import")
+        assert import_menu is not None
+        self.file_import_map_action = self._action_from_spec(
+            "file_import_map", lambda: self._show_unavailable("Import Map")
+        )
+        self.file_import_monsters_action = self._action_from_spec(
+            "file_import_monsters",
+            lambda: self._show_unavailable("Import Monsters/NPC"),
+        )
+        import_menu.addActions(
+            [self.file_import_map_action, self.file_import_monsters_action]
+        )
+
+        export_menu = menu.addMenu("Export")
+        assert export_menu is not None
+        self.file_export_minimap_action = self._action_from_spec(
+            "file_export_minimap", lambda: self._show_unavailable("Export Minimap")
+        )
+        self.file_export_tilesets_action = self._action_from_spec(
+            "file_export_tilesets", lambda: self._show_unavailable("Export Tilesets")
+        )
+        export_menu.addActions(
+            [self.file_export_minimap_action, self.file_export_tilesets_action]
+        )
+
+        reload_menu = menu.addMenu("Reload")
+        assert reload_menu is not None
+        self.file_reload_data_action = self._action_from_spec(
+            "file_reload_data", lambda: self._show_unavailable("Reload Data Files")
+        )
+        reload_menu.addAction(self.file_reload_data_action)
+
+        self.file_missing_items_report_action = self._action_from_spec(
+            "file_missing_items_report",
+            lambda: self._show_unavailable("Missing Items Report"),
+        )
+        menu.addAction(self.file_missing_items_report_action)
+        menu.addSeparator()
+        recent_menu = menu.addMenu("Recent Files")
+        assert recent_menu is not None
+        self.file_preferences_action = self._action_from_spec(
+            "file_preferences", lambda: self._show_unavailable("Preferences")
+        )
+        self.file_exit_action = self._action_from_spec(
+            "file_exit", lambda: self._show_unavailable("Exit")
+        )
+        menu.addAction(self.file_preferences_action)
+        menu.addAction(self.file_exit_action)
 
     def _setup_edit_menu(self) -> None:
         menu = self._menus["Edit"]

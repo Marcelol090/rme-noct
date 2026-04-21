@@ -76,6 +76,36 @@ LEGACY_EDITOR_ZOOM_ITEMS = (
     "Zoom Normal",
 )
 
+LEGACY_FILE_MENU_SEQUENCE = (
+    "New...",
+    "Open...",
+    "Save",
+    "Save As...",
+    "Generate Map",
+    "Close",
+    None,
+    "Import",
+    "Export",
+    "Reload",
+    "Missing Items Report...",
+    None,
+    "Recent Files",
+    "Preferences",
+    "Exit",
+)
+
+LEGACY_FILE_IMPORT_ITEMS = (
+    "Import Map...",
+    "Import Monsters/NPC...",
+)
+
+LEGACY_FILE_EXPORT_ITEMS = (
+    "Export Minimap...",
+    "Export Tilesets...",
+)
+
+LEGACY_FILE_RELOAD_ITEMS = ("Reload Data Files",)
+
 LEGACY_EDIT_MENU_SEQUENCE = (
     "Undo",
     "Redo",
@@ -111,6 +141,104 @@ LEGACY_EDIT_STATE_DEFAULTS = {"border_automagic": True}
 
 
 PHASE1_ACTIONS: dict[str, ActionSpec] = {
+    "file_new": ActionSpec(
+        action_id="file_new",
+        text="New...",
+        menu_path=("File",),
+        shortcut="Ctrl+N",
+        status_tip="Create a new map.",
+    ),
+    "file_open": ActionSpec(
+        action_id="file_open",
+        text="Open...",
+        menu_path=("File",),
+        shortcut="Ctrl+O",
+        status_tip="Open another map.",
+    ),
+    "file_save": ActionSpec(
+        action_id="file_save",
+        text="Save",
+        menu_path=("File",),
+        shortcut="Ctrl+S",
+        status_tip="Save the current map.",
+    ),
+    "file_save_as": ActionSpec(
+        action_id="file_save_as",
+        text="Save As...",
+        menu_path=("File",),
+        shortcut="Ctrl+Alt+S",
+        status_tip="Save the current map as a new file.",
+    ),
+    "file_generate_map": ActionSpec(
+        action_id="file_generate_map",
+        text="Generate Map",
+        menu_path=("File",),
+        shortcut=None,
+        status_tip="Generate a new map.",
+    ),
+    "file_close": ActionSpec(
+        action_id="file_close",
+        text="Close",
+        menu_path=("File",),
+        shortcut="Ctrl+Q",
+        status_tip="Closes the currently open map.",
+    ),
+    "file_import_map": ActionSpec(
+        action_id="file_import_map",
+        text="Import Map...",
+        menu_path=("File", "Import"),
+        shortcut=None,
+        status_tip="Import map data from another map file.",
+    ),
+    "file_import_monsters": ActionSpec(
+        action_id="file_import_monsters",
+        text="Import Monsters/NPC...",
+        menu_path=("File", "Import"),
+        shortcut=None,
+        status_tip="Import either a monsters.xml file or a specific monster/NPC.",
+    ),
+    "file_export_minimap": ActionSpec(
+        action_id="file_export_minimap",
+        text="Export Minimap...",
+        menu_path=("File", "Export"),
+        shortcut=None,
+        status_tip="Export minimap to an image file.",
+    ),
+    "file_export_tilesets": ActionSpec(
+        action_id="file_export_tilesets",
+        text="Export Tilesets...",
+        menu_path=("File", "Export"),
+        shortcut=None,
+        status_tip="Export tilesets to an xml file.",
+    ),
+    "file_reload_data": ActionSpec(
+        action_id="file_reload_data",
+        text="Reload Data Files",
+        menu_path=("File", "Reload"),
+        shortcut="F5",
+        status_tip="Reloads all data files.",
+    ),
+    "file_missing_items_report": ActionSpec(
+        action_id="file_missing_items_report",
+        text="Missing Items Report...",
+        menu_path=("File",),
+        shortcut=None,
+        status_tip="View missing item definitions between data files.",
+    ),
+    "file_preferences": ActionSpec(
+        action_id="file_preferences",
+        text="Preferences",
+        menu_path=("File",),
+        shortcut=None,
+        status_tip="Configure the map editor.",
+    ),
+    "file_exit": ActionSpec(
+        action_id="file_exit",
+        text="Exit",
+        menu_path=("File",),
+        shortcut=None,
+        status_tip="Close the editor.",
+    ),
     "edit_undo": ActionSpec(
         action_id="edit_undo",
         text="Undo",
