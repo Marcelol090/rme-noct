@@ -139,6 +139,25 @@ def test_main_window_stub_navigation_commands_report_status(
     assert window._active_item_id is None
 
 
+def test_main_window_item_palette_selection_updates_active_brush(
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    window = MainWindow(settings=_build_settings(tmp_path, "item-selection.ini"))
+    qtbot.addWidget(window)
+
+    assert window.brush_palette_dock is not None
+    palette = window.brush_palette_dock.item_palette
+    assert palette is not None
+
+    palette._on_result_clicked(palette._result_model.index(0))
+
+    assert window._active_brush_name == "Stone"
+    assert window._editor_context.session.active_item_id == 1
+    assert window._editor_context.session.active_brush_id == "item:1"
+    assert _status_message(window) == "Selected item Stone (#1)."
+
+
 def test_main_window_find_item_selection_updates_session_state(
     qtbot,
     tmp_path: Path,
@@ -296,6 +315,73 @@ def test_main_window_jump_to_brush_action_selects_item_result(
     assert window._editor_context.session.active_item_id == 1
     assert window._editor_context.session.active_brush_id == "item:1"
     assert _status_message(window) == "Selected item Stone (#1)."
+
+
+def test_main_window_item_palette_switch_clears_stale_item_selection(
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    window = MainWindow(settings=_build_settings(tmp_path, "item-palette-clear.ini"))
+    qtbot.addWidget(window)
+
+    assert window.brush_palette_dock is not None
+    palette = window.brush_palette_dock.item_palette
+    assert palette is not None
+    palette._on_result_clicked(palette._result_model.index(0))
+
+    assert window._editor_context.session.active_item_id == 1
+
+    window.brush_palette_dock.hide()
+    assert window.brush_palette_dock.isHidden() is True
+    window._show_palette("Item")
+
+    assert window._active_brush_name == "Item"
+    assert window._editor_context.session.active_brush_id == "palette:item"
+    assert window._editor_context.session.active_item_id is None
+    assert window.brush_palette_dock.isHidden() is False
+    assert _status_message(window) == "Palette switched to Item."
+
+
+def test_main_window_item_palette_switch_clears_stale_item_search(
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    window = MainWindow(settings=_build_settings(tmp_path, "item-palette-search-clear.ini"))
+    qtbot.addWidget(window)
+
+    assert window.brush_palette_dock is not None
+    palette = window.brush_palette_dock.item_palette
+    assert palette is not None
+
+    window.brush_palette_dock.focus_item_palette("Stone")
+    assert window.brush_palette_dock._search_bar.text() == "Stone"
+
+    window._show_palette("Item")
+
+    assert window.brush_palette_dock.current_palette() == "Item"
+    assert window.brush_palette_dock._search_bar.text() == ""
+    assert palette._result_model.rowCount() > 1
+
+
+def test_main_window_palette_switch_clears_shared_search_state(
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    window = MainWindow(settings=_build_settings(tmp_path, "palette-search-clear.ini"))
+    qtbot.addWidget(window)
+
+    assert window.brush_palette_dock is not None
+    window.brush_palette_dock.focus_item_palette("Stone")
+    assert window.brush_palette_dock._search_bar.text() == "Stone"
+    window.brush_palette_dock.hide()
+    assert window.brush_palette_dock.isHidden() is True
+
+    window._show_palette("RAW")
+
+    assert window.brush_palette_dock.current_palette() == "RAW"
+    assert window.brush_palette_dock.isHidden() is False
+    assert window.brush_palette_dock._search_bar.text() == ""
+    assert _status_message(window) == "Palette switched to RAW."
 
 
 def test_main_window_brush_mode_toolbar_updates_session_and_tool_options(
