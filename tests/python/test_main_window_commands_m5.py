@@ -296,3 +296,40 @@ def test_main_window_jump_to_brush_action_selects_item_result(
     assert window._editor_context.session.active_item_id == 1
     assert window._editor_context.session.active_brush_id == "item:1"
     assert _status_message(window) == "Selected item Stone (#1)."
+
+
+def test_main_window_brush_mode_toolbar_updates_session_and_tool_options(
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    window = MainWindow(settings=_build_settings(tmp_path, "brush-mode.ini"))
+    qtbot.addWidget(window)
+
+    assert window.tool_options_dock is not None
+    assert window._editor_context.session.mode == "drawing"
+    assert window.brush_mode_actions["drawing"].isChecked()
+    assert window.tool_options_dock._mode_label.text() == "Draw"
+
+    window.brush_mode_actions["selection"].trigger()
+
+    assert window._editor_context.session.mode == "selection"
+    assert window.brush_mode_actions["selection"].isChecked()
+    assert not window.brush_mode_actions["drawing"].isChecked()
+    assert window.tool_options_dock._mode_label.text() == "Select"
+    assert _status_message(window) == "Editor mode: Select."
+
+
+def test_main_window_unknown_brush_mode_falls_back_to_drawing(
+    qtbot,
+    tmp_path: Path,
+) -> None:
+    window = MainWindow(settings=_build_settings(tmp_path, "brush-mode-fallback.ini"))
+    qtbot.addWidget(window)
+
+    window._editor_context.session.mode = "unknown"
+    window._sync_canvas_shell_state()
+
+    assert window._editor_context.session.mode == "drawing"
+    assert window.tool_options_dock is not None
+    assert window.brush_mode_actions["drawing"].isChecked()
+    assert window.tool_options_dock._mode_label.text() == "Draw"

@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
     QStatusBar,
     QTabWidget,
     QToolBar,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -33,6 +34,7 @@ from pyrme.ui.canvas_host import (
     implements_editor_view_flag_canvas_protocol,
     implements_editor_viewport_canvas_protocol,
 )
+from pyrme.ui.components.glass import GlassDockWidget
 from pyrme.ui.dialogs import (
     FindBrushDialog,
     FindItemDialog,
@@ -62,6 +64,26 @@ class _MinimalItemPalette:
 
     def _on_result_clicked(self, _index) -> None:
         self._window._set_active_item_selection("Stone", 1)
+
+
+class _ToolOptionsDock(GlassDockWidget):
+    """Small tool-options surface for current editor mode."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__("TOOL OPTIONS", parent)
+        self.setObjectName("tool_options_dock")
+        layout = QVBoxLayout()
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(8)
+        self._mode_label = QLabel("Draw")
+        self._mode_label.setFont(TYPOGRAPHY.ui_label())
+        self._mode_label.setStyleSheet(f"color: {qss_color(THEME.ash_lavender)};")
+        layout.addWidget(self._mode_label)
+        layout.addStretch()
+        self.set_inner_layout(layout)
+
+    def set_mode_label(self, text: str) -> None:
+        self._mode_label.setText(text)
 
 
 class MainWindow(QMainWindow):
@@ -98,6 +120,7 @@ class MainWindow(QMainWindow):
         self._editor_context = EditorContext()
         self._views: list[EditorViewRecord] = []
         self.brush_palette_dock: BrushPaletteDock | None = None
+        self.tool_options_dock: _ToolOptionsDock | None = None
         self.minimap_dock: MinimapDock | None = None
         self.properties_dock: PropertiesDock | None = None
         self.waypoints_dock: WaypointsDock | None = None
@@ -330,6 +353,12 @@ class MainWindow(QMainWindow):
         self.addDockWidget(
             Qt.DockWidgetArea.LeftDockWidgetArea,
             self.brush_palette_dock,
+        )
+
+        self.tool_options_dock = _ToolOptionsDock(self)
+        self.addDockWidget(
+            Qt.DockWidgetArea.LeftDockWidgetArea,
+            self.tool_options_dock,
         )
 
         self.minimap_dock = MinimapDock(self)
@@ -649,9 +678,22 @@ class MainWindow(QMainWindow):
             self._canvas.set_show_flag(name, enabled)
 
     def _set_editor_mode(self, mode: str) -> None:
-        self._editor_context.session.mode = mode
+        self._editor_context.session.mode = self._normalized_editor_mode(mode)
         if implements_editor_activation_canvas_protocol(self._canvas):
             self._canvas.set_editor_mode(self._editor_context.session.mode)
+        label = self._mode_label_for(self._editor_context.session.mode)
+        if self.tool_options_dock is not None:
+            self.tool_options_dock.set_mode_label(label)
+        self._status_bar().showMessage(f"Editor mode: {label}.", 3000)
+
+    def _normalized_editor_mode(self, mode: str) -> str:
+        return mode if mode in {"selection", "drawing"} else "drawing"
+
+    def _mode_label_for(self, mode: str) -> str:
+        return {
+            "selection": "Select",
+            "drawing": "Draw",
+        }.get(mode, "Draw")
 
     def _set_active_item_selection(self, name: str, item_id: int) -> None:
         self._active_brush_name = name
@@ -700,6 +742,9 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(f"{label} - {__app_name__} v{__version__}")
 
     def _sync_canvas_shell_state(self) -> None:
+        self._editor_context.session.mode = self._normalized_editor_mode(
+            self._editor_context.session.mode
+        )
         if self._views and implements_editor_viewport_canvas_protocol(self._canvas):
             self._canvas.set_viewport_snapshot(self._active_view().viewport.snapshot())
         self._canvas.set_position(self._current_x, self._current_y, self._current_z)
@@ -715,6 +760,11 @@ class MainWindow(QMainWindow):
                 self._active_brush_id,
                 self._active_item_id,
             )
+        mode = self._editor_context.session.mode
+        if self.tool_options_dock is not None:
+            self.tool_options_dock.set_mode_label(self._mode_label_for(mode))
+        if mode in self.brush_mode_actions:
+            self._sync_checkable_action(self.brush_mode_actions[mode], True)
 
     def _sync_floor_actions(self, floor: int) -> None:
         floor = max(0, min(15, floor))
