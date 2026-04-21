@@ -76,8 +76,55 @@ LEGACY_EDITOR_ZOOM_ITEMS = (
     "Zoom Normal",
 )
 
+LEGACY_EDIT_MENU_SEQUENCE = (
+    "Undo",
+    "Redo",
+    None,
+    "Replace Items...",
+    None,
+    "Border Options",
+    "Other Options",
+    None,
+    "Cut",
+    "Copy",
+    "Paste",
+)
+
+LEGACY_EDIT_BORDER_ITEMS = (
+    "Border Automagic",
+    None,
+    "Borderize Selection",
+    "Borderize Map",
+    "Randomize Selection",
+    "Randomize Map",
+)
+
+LEGACY_EDIT_OTHER_ITEMS = (
+    "Remove Items by ID...",
+    "Remove all Corpses...",
+    "Remove all Unreachable Tiles...",
+    "Clear Invalid Houses",
+    "Clear Modified State",
+)
+
+LEGACY_EDIT_STATE_DEFAULTS = {"border_automagic": True}
+
 
 PHASE1_ACTIONS: dict[str, ActionSpec] = {
+    "edit_undo": ActionSpec(
+        action_id="edit_undo",
+        text="Undo",
+        menu_path=("Edit",),
+        shortcut="Ctrl+Z",
+        status_tip="Undo the last action.",
+    ),
+    "edit_redo": ActionSpec(
+        action_id="edit_redo",
+        text="Redo",
+        menu_path=("Edit",),
+        shortcut="Ctrl+Shift+Z",
+        status_tip="Redo the last undone action.",
+    ),
     "find_item": ActionSpec(
         action_id="find_item",
         text="Find Item...",
@@ -91,6 +138,97 @@ PHASE1_ACTIONS: dict[str, ActionSpec] = {
         menu_path=("Edit",),
         shortcut="Ctrl+Shift+F",
         status_tip="Replaces all occurrences of one item with another.",
+    ),
+    "border_automagic": ActionSpec(
+        action_id="border_automagic",
+        text="Border Automagic",
+        menu_path=("Edit", "Border Options"),
+        shortcut="A",
+        status_tip="Toggle automagic border drawing.",
+    ),
+    "borderize_selection": ActionSpec(
+        action_id="borderize_selection",
+        text="Borderize Selection",
+        menu_path=("Edit", "Border Options"),
+        shortcut="Ctrl+B",
+        status_tip="Borderize the current selection.",
+    ),
+    "borderize_map": ActionSpec(
+        action_id="borderize_map",
+        text="Borderize Map",
+        menu_path=("Edit", "Border Options"),
+        shortcut=None,
+        status_tip="Borderize the current map.",
+    ),
+    "randomize_selection": ActionSpec(
+        action_id="randomize_selection",
+        text="Randomize Selection",
+        menu_path=("Edit", "Border Options"),
+        shortcut=None,
+        status_tip="Randomize the current selection.",
+    ),
+    "randomize_map": ActionSpec(
+        action_id="randomize_map",
+        text="Randomize Map",
+        menu_path=("Edit", "Border Options"),
+        shortcut=None,
+        status_tip="Randomize the current map.",
+    ),
+    "remove_items_by_id": ActionSpec(
+        action_id="remove_items_by_id",
+        text="Remove Items by ID...",
+        menu_path=("Edit", "Other Options"),
+        shortcut="Ctrl+Shift+R",
+        status_tip="Remove items by id.",
+    ),
+    "remove_all_corpses": ActionSpec(
+        action_id="remove_all_corpses",
+        text="Remove all Corpses...",
+        menu_path=("Edit", "Other Options"),
+        shortcut=None,
+        status_tip="Remove all corpses.",
+    ),
+    "remove_all_unreachable_tiles": ActionSpec(
+        action_id="remove_all_unreachable_tiles",
+        text="Remove all Unreachable Tiles...",
+        menu_path=("Edit", "Other Options"),
+        shortcut=None,
+        status_tip="Remove all unreachable tiles.",
+    ),
+    "clear_invalid_houses": ActionSpec(
+        action_id="clear_invalid_houses",
+        text="Clear Invalid Houses",
+        menu_path=("Edit", "Other Options"),
+        shortcut=None,
+        status_tip="Clear invalid houses.",
+    ),
+    "clear_modified_state": ActionSpec(
+        action_id="clear_modified_state",
+        text="Clear Modified State",
+        menu_path=("Edit", "Other Options"),
+        shortcut=None,
+        status_tip="Clear modified state.",
+    ),
+    "edit_cut": ActionSpec(
+        action_id="edit_cut",
+        text="Cut",
+        menu_path=("Edit",),
+        shortcut="Ctrl+X",
+        status_tip="Cut the current selection.",
+    ),
+    "edit_copy": ActionSpec(
+        action_id="edit_copy",
+        text="Copy",
+        menu_path=("Edit",),
+        shortcut="Ctrl+C",
+        status_tip="Copy the current selection.",
+    ),
+    "edit_paste": ActionSpec(
+        action_id="edit_paste",
+        text="Paste",
+        menu_path=("Edit",),
+        shortcut="Ctrl+V",
+        status_tip="Paste from the clipboard.",
     ),
     "map_properties": ActionSpec(
         action_id="map_properties",

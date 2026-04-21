@@ -43,13 +43,18 @@ from pyrme.ui.dialogs import (
 )
 from pyrme.ui.docks import BrushPaletteDock, MinimapDock, PropertiesDock, WaypointsDock
 from pyrme.ui.editor_context import EditorContext, EditorViewRecord, ShellStateSnapshot
-from pyrme.ui.legacy_menu_contract import LEGACY_TOP_LEVEL_MENUS, PHASE1_ACTIONS
+from pyrme.ui.legacy_menu_contract import (
+    LEGACY_EDIT_STATE_DEFAULTS,
+    LEGACY_TOP_LEVEL_MENUS,
+    PHASE1_ACTIONS,
+)
 from pyrme.ui.styles import qss_color
 from pyrme.ui.theme import THEME, TYPOGRAPHY
 
 logger = logging.getLogger(__name__)
 
 CanvasFactory = Callable[[QWidget | None], QWidget]
+QSETTINGS_BORDER_AUTOMAGIC = "editor/border_automagic"
 
 
 class _MinimalResultModel:
@@ -249,6 +254,8 @@ class MainWindow(QMainWindow):
             action = phase1_action_attrs[spec_key]
             menu.addAction(action)
 
+        self._setup_edit_menu()
+
         self.view_menu_actions: dict[str, QAction] = {
             "view_show_as_minimap": self._check_action(
                 "Show as Minimap",
@@ -280,6 +287,81 @@ class MainWindow(QMainWindow):
             mode_group.addAction(action)
             self.brush_mode_actions[mode] = action
         self.brush_mode_actions["drawing"].setChecked(True)
+
+    def _setup_edit_menu(self) -> None:
+        menu = self._menus["Edit"]
+        menu.clear()
+
+        self.edit_menu_actions: dict[str, QAction] = {}
+        self.edit_undo_action = self._action_from_spec(
+            "edit_undo", lambda: self._show_unavailable("Undo")
+        )
+        self.edit_redo_action = self._action_from_spec(
+            "edit_redo", lambda: self._show_unavailable("Redo")
+        )
+        menu.addActions([self.edit_undo_action, self.edit_redo_action])
+        menu.addSeparator()
+        menu.addAction(self.replace_items_action)
+        menu.addSeparator()
+
+        border_menu = menu.addMenu("Border Options")
+        assert border_menu is not None
+        self.edit_menu_actions["border_automagic"] = self._action_from_spec(
+            "border_automagic"
+        )
+        self.edit_menu_actions["border_automagic"].setCheckable(True)
+        self._sync_checkable_action(
+            self.edit_menu_actions["border_automagic"],
+            self._coerce_bool(
+                self._settings.value(
+                    QSETTINGS_BORDER_AUTOMAGIC,
+                    LEGACY_EDIT_STATE_DEFAULTS["border_automagic"],
+                ),
+                LEGACY_EDIT_STATE_DEFAULTS["border_automagic"],
+            ),
+        )
+        self.edit_menu_actions["border_automagic"].toggled.connect(
+            self._toggle_border_automagic
+        )
+        border_menu.addAction(self.edit_menu_actions["border_automagic"])
+        border_menu.addSeparator()
+        for key, label in (
+            ("borderize_selection", "Borderize Selection"),
+            ("borderize_map", "Borderize Map"),
+            ("randomize_selection", "Randomize Selection"),
+            ("randomize_map", "Randomize Map"),
+        ):
+            self.edit_menu_actions[key] = self._action_from_spec(
+                key, lambda _checked=False, value=label: self._show_unavailable(value)
+            )
+            self.edit_menu_actions[key].setEnabled(False)
+            border_menu.addAction(self.edit_menu_actions[key])
+
+        other_menu = menu.addMenu("Other Options")
+        assert other_menu is not None
+        for key, label in (
+            ("remove_items_by_id", "Remove Items by ID"),
+            ("remove_all_corpses", "Remove all Corpses"),
+            ("remove_all_unreachable_tiles", "Remove all Unreachable Tiles"),
+            ("clear_invalid_houses", "Clear Invalid Houses"),
+            ("clear_modified_state", "Clear Modified State"),
+        ):
+            self.edit_menu_actions[key] = self._action_from_spec(
+                key, lambda _checked=False, value=label: self._show_unavailable(value)
+            )
+            other_menu.addAction(self.edit_menu_actions[key])
+
+        menu.addSeparator()
+        self.edit_cut_action = self._action_from_spec(
+            "edit_cut", lambda: self._show_unavailable("Cut")
+        )
+        self.edit_copy_action = self._action_from_spec(
+            "edit_copy", lambda: self._show_unavailable("Copy")
+        )
+        self.edit_paste_action = self._action_from_spec(
+            "edit_paste", lambda: self._show_unavailable("Paste")
+        )
+        menu.addActions([self.edit_cut_action, self.edit_copy_action, self.edit_paste_action])
 
     def _setup_toolbars(self) -> None:
         """Create the main toolbars."""
@@ -464,6 +546,9 @@ class MainWindow(QMainWindow):
             action.triggered.connect(handler)
         return action
 
+    def _show_unavailable(self, label: str) -> None:
+        self._status_bar().showMessage(f"{label} is not available yet.", 3000)
+
     def _sync_checkable_action(self, action: QAction, checked: bool) -> None:
         was_blocked = action.blockSignals(True)
         action.setChecked(checked)
@@ -509,6 +594,14 @@ class MainWindow(QMainWindow):
 
     def _show_replace_items(self) -> None:
         self._status_bar().showMessage("Replace Items is not available yet.", 3000)
+
+    def _toggle_border_automagic(self, checked: bool) -> None:
+        self._settings.setValue(QSETTINGS_BORDER_AUTOMAGIC, checked)
+        self._settings.sync()
+        self._status_bar().showMessage(
+            f"Automagic {'enabled' if checked else 'disabled'}.",
+            3000,
+        )
 
     def _show_map_statistics(self) -> None:
         self._status_bar().showMessage("Map Statistics is not available yet.", 3000)
@@ -763,6 +856,12 @@ class MainWindow(QMainWindow):
     def _refresh_selection_actions(self) -> None:
         enabled = self._editor_context.session.editor.has_selection()
         self.selection_menu_actions["replace_on_selection_items"].setEnabled(enabled)
+        if hasattr(self, "edit_menu_actions"):
+            self.edit_menu_actions["borderize_selection"].setEnabled(enabled)
+            self.edit_menu_actions["randomize_selection"].setEnabled(enabled)
+
+    def _refresh_selection_action_state(self) -> None:
+        self._refresh_selection_actions()
 
     def _refresh_dirty_chrome(self) -> None:
         dirty = self._editor_context.session.document.is_dirty
