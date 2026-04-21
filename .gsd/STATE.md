@@ -4,9 +4,9 @@
 **Active Slice:** none
 **Active Task:** none
 **Phase:** complete
-**Next Action:** Open the next renderer milestone only after choosing the next sprite/draw execution capability.
-**Last Updated:** 2026-04-18T00:00:00-03:00
-**Requirements Status:** 0 active · 20 validated · 0 deferred · 3 out of scope
+**Next Action:** Selectively stage and commit completed M005 scope without mixing unrelated dirty worktree changes; do not rebase until the worktree is clean.
+**Last Updated:** 2026-04-20T22:03:05-03:00
+**Requirements Status:** 0 active · 21 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
@@ -28,8 +28,27 @@
 - `CANVAS-40-RENDER-FRAME-PLAN` is complete: the renderer path now builds a stable `CanvasFrame` from `MapModel` and the active `EditorViewport`, reports visible tiles, map generation, and visible rect, and still avoids pretending sprites are drawn.
 - `CANVAS-50-DIAGNOSTIC-TILE-PRIMITIVES` is complete: frame-plan tile commands now project into screen-space diagnostic rectangles and the renderer host reports primitive count without claiming sprite parity.
 - Workflow health remediation is complete: `npm run preflight` now reflects the integrated Codex session, optional local agent TOML files, optional standalone Context7 CLI, and Windows `.venv` Python runtime.
+- `M005-sprite-resolver` was completed in manual GSD mode: Ollama/GSD auto were not required, and the milestone added an honest item-id to sprite-resource resolver before any draw pass.
+- `CANVAS-60-SPRITE-RESOLVER-CONTRACT/T01` is complete: immutable sprite lookup result statuses and payload fields are covered by `tests/python/test_sprite_resolver.py`.
+- `CANVAS-60-SPRITE-RESOLVER-CONTRACT/T02` is complete: `SpriteResourceResolver` maps known item ids to primary sprite ids and reports unknown items explicitly.
+- `CANVAS-60-SPRITE-RESOLVER-CONTRACT/T03` is complete: sprite payload lookup resolves pixel bytes when available and keeps missing-sprite status explicit when absent.
+- `CANVAS-60-SPRITE-RESOLVER-CONTRACT/T04` is complete: repeated item lookups are cached and cache invalidation is tied to explicit source replacement.
+- `CANVAS-60-SPRITE-RESOLVER-CONTRACT` is complete: S01 verified the sprite resolver contract with 249 local Python tests passing and S02 is now open for frame-plan resource integration.
+- `CANVAS-61-FRAME-SPRITE-RESOURCES/T01` is complete: immutable frame sprite resource records carry tile position, item id, stack layer, and resolver result without changing renderer drawing.
+- `CANVAS-61-FRAME-SPRITE-RESOURCES/T02` is complete: pure frame sprite resource collection resolves ordered ground items through `SpriteResourceResolver`.
+- `CANVAS-61-FRAME-SPRITE-RESOURCES/T03` is complete: frame sprite resource collection appends stack item resources after each tile ground item while preserving item order.
+- `CANVAS-61-FRAME-SPRITE-RESOURCES/T04` is complete: missing item and missing sprite resolver outcomes stay in frame sprite resource output.
+- `CANVAS-61-FRAME-SPRITE-RESOURCES` is complete: S02 verified pure frame-plan sprite resource records with 254 local Python tests passing and S03 is now open for renderer diagnostics.
+- `CANVAS-62-SPRITE-RESOLVER-DIAGNOSTICS/T01` is complete: pure immutable diagnostics count total, resolved, missing-item, and missing-sprite resource outcomes.
+- `CANVAS-62-SPRITE-RESOLVER-DIAGNOSTICS/T02` is complete: sprite resource diagnostics expose stable summary text for empty, resolved, and missing states.
+- `CANVAS-62-SPRITE-RESOLVER-DIAGNOSTICS/T03` is complete: renderer host diagnostic text now includes initialized sprite resource diagnostics without changing drawing behavior.
+- `CANVAS-62-SPRITE-RESOLVER-DIAGNOSTICS/T04` is complete: renderer host sync now builds frame sprite diagnostics through an explicit resolver seam and reports honest missing-item defaults.
+- `CANVAS-62-SPRITE-RESOLVER-DIAGNOSTICS` is complete: S03 verified sprite resource diagnostics with 260 local Python tests passing.
+- `M005-sprite-resolver` is complete: item-id sprite resolution, frame resource records, and renderer diagnostic counts are tested while renderer drawing remains diagnostic-only.
 
 ## Blockers
 
 - `GSD auto` still stalls with the installed local `qwen2.5-coder:3b` model: it completes with 0 tool calls while planning `M001-1pt4oy/S12`. Manual materialization was used for S12-S15 after local verification.
 - `QOpenGLWidget` under `QT_QPA_PLATFORM=offscreen` still reports invalid contexts locally, so slice verification relies on protocol behavior and honest diagnostics rather than requiring a live GL context in CI.
+- Local network/socket health is restored: `git fetch origin` works and Ollama `/v1/models` responds. Branch remains `ahead 2, behind 6` with a dirty worktree, so do not rebase or publish until scoped changes are staged and committed cleanly.
+- GSD status works in degraded filesystem mode on Windows; native addon/registry warnings remain non-blocking for manual GSD updates.
