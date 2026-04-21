@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import QSettings, QSize, Qt
 from PyQt6.QtGui import QAction, QActionGroup, QCloseEvent
@@ -50,6 +50,9 @@ from pyrme.ui.legacy_menu_contract import (
 )
 from pyrme.ui.styles import qss_color
 from pyrme.ui.theme import THEME, TYPOGRAPHY
+
+if TYPE_CHECKING:
+    from pyrme.ui.models.item_palette_types import ItemEntry
 
 logger = logging.getLogger(__name__)
 
@@ -543,7 +546,7 @@ class MainWindow(QMainWindow):
     def _setup_docks(self) -> None:
         """Create dock widgets for palettes and tools."""
         self.brush_palette_dock = BrushPaletteDock(self)
-        self.brush_palette_dock.item_palette = _MinimalItemPalette(self)
+        self.brush_palette_dock.item_selected.connect(self._handle_item_palette_selection)
         self.addDockWidget(
             Qt.DockWidgetArea.LeftDockWidgetArea,
             self.brush_palette_dock,
@@ -899,6 +902,13 @@ class MainWindow(QMainWindow):
             "selection": "Select",
             "drawing": "Draw",
         }.get(mode, "Draw")
+
+    def _handle_item_palette_selection(self, item: ItemEntry) -> None:
+        self._set_active_item_selection(item.name, item.item_id)
+        self._status_bar().showMessage(
+            f"Selected item {item.name} (#{item.item_id}).",
+            3000,
+        )
 
     def _set_active_item_selection(self, name: str, item_id: int) -> None:
         self._active_brush_name = name
