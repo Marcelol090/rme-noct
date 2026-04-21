@@ -60,50 +60,6 @@ CanvasFactory = Callable[[QWidget | None], QWidget]
 QSETTINGS_BORDER_AUTOMAGIC = "editor/border_automagic"
 
 
-class _MinimalResultModel:
-    def __init__(self, palette: _MinimalItemPalette) -> None:
-        self._palette = palette
-
-    def index(self, row: int):
-        return row
-
-    def rowCount(self) -> int:  # noqa: N802
-        return len(self._palette._filtered_entries)
-
-
-class _MinimalItemPalette:
-    def __init__(self, window: MainWindow) -> None:
-        self._window = window
-        self._entries = [
-            ("Stone", 1),
-            ("Gold Coin", 2148),
-            ("Dragon Ham", 3582),
-        ]
-        self._filtered_entries = list(self._entries)
-        self._result_model = _MinimalResultModel(self)
-
-    def set_search_text(self, text: str) -> None:
-        needle = text.strip().casefold()
-        if not needle:
-            self._filtered_entries = list(self._entries)
-            return
-        self._filtered_entries = [
-            entry for entry in self._entries if needle in entry[0].casefold()
-        ]
-
-    def _on_result_clicked(self, index) -> None:
-        if not self._filtered_entries:
-            return
-        row = index if isinstance(index, int) else 0
-        row = max(0, min(row, len(self._filtered_entries) - 1))
-        name, item_id = self._filtered_entries[row]
-        self._window._set_active_item_selection(name, item_id)
-        self._window._status_bar().showMessage(
-            f"Selected item {name} (#{item_id}).",
-            3000,
-        )
-
-
 class _ToolOptionsDock(GlassDockWidget):
     """Small tool-options surface for current editor mode."""
 
