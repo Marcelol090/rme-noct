@@ -33,9 +33,9 @@ def _status_message(window: MainWindow) -> str:
 
 def test_main_window_exposes_legacy_navigation_shortcuts_and_status_tips(
     qtbot,
-    tmp_path: Path,
+    settings_workspace: Path,
 ) -> None:
-    window = MainWindow(settings=_build_settings(tmp_path, "commands.ini"))
+    window = MainWindow(settings=_build_settings(settings_workspace, "commands.ini"))
     qtbot.addWidget(window)
 
     assert _shortcut(window.find_item_action) == PHASE1_ACTIONS["find_item"].shortcut
@@ -72,7 +72,7 @@ def test_main_window_exposes_legacy_navigation_shortcuts_and_status_tips(
 
 def test_main_window_previous_position_swaps_single_history_slot(
     qtbot,
-    tmp_path: Path,
+    settings_workspace: Path,
 ) -> None:
     class _GotoDialog:
         def __init__(self, parent=None) -> None:
@@ -85,7 +85,7 @@ def test_main_window_previous_position_swaps_single_history_slot(
             return (32123, 32234, 6)
 
     window = MainWindow(
-        settings=_build_settings(tmp_path, "previous.ini"),
+        settings=_build_settings(settings_workspace, "previous.ini"),
         goto_dialog_factory=_GotoDialog,
     )
     qtbot.addWidget(window)
@@ -105,7 +105,7 @@ def test_main_window_previous_position_swaps_single_history_slot(
 
 def test_main_window_stub_navigation_commands_report_status(
     qtbot,
-    tmp_path: Path,
+    settings_workspace: Path,
 ) -> None:
     class _CancelDialog:
         def __init__(self, parent=None) -> None:
@@ -121,7 +121,7 @@ def test_main_window_stub_navigation_commands_report_status(
             return None
 
     window = MainWindow(
-        settings=_build_settings(tmp_path, "status.ini"),
+        settings=_build_settings(settings_workspace, "status.ini"),
         jump_to_brush_dialog_factory=_CancelDialog,
         jump_to_item_dialog_factory=_CancelDialog,
     )
@@ -141,9 +141,9 @@ def test_main_window_stub_navigation_commands_report_status(
 
 def test_main_window_item_palette_selection_updates_active_brush(
     qtbot,
-    tmp_path: Path,
+    settings_workspace: Path,
 ) -> None:
-    window = MainWindow(settings=_build_settings(tmp_path, "item-selection.ini"))
+    window = MainWindow(settings=_build_settings(settings_workspace, "item-selection.ini"))
     qtbot.addWidget(window)
 
     assert window.brush_palette_dock is not None
@@ -160,7 +160,7 @@ def test_main_window_item_palette_selection_updates_active_brush(
 
 def test_main_window_find_item_selection_updates_session_state(
     qtbot,
-    tmp_path: Path,
+    settings_workspace: Path,
 ) -> None:
     class _FindItemDialog:
         def __init__(self, parent=None) -> None:
@@ -177,7 +177,7 @@ def test_main_window_find_item_selection_updates_session_state(
             return _Result()
 
     window = MainWindow(
-        settings=_build_settings(tmp_path, "find-item-selection.ini"),
+        settings=_build_settings(settings_workspace, "find-item-selection.ini"),
         find_item_dialog_factory=_FindItemDialog,
     )
     qtbot.addWidget(window)
@@ -192,7 +192,7 @@ def test_main_window_find_item_selection_updates_session_state(
 
 def test_main_window_jump_to_item_action_updates_session_state(
     qtbot,
-    tmp_path: Path,
+    settings_workspace: Path,
 ) -> None:
     class _JumpToItemDialog:
         def __init__(self, parent=None) -> None:
@@ -209,7 +209,7 @@ def test_main_window_jump_to_item_action_updates_session_state(
             return _Result()
 
     window = MainWindow(
-        settings=_build_settings(tmp_path, "jump-to-item-selection.ini"),
+        settings=_build_settings(settings_workspace, "jump-to-item-selection.ini"),
         jump_to_item_dialog_factory=_JumpToItemDialog,
     )
     qtbot.addWidget(window)
@@ -224,7 +224,7 @@ def test_main_window_jump_to_item_action_updates_session_state(
 
 def test_main_window_jump_to_item_reports_search_map_gap(
     qtbot,
-    tmp_path: Path,
+    settings_workspace: Path,
 ) -> None:
     class _JumpToItemDialog:
         def __init__(self, parent=None) -> None:
@@ -240,7 +240,7 @@ def test_main_window_jump_to_item_reports_search_map_gap(
             return FindItemQuery(search_text="coin")
 
     window = MainWindow(
-        settings=_build_settings(tmp_path, "jump-to-item-search-map.ini"),
+        settings=_build_settings(settings_workspace, "jump-to-item-search-map.ini"),
         jump_to_item_dialog_factory=_JumpToItemDialog,
     )
     qtbot.addWidget(window)
@@ -252,7 +252,7 @@ def test_main_window_jump_to_item_reports_search_map_gap(
 
 def test_main_window_jump_to_brush_action_selects_palette_result(
     qtbot,
-    tmp_path: Path,
+    settings_workspace: Path,
 ) -> None:
     class _JumpToBrushDialog:
         def __init__(self, parent=None) -> None:
@@ -270,7 +270,7 @@ def test_main_window_jump_to_brush_action_selects_palette_result(
             return _Result()
 
     window = MainWindow(
-        settings=_build_settings(tmp_path, "jump-to-brush-palette.ini"),
+        settings=_build_settings(settings_workspace, "jump-to-brush-palette.ini"),
         jump_to_brush_dialog_factory=_JumpToBrushDialog,
     )
     qtbot.addWidget(window)
@@ -286,7 +286,7 @@ def test_main_window_jump_to_brush_action_selects_palette_result(
 
 def test_main_window_jump_to_brush_action_selects_item_result(
     qtbot,
-    tmp_path: Path,
+    settings_workspace: Path,
 ) -> None:
     class _JumpToBrushDialog:
         def __init__(self, parent=None) -> None:
@@ -304,7 +304,7 @@ def test_main_window_jump_to_brush_action_selects_item_result(
             return _Result()
 
     window = MainWindow(
-        settings=_build_settings(tmp_path, "jump-to-brush-item.ini"),
+        settings=_build_settings(settings_workspace, "jump-to-brush-item.ini"),
         jump_to_brush_dialog_factory=_JumpToBrushDialog,
     )
     qtbot.addWidget(window)
@@ -319,9 +319,9 @@ def test_main_window_jump_to_brush_action_selects_item_result(
 
 def test_main_window_item_palette_switch_clears_stale_item_selection(
     qtbot,
-    tmp_path: Path,
+    settings_workspace: Path,
 ) -> None:
-    window = MainWindow(settings=_build_settings(tmp_path, "item-palette-clear.ini"))
+    window = MainWindow(settings=_build_settings(settings_workspace, "item-palette-clear.ini"))
     qtbot.addWidget(window)
 
     assert window.brush_palette_dock is not None
@@ -344,9 +344,11 @@ def test_main_window_item_palette_switch_clears_stale_item_selection(
 
 def test_main_window_item_palette_switch_clears_stale_item_search(
     qtbot,
-    tmp_path: Path,
+    settings_workspace: Path,
 ) -> None:
-    window = MainWindow(settings=_build_settings(tmp_path, "item-palette-search-clear.ini"))
+    window = MainWindow(
+        settings=_build_settings(settings_workspace, "item-palette-search-clear.ini")
+    )
     qtbot.addWidget(window)
 
     assert window.brush_palette_dock is not None
@@ -365,9 +367,9 @@ def test_main_window_item_palette_switch_clears_stale_item_search(
 
 def test_main_window_palette_switch_clears_shared_search_state(
     qtbot,
-    tmp_path: Path,
+    settings_workspace: Path,
 ) -> None:
-    window = MainWindow(settings=_build_settings(tmp_path, "palette-search-clear.ini"))
+    window = MainWindow(settings=_build_settings(settings_workspace, "palette-search-clear.ini"))
     qtbot.addWidget(window)
 
     assert window.brush_palette_dock is not None
@@ -386,9 +388,9 @@ def test_main_window_palette_switch_clears_shared_search_state(
 
 def test_main_window_brush_mode_toolbar_updates_session_and_tool_options(
     qtbot,
-    tmp_path: Path,
+    settings_workspace: Path,
 ) -> None:
-    window = MainWindow(settings=_build_settings(tmp_path, "brush-mode.ini"))
+    window = MainWindow(settings=_build_settings(settings_workspace, "brush-mode.ini"))
     qtbot.addWidget(window)
 
     assert window.tool_options_dock is not None
@@ -407,9 +409,9 @@ def test_main_window_brush_mode_toolbar_updates_session_and_tool_options(
 
 def test_main_window_unknown_brush_mode_falls_back_to_drawing(
     qtbot,
-    tmp_path: Path,
+    settings_workspace: Path,
 ) -> None:
-    window = MainWindow(settings=_build_settings(tmp_path, "brush-mode-fallback.ini"))
+    window = MainWindow(settings=_build_settings(settings_workspace, "brush-mode-fallback.ini"))
     qtbot.addWidget(window)
 
     window._editor_context.session.mode = "unknown"

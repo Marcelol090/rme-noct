@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project": "remeres-map-editor-redux",
-  "updated_at": "2026-04-18T00:00:00-03:00",
+  "updated_at": "2026-04-22T12:36:26-03:00",
   "tasks": [
     {
       "id": "GSD-RUNTIME-NODE22",
@@ -1301,6 +1301,100 @@
       "recorded_at": "2026-04-18T00:00:00-03:00",
       "updated_at": "2026-04-18T00:00:00-03:00",
       "completed_at": "2026-04-18T00:00:00-03:00"
+    },
+    {
+      "id": "BRUSH-20-SHELL-COMMAND-WIRING",
+      "title": "Wire brush shell commands into the canonical backend",
+      "category": "primary-user-loop",
+      "status": "verified",
+      "milestone": "M008-brush-shell-wiring",
+      "slice": "S01",
+      "summary": "The pending local shell wiring delta is now recorded and verified: Jump to Brush, Jump to Item, palette switching, brush mode toolbar state, and WSL preflight all align the UI shell with the canonical brush backend contract.",
+      "done_criteria": [
+        "FindBrushDialog and FindBrushResult are exported for local Jump to Brush flow",
+        "Jump to Brush handles palette and item-backed results",
+        "Jump to Item handles accepted item activation and rejected search-on-map gap honestly",
+        "Palette switching clears stale shared search and stale item activation",
+        "Brush mode toolbar updates session mode and Tool Options label from one source of truth",
+        "npm run preflight passes in WSL with the repo-local Python launcher"
+      ],
+      "scope": [
+        "package.json",
+        ".npmrc",
+        "scripts/run-python.mjs",
+        "pyrme/ui/dialogs/find_brush.py",
+        "pyrme/ui/dialogs/__init__.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_find_brush_tier2.py",
+        "tests/python/test_main_window_commands_m5.py",
+        "tests/python/test_main_window_editor_shell_actions.py",
+        "tests/python/test_editor_activation_backend.py",
+        "tests/python/test_main_window_new_view.py",
+        "tests/python/test_canvas_seam_m4.py",
+        "pyrme/ui/AGENTS.md",
+        ".gsd/PROJECT.md",
+        ".gsd/REQUIREMENTS.md",
+        ".gsd/DECISIONS.md",
+        ".gsd/STATE.md"
+      ],
+      "files_modified": [
+        "package.json",
+        ".npmrc",
+        "scripts/run-python.mjs",
+        "pyrme/ui/dialogs/find_brush.py",
+        "pyrme/ui/dialogs/__init__.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_find_brush_tier2.py",
+        "tests/python/test_main_window_commands_m5.py",
+        "tests/python/test_main_window_editor_shell_actions.py",
+        "pyrme/ui/AGENTS.md",
+        ".gsd/milestones/M008-brush-shell-wiring/M008-brush-shell-wiring-CONTEXT.md",
+        ".gsd/milestones/M008-brush-shell-wiring/M008-brush-shell-wiring-META.json",
+        ".gsd/milestones/M008-brush-shell-wiring/M008-brush-shell-wiring-ROADMAP.md",
+        ".gsd/milestones/M008-brush-shell-wiring/M008-brush-shell-wiring-SUMMARY.md",
+        ".gsd/milestones/M008-brush-shell-wiring/slices/S01/S01-CONTEXT.md",
+        ".gsd/milestones/M008-brush-shell-wiring/slices/S01/S01-PLAN.md",
+        ".gsd/milestones/M008-brush-shell-wiring/slices/S01/S01-SUMMARY.md",
+        ".gsd/milestones/M008-brush-shell-wiring/slices/S01/tasks/T01-SUMMARY.md",
+        ".gsd/milestones/M008-brush-shell-wiring/slices/S01/tasks/T02-SUMMARY.md",
+        ".gsd/milestones/M008-brush-shell-wiring/slices/S01/tasks/T03-SUMMARY.md",
+        ".gsd/milestones/M008-brush-shell-wiring/slices/S01/tasks/T04-SUMMARY.md",
+        ".gsd/milestones/M008-brush-shell-wiring/slices/S01/tasks/T05-SUMMARY.md",
+        ".gsd/PROJECT.md",
+        ".gsd/REQUIREMENTS.md",
+        ".gsd/DECISIONS.md",
+        ".gsd/STATE.md",
+        ".gsd/task-registry.json"
+      ],
+      "tests_run": [
+        "./.venv/bin/python3.12 -m ruff check pyrme/ui/main_window.py pyrme/ui/dialogs/find_brush.py pyrme/ui/dialogs/__init__.py tests/python/test_main_window_commands_m5.py tests/python/test_main_window_editor_shell_actions.py tests/python/test_find_brush_tier2.py",
+        "./.venv/bin/python3.12 -m mypy pyrme/ui/main_window.py pyrme/ui/dialogs/find_brush.py pyrme/ui/dialogs/__init__.py --ignore-missing-imports",
+        "./.venv/bin/python3.12 -m pytest -q -s --tb=short tests/python/test_find_brush_tier2.py tests/python/test_main_window_commands_m5.py tests/python/test_main_window_editor_shell_actions.py",
+        "./.venv/bin/python3.12 -m pytest -q -s --tb=short tests/python/test_editor_activation_backend.py tests/python/test_main_window_new_view.py tests/python/test_canvas_seam_m4.py",
+        "./.venv/bin/python3.12 -m pytest -q -s --tb=short tests/python/test_find_brush_tier2.py tests/python/test_main_window_commands_m5.py tests/python/test_main_window_editor_shell_actions.py tests/python/test_editor_activation_backend.py tests/python/test_main_window_new_view.py tests/python/test_canvas_seam_m4.py",
+        "./.venv/bin/python3.12 -m pytest tests/python/ -q -s --tb=short",
+        "npm run preflight --silent",
+        "env QT_QPA_PLATFORM=offscreen ./.venv/bin/python3.12 -m pyrme"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "Focused shell wiring tests passed: 17 tests.",
+          "Adjacent backend/new-view/canvas regressions passed: 36 tests.",
+          "Combined slice verification passed: 53 tests.",
+          "Scoped mypy check passed for the touched UI/dialog modules.",
+          "Full Python suite passed: 266 tests.",
+          "npm run preflight reports Validation: ok in WSL.",
+          "Offscreen startup smoke reached the event loop, and the stale `pyrme --dev` AGENTS command was corrected."
+        ]
+      },
+      "notes": [
+        "The surrounding worktree remains mixed and still requires selective staging by hunk before any commit or publish step.",
+        "npm run gsd:status --silent timed out in this WSL session, so M008 closeout used direct artifact updates instead of GSD status output."
+      ],
+      "recorded_at": "2026-04-22T12:36:26-03:00",
+      "updated_at": "2026-04-22T12:36:26-03:00",
+      "completed_at": "2026-04-22T12:36:26-03:00"
     }
   ]
 }

@@ -10,6 +10,28 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 ## Validated
 
+### R047 - Brush shell commands must drive the canonical activation backend
+- Class: primary-user-loop
+- Status: validated
+- Description: `MainWindow` brush commands, palette switching, and local jump dialogs must synchronize `EditorSessionState` and `EditorModel` instead of keeping ad hoc shell-only brush state.
+- Why it matters: The backend activation contract is only useful once the user-facing shell flows actually drive it.
+- Source: execution
+- Primary owning slice: BRUSH-20-SHELL-COMMAND-WIRING
+- Supporting slices: BRUSH-10-ACTIVATION-BACKEND-CONTRACT, ITEM-10-MODEL-VIEW-PALETTE
+- Validation: validated
+- Notes: Verified by `tests/python/test_find_brush_tier2.py`, `tests/python/test_main_window_commands_m5.py`, and `tests/python/test_main_window_editor_shell_actions.py`; `Jump to Brush`, `Jump to Item`, palette switching, and brush mode toolbar now update the canonical backend while `Take Screenshot` remains an honest safe gap.
+
+### R046 - Sprite resolver seam before real draw pass
+- Class: core-capability
+- Status: validated
+- Description: Renderer planning must be able to resolve map item ids into sprite-resource results through a tested seam before any real OpenGL or wgpu sprite draw pass is introduced.
+- Why it matters: The renderer needs item artwork inputs, but claiming visual sprite parity before lookup, failure states, and caching are tested would hide missing backend behavior.
+- Source: execution
+- Primary owning slice: CANVAS-60-SPRITE-RESOLVER-CONTRACT
+- Supporting slices: CANVAS-61-FRAME-SPRITE-RESOURCES, CANVAS-62-SPRITE-RESOLVER-DIAGNOSTICS
+- Validation: validated
+- Notes: Verified by `tests/python/test_sprite_resolver.py`; known item resolution, missing item ids, missing sprite payloads, resolved pixel payloads, and repeated lookup caching are covered without changing the renderer host draw path.
+
 ### R045 - Renderer host must consume frame plans as diagnostic draw primitives
 - Class: core-capability
 - Status: validated
@@ -293,6 +315,8 @@ Use it to track what is actively in scope, what has been validated by completed 
 | R043 | primary-user-loop | validated | CANVAS-30-MAP-VIEW-MATH | CANVAS-10-RENDERER-HOST, CANVAS-20-VIEWPORT-MODEL | validated |
 | R044 | core-capability | validated | CANVAS-40-RENDER-FRAME-PLAN | CANVAS-10-RENDERER-HOST, CANVAS-20-VIEWPORT-MODEL, CANVAS-30-MAP-VIEW-MATH | validated |
 | R045 | core-capability | validated | CANVAS-50-DIAGNOSTIC-TILE-PRIMITIVES | CANVAS-40-RENDER-FRAME-PLAN, CANVAS-30-MAP-VIEW-MATH | validated |
+| R046 | core-capability | validated | CANVAS-60-SPRITE-RESOLVER-CONTRACT | CANVAS-61-FRAME-SPRITE-RESOURCES, CANVAS-62-SPRITE-RESOLVER-DIAGNOSTICS | validated |
+| R047 | primary-user-loop | validated | BRUSH-20-SHELL-COMMAND-WIRING | BRUSH-10-ACTIVATION-BACKEND-CONTRACT, ITEM-10-MODEL-VIEW-PALETTE | validated |
 | R030 | anti-feature | out-of-scope | none | none | n/a |
 | R031 | constraint | out-of-scope | none | none | n/a |
 | R032 | constraint | out-of-scope | none | none | n/a |
@@ -300,6 +324,6 @@ Use it to track what is actively in scope, what has been validated by completed 
 ## Coverage Summary
 
 - Active requirements: 0
-- Mapped to slices: 20
-- Validated: 20
+- Mapped to slices: 22
+- Validated: 22
 - Unmapped active requirements: 0

@@ -58,10 +58,11 @@ logger = logging.getLogger(__name__)
 
 CanvasFactory = Callable[[QWidget | None], QWidget]
 QSETTINGS_BORDER_AUTOMAGIC = "editor/border_automagic"
+DialogFactory = Callable[[QWidget | None], QDialog]
 
 
 class _ToolOptionsDock(GlassDockWidget):
-    """Small tool-options surface for current editor mode."""
+    """Small honest tool-options surface for current editor mode."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__("TOOL OPTIONS", parent)
@@ -96,6 +97,7 @@ class MainWindow(QMainWindow):
         jump_to_brush_dialog_factory=None,
         jump_to_item_dialog_factory=None,
         find_item_dialog_factory=None,
+        map_properties_dialog_factory: DialogFactory | None = None,
         canvas_factory: CanvasFactory | None = None,
         enable_docks: bool | None = None,
     ) -> None:
@@ -109,6 +111,9 @@ class MainWindow(QMainWindow):
             lambda parent=None: FindItemDialog(parent, window_title="Jump to Item")
         )
         self._find_item_dialog_factory = find_item_dialog_factory or FindItemDialog
+        self._map_properties_dialog_factory = (
+            map_properties_dialog_factory or MapPropertiesDialog
+        )
         self._canvas_factory = canvas_factory or RendererHostCanvasWidget
         self._enable_docks = True if enable_docks is None else enable_docks
         self._editor_context = EditorContext()
@@ -121,6 +126,10 @@ class MainWindow(QMainWindow):
         self.toggle_minimap_action: QAction | None = None
         self.toggle_floors_toolbar_action: QAction | None = None
         self.floor_toolbar: QToolBar | None = None
+        self.editor_new_view_action: QAction | None = None
+        self.editor_zoom_out_action: QAction | None = None
+        self.editor_zoom_normal_action: QAction | None = None
+        self.editor_screenshot_action: QAction | None = None
         self._current_x, self._current_y, self._current_z = (32000, 32000, 7)
         self._previous_position: tuple[int, int, int] | None = None
         self._zoom_percent = 100
@@ -193,6 +202,14 @@ class MainWindow(QMainWindow):
         self.ghost_higher_action.toggled.connect(self._stub_ghost_higher)
         self.editor_zoom_in_action = self._action("Zoom In", "Ctrl++")
         self.editor_zoom_in_action.triggered.connect(self._zoom_in)
+        self.editor_zoom_out_action = self._action("Zoom Out", "Ctrl+-")
+        self.editor_zoom_out_action.triggered.connect(self._zoom_out)
+        self.editor_zoom_normal_action = self._action("Normal Size", "Ctrl+0")
+        self.editor_zoom_normal_action.triggered.connect(self._zoom_normal)
+        self.editor_screenshot_action = self._action("Take Screenshot")
+        self.editor_screenshot_action.triggered.connect(self._take_screenshot)
+        self.editor_new_view_action = self._action("New View")
+        self.editor_new_view_action.triggered.connect(self._new_view)
 
         phase1_action_attrs = {
             "find_item": self.find_item_action,
@@ -497,6 +514,7 @@ class MainWindow(QMainWindow):
         self._views.append(view)
         self._view_tabs = QTabWidget(self)
         self._view_tabs.addTab(cast("QWidget", raw_canvas), "Untitled")
+        self._view_tabs.currentChanged.connect(self._on_view_tab_changed)
         self.setCentralWidget(self._view_tabs)
 
     def _setup_docks(self) -> None:
@@ -596,13 +614,14 @@ class MainWindow(QMainWindow):
         action.blockSignals(was_blocked)
 
     def _show_map_properties(self) -> None:
-        dialog = MapPropertiesDialog(self)
+        dialog = self._map_properties_dialog_factory(self)
         dialog.exec()
 
     def _show_find_item(self) -> None:
         dialog = self._find_item_dialog_factory(self)
         if dialog.exec() == int(QDialog.DialogCode.Accepted):
-            self._apply_item_dialog_selection(dialog)
+            if self._apply_item_dialog_selection(dialog):
+                return
             return
 
         query = (
@@ -808,6 +827,55 @@ class MainWindow(QMainWindow):
         self._zoom_label.setText(f"{self._zoom_percent}%")
         self._sync_canvas_shell_state()
 
+    def _zoom_out(self) -> None:
+        self._zoom_percent = max(10, self._zoom_percent - 10)
+        if self._views:
+            self._active_view().viewport.set_zoom_percent(self._zoom_percent)
+        self._zoom_label.setText(f"{self._zoom_percent}%")
+        self._sync_canvas_shell_state()
+
+    def _zoom_normal(self) -> None:
+        self._zoom_percent = 100
+        if self._views:
+            self._active_view().viewport.set_zoom_percent(self._zoom_percent)
+        self._zoom_label.setText("100%")
+        self._sync_canvas_shell_state()
+
+    def _take_screenshot(self) -> None:
+        self._status_bar().showMessage("Take Screenshot is not available yet.", 3000)
+
+    def _new_view(self) -> None:
+        raw_canvas = self._canvas_factory(self)
+        if not implements_canvas_widget_protocol(raw_canvas):
+            raise TypeError("canvas_factory must return a CanvasWidgetProtocol widget")
+        raw_canvas.bind_editor_context(self._editor_context)
+        if implements_editor_tool_callback_canvas_protocol(raw_canvas):
+            raw_canvas.set_tool_applied_callback(self._handle_tool_applied)
+
+        active = self._active_view()
+        view = EditorViewRecord(
+            canvas=cast("CanvasWidgetProtocol", raw_canvas),
+            editor_context=self._editor_context,
+            shell_state=ShellStateSnapshot(
+                show_grid_enabled=self._show_grid_enabled,
+                ghost_higher_enabled=self._ghost_higher_enabled,
+                show_lower_enabled=self._show_lower_enabled,
+                view_flags=dict(active.shell_state.view_flags),
+                show_flags=dict(active.shell_state.show_flags),
+            ),
+        )
+        view.viewport.restore(active.viewport.snapshot())
+        view.minimap_viewport.center_x = view.viewport.center_x
+        view.minimap_viewport.center_y = view.viewport.center_y
+        view.minimap_viewport.floor = view.viewport.floor
+        view.minimap_viewport.zoom_percent = view.viewport.zoom_percent
+        self._views.append(view)
+        self._view_tabs.addTab(cast("QWidget", raw_canvas), "Untitled")
+        self._view_tabs.setCurrentIndex(self._view_tabs.count() - 1)
+        self._canvas = cast("CanvasWidgetProtocol", raw_canvas)
+        self._sync_canvas_shell_state()
+        self._status_bar().showMessage("Opened a new view.", 3000)
+
     def _toggle_show_grid(self, checked: bool) -> None:
         self._show_grid_enabled = checked
         self._canvas.set_show_grid(checked)
@@ -828,6 +896,36 @@ class MainWindow(QMainWindow):
 
     def _active_view(self) -> EditorViewRecord:
         return self._views[self._view_tabs.currentIndex()]
+
+    def _on_view_tab_changed(self, index: int) -> None:
+        if not 0 <= index < len(self._views):
+            return
+        view = self._views[index]
+        self._canvas = view.canvas
+        self._current_x = view.viewport.center_x
+        self._current_y = view.viewport.center_y
+        self._current_z = view.viewport.floor
+        self._previous_position = view.viewport.previous_position
+        self._zoom_percent = view.viewport.zoom_percent
+        self._show_grid_enabled = view.shell_state.show_grid_enabled
+        self._ghost_higher_enabled = view.shell_state.ghost_higher_enabled
+        self._show_lower_enabled = view.shell_state.show_lower_enabled
+        self._coord_label.setText(
+            f"Pos: (X: {self._current_x}, Y: {self._current_y}, Z: {self._current_z:02d})"
+        )
+        self._zoom_label.setText(f"{self._zoom_percent}%")
+        self._items_label.setText(
+            f"Floor {self._current_z} ({self._describe_floor(self._current_z)})"
+        )
+        for key, checked in view.shell_state.view_flags.items():
+            action = self.view_menu_actions.get(key)
+            if action is not None:
+                self._sync_checkable_action(action, checked)
+        for key, checked in view.shell_state.show_flags.items():
+            action = self.show_menu_actions.get(key)
+            if action is not None:
+                self._sync_checkable_action(action, checked)
+        self._sync_canvas_shell_state()
 
     def _set_view_flag(self, name: str, enabled: bool) -> None:
         view = self._active_view()
@@ -851,12 +949,15 @@ class MainWindow(QMainWindow):
         self._status_bar().showMessage(f"Editor mode: {label}.", 3000)
 
     def _normalized_editor_mode(self, mode: str) -> str:
-        return mode if mode in {"selection", "drawing"} else "drawing"
+        return mode if mode in {"selection", "drawing", "erasing", "fill", "move"} else "drawing"
 
     def _mode_label_for(self, mode: str) -> str:
         return {
             "selection": "Select",
             "drawing": "Draw",
+            "erasing": "Erase",
+            "fill": "Fill",
+            "move": "Move",
         }.get(mode, "Draw")
 
     def _handle_item_palette_selection(self, item: ItemEntry) -> None:
@@ -914,8 +1015,9 @@ class MainWindow(QMainWindow):
     def _refresh_dirty_chrome(self) -> None:
         dirty = self._editor_context.session.document.is_dirty
         label = "Untitled*" if dirty else "Untitled"
-        if self._view_tabs.tabText(0) != label:
-            self._view_tabs.setTabText(0, label)
+        for index in range(self._view_tabs.count()):
+            if self._view_tabs.tabText(index) != label:
+                self._view_tabs.setTabText(index, label)
         self.setWindowTitle(f"{label} - {__app_name__} v{__version__}")
 
     def _sync_canvas_shell_state(self) -> None:

@@ -125,7 +125,10 @@ class FindBrushDialog(QDialog):
                 result
                 for result in self._catalog
                 if search_text in result.name.casefold()
-                or (result.item_id is not None and search_text in str(result.item_id))
+                or (
+                    result.item_id is not None
+                    and search_text in str(result.item_id)
+                )
             ]
 
         result_count = len(self._current_results)

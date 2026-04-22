@@ -4,9 +4,9 @@
 **Active Slice:** none
 **Active Task:** none
 **Phase:** complete
-**Next Action:** Separate and review pending UI-shell command wiring before any broad `pyrme/ui/main_window.py` commit; do not rebase until the worktree is clean.
-**Last Updated:** 2026-04-20T22:46:13-03:00
-**Requirements Status:** 0 active · 21 validated · 0 deferred · 3 out of scope
+**Next Action:** Extract and review only the remaining scoped `pyrme/ui/main_window.py` hunks for M008, and leave the unrelated `package.json` `gsd:auto` delta out of the slice unless it is promoted into a separate preparatory scope.
+**Last Updated:** 2026-04-22T12:36:26-03:00
+**Requirements Status:** 0 active · 22 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
@@ -28,6 +28,7 @@
 - `CANVAS-40-RENDER-FRAME-PLAN` is complete: the renderer path now builds a stable `CanvasFrame` from `MapModel` and the active `EditorViewport`, reports visible tiles, map generation, and visible rect, and still avoids pretending sprites are drawn.
 - `CANVAS-50-DIAGNOSTIC-TILE-PRIMITIVES` is complete: frame-plan tile commands now project into screen-space diagnostic rectangles and the renderer host reports primitive count without claiming sprite parity.
 - Workflow health remediation is complete: `npm run preflight` now reflects the integrated Codex session, optional local agent TOML files, optional standalone Context7 CLI, and Windows `.venv` Python runtime.
+- Workflow health remediation now also holds in WSL: npm Python scripts launch through `scripts/run-python.mjs`, and the repo no longer forces Windows `cmd.exe` as the npm script shell.
 - `M005-sprite-resolver` was completed in manual GSD mode: Ollama/GSD auto were not required, and the milestone added an honest item-id to sprite-resource resolver before any draw pass.
 - `CANVAS-60-SPRITE-RESOLVER-CONTRACT/T01` is complete: immutable sprite lookup result statuses and payload fields are covered by `tests/python/test_sprite_resolver.py`.
 - `CANVAS-60-SPRITE-RESOLVER-CONTRACT/T02` is complete: `SpriteResourceResolver` maps known item ids to primary sprite ids and reports unknown items explicitly.
@@ -58,6 +59,13 @@
 - `BRUSH-10-ACTIVATION-BACKEND-CONTRACT/T03` is complete: selection, drawing, erasing, preserved stack, and unsupported/no-active-item no-op paths are tested.
 - `BRUSH-10-ACTIVATION-BACKEND-CONTRACT/T04` is complete: M007 closeout recorded verification and kept UI-shell dirty work unstaged.
 - `BRUSH-10-ACTIVATION-BACKEND-CONTRACT` is complete: S01 verified backend activation behavior with 9 targeted Python tests passing, 261 full Python tests passing, preflight passing, and ruff clean.
+- `M008-brush-shell-wiring` was completed in manual GSD mode: local jump dialogs, palette switching, brush mode toolbar state, and WSL preflight now align the UI shell with the canonical backend contract without widening into renderer work.
+- `BRUSH-20-SHELL-COMMAND-WIRING/T01` is complete: WSL preflight now launches through a repo-local Python helper and platform-default npm script shell instead of hardcoded Windows `py -3` / `cmd.exe`.
+- `BRUSH-20-SHELL-COMMAND-WIRING/T02` is complete: `FindBrushDialog` exposes palette and item-backed brush search results through a public dialog export seam.
+- `BRUSH-20-SHELL-COMMAND-WIRING/T03` is complete: `Jump to Brush`, `Jump to Item`, palette switching, brush mode toolbar state, and adjacent editor shell actions now drive canonical backend/session state through focused `MainWindow` tests.
+- `BRUSH-20-SHELL-COMMAND-WIRING/T04` is complete: activation backend, new-view, and canvas seam regressions remain green alongside the new shell wiring tests.
+- `BRUSH-20-SHELL-COMMAND-WIRING/T05` is complete: M008 closeout recorded real verification, corrected the stale UI smoke command, and kept next action limited to scoped review/staging.
+- `BRUSH-20-SHELL-COMMAND-WIRING` is complete: S01 verified shell wiring behavior with 53 targeted Python tests passing, preflight passing in WSL, and an honest offscreen startup smoke that kept the known `QOpenGLWidget` limitation explicit.
 
 ## Blockers
 
@@ -65,4 +73,5 @@
 - `QOpenGLWidget` under `QT_QPA_PLATFORM=offscreen` still reports invalid contexts locally, so slice verification relies on protocol behavior and honest diagnostics rather than requiring a live GL context in CI.
 - Local network/socket health is restored: `git fetch origin` works and Ollama `/v1/models` responds. Branch remains `ahead 5, behind 6` with a dirty worktree after the M007 local commit, so do not rebase or publish until scoped changes are staged and committed cleanly.
 - Current dirty worktree mixes older legacy-shell/tooling changes. Do not stage `pyrme/ui/main_window.py` file-wide without reviewing mixed hunks.
+- `npm run gsd:status --silent` timed out in this WSL session without returning output, so M008 closeout used direct artifact updates instead of GSD status output.
 - GSD status works in degraded filesystem mode on Windows; native addon/registry warnings remain non-blocking for manual GSD updates.
