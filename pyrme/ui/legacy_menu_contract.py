@@ -1,12 +1,16 @@
 """Legacy menu contract for the Python editor shell.
 
-This module freezes the first wave of menu parity against the legacy
-redux C++ editor so the shell can converge on one source of truth.
+The tracked ``pyrme/assets/contracts/legacy/menubar.xml`` snapshot is the
+publishable source of truth for labels, shortcuts, help text, and menu
+ordering. This module exposes the subset of that contract currently mounted by
+the Python shell.
 """
 
 from __future__ import annotations
 
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -20,551 +24,379 @@ class ActionSpec:
     status_tip: str | None = None
 
 
-LEGACY_TOP_LEVEL_MENUS = (
-    "File",
-    "Edit",
-    "Editor",
-    "Search",
-    "Map",
-    "Selection",
-    "View",
-    "Show",
-    "Navigate",
-    "Window",
-    "Experimental",
-    "Scripts",
-    "About",
+_PYRME_ROOT = Path(__file__).resolve().parents[1]
+LEGACY_MENUBAR_XML = _PYRME_ROOT / "assets" / "contracts" / "legacy" / "menubar.xml"
+_MENUBAR_ROOT = ET.parse(LEGACY_MENUBAR_XML).getroot()
+
+
+def _menu(name: str, parent: ET.Element | None = None) -> ET.Element:
+    source = _MENUBAR_ROOT if parent is None else parent
+    for node in source.findall("menu"):
+        if node.get("name") == name:
+            return node
+    raise KeyError(f"Legacy menu not found: {name}")
+
+
+def _menu_path(*names: str) -> ET.Element:
+    current: ET.Element | None = None
+    for name in names:
+        current = _menu(name, current)
+    assert current is not None
+    return current
+
+
+def _sequence(*names: str) -> tuple[str | None, ...]:
+    menu = _menu_path(*names)
+    items: list[str | None] = []
+    for child in menu:
+        if child.tag == "separator":
+            items.append(None)
+        elif child.tag in {"item", "menu"}:
+            items.append(child.get("name", ""))
+    return tuple(items)
+
+
+def _action_nodes() -> dict[str, ET.Element]:
+    nodes: dict[str, ET.Element] = {}
+    for node in _MENUBAR_ROOT.iter("item"):
+        action = node.get("action")
+        if action and action not in nodes:
+            nodes[action] = node
+    return nodes
+
+
+_XML_ACTIONS = _action_nodes()
+
+LEGACY_TOP_LEVEL_MENUS = tuple(
+    node.get("name", "") for node in _MENUBAR_ROOT.findall("menu")
 )
 
-LEGACY_NAVIGATE_FLOOR_LABELS = tuple(f"Floor {floor}" for floor in range(16))
+LEGACY_FILE_MENU_SEQUENCE = _sequence("File")
+LEGACY_FILE_IMPORT_ITEMS = _sequence("File", "Import")
+LEGACY_FILE_EXPORT_ITEMS = _sequence("File", "Export")
+LEGACY_FILE_RELOAD_ITEMS = _sequence("File", "Reload")
 
-LEGACY_WINDOW_PRIMARY_ITEMS = (
-    "Minimap",
-    "Tool Options",
-    "Tile Properties",
-    "In-game Preview",
-    "New Palette",
-)
-
-LEGACY_WINDOW_PALETTE_ITEMS = (
-    "Terrain",
-    "Doodad",
-    "Item",
-    "Collection",
-    "House",
-    "Creature",
-    "Waypoint",
-    "RAW",
-)
-
-LEGACY_WINDOW_TOOLBAR_ITEMS = (
-    "Brushes",
-    "Position",
-    "Sizes",
-    "Standard",
-)
-
-LEGACY_EDITOR_ITEMS = (
-    "New View",
-    "Enter Fullscreen",
-    "Take Screenshot",
-)
-
-LEGACY_EDITOR_ZOOM_ITEMS = (
-    "Zoom In",
-    "Zoom Out",
-    "Zoom Normal",
-)
-
-LEGACY_FILE_MENU_SEQUENCE = (
-    "New...",
-    "Open...",
-    "Save",
-    "Save As...",
-    "Generate Map",
-    "Close",
-    None,
-    "Import",
-    "Export",
-    "Reload",
-    "Missing Items Report...",
-    None,
-    "Recent Files",
-    "Preferences",
-    "Exit",
-)
-
-LEGACY_FILE_IMPORT_ITEMS = (
-    "Import Map...",
-    "Import Monsters/NPC...",
-)
-
-LEGACY_FILE_EXPORT_ITEMS = (
-    "Export Minimap...",
-    "Export Tilesets...",
-)
-
-LEGACY_FILE_RELOAD_ITEMS = ("Reload Data Files",)
-
-LEGACY_EDIT_MENU_SEQUENCE = (
-    "Undo",
-    "Redo",
-    None,
-    "Replace Items...",
-    None,
-    "Border Options",
-    "Other Options",
-    None,
-    "Cut",
-    "Copy",
-    "Paste",
-)
-
-LEGACY_EDIT_BORDER_ITEMS = (
-    "Border Automagic",
-    None,
-    "Borderize Selection",
-    "Borderize Map",
-    "Randomize Selection",
-    "Randomize Map",
-)
-
-LEGACY_EDIT_OTHER_ITEMS = (
-    "Remove Items by ID...",
-    "Remove all Corpses...",
-    "Remove all Unreachable Tiles...",
-    "Clear Invalid Houses",
-    "Clear Modified State",
-)
-
+LEGACY_EDIT_MENU_SEQUENCE = _sequence("Edit")
+LEGACY_EDIT_BORDER_ITEMS = _sequence("Edit", "Border Options")
+LEGACY_EDIT_OTHER_ITEMS = _sequence("Edit", "Other Options")
 LEGACY_EDIT_STATE_DEFAULTS = {"border_automagic": True}
 
+LEGACY_EDITOR_ITEMS = tuple(
+    child.get("name", "")
+    for child in _menu_path("Editor").findall("item")
+)
+LEGACY_EDITOR_ZOOM_ITEMS = _sequence("Editor", "Zoom")
 
-PHASE1_ACTIONS: dict[str, ActionSpec] = {
-    "file_new": ActionSpec(
-        action_id="file_new",
-        text="New...",
-        menu_path=("File",),
-        shortcut="Ctrl+N",
-        status_tip="Create a new map.",
-    ),
-    "file_open": ActionSpec(
-        action_id="file_open",
-        text="Open...",
-        menu_path=("File",),
-        shortcut="Ctrl+O",
-        status_tip="Open another map.",
-    ),
-    "file_save": ActionSpec(
-        action_id="file_save",
-        text="Save",
-        menu_path=("File",),
-        shortcut="Ctrl+S",
-        status_tip="Save the current map.",
-    ),
-    "file_save_as": ActionSpec(
-        action_id="file_save_as",
-        text="Save As...",
-        menu_path=("File",),
-        shortcut="Ctrl+Alt+S",
-        status_tip="Save the current map as a new file.",
-    ),
-    "file_generate_map": ActionSpec(
-        action_id="file_generate_map",
-        text="Generate Map",
-        menu_path=("File",),
-        shortcut=None,
-        status_tip="Generate a new map.",
-    ),
-    "file_close": ActionSpec(
-        action_id="file_close",
-        text="Close",
-        menu_path=("File",),
-        shortcut="Ctrl+Q",
-        status_tip="Closes the currently open map.",
-    ),
-    "file_import_map": ActionSpec(
-        action_id="file_import_map",
-        text="Import Map...",
-        menu_path=("File", "Import"),
-        shortcut=None,
-        status_tip="Import map data from another map file.",
-    ),
-    "file_import_monsters": ActionSpec(
-        action_id="file_import_monsters",
-        text="Import Monsters/NPC...",
-        menu_path=("File", "Import"),
-        shortcut=None,
-        status_tip="Import either a monsters.xml file or a specific monster/NPC.",
-    ),
-    "file_export_minimap": ActionSpec(
-        action_id="file_export_minimap",
-        text="Export Minimap...",
-        menu_path=("File", "Export"),
-        shortcut=None,
-        status_tip="Export minimap to an image file.",
-    ),
-    "file_export_tilesets": ActionSpec(
-        action_id="file_export_tilesets",
-        text="Export Tilesets...",
-        menu_path=("File", "Export"),
-        shortcut=None,
-        status_tip="Export tilesets to an xml file.",
-    ),
-    "file_reload_data": ActionSpec(
-        action_id="file_reload_data",
-        text="Reload Data Files",
-        menu_path=("File", "Reload"),
-        shortcut="F5",
-        status_tip="Reloads all data files.",
-    ),
-    "file_missing_items_report": ActionSpec(
-        action_id="file_missing_items_report",
-        text="Missing Items Report...",
-        menu_path=("File",),
-        shortcut=None,
-        status_tip="View missing item definitions between data files.",
-    ),
-    "file_preferences": ActionSpec(
-        action_id="file_preferences",
-        text="Preferences",
-        menu_path=("File",),
-        shortcut=None,
-        status_tip="Configure the map editor.",
-    ),
-    "file_exit": ActionSpec(
-        action_id="file_exit",
-        text="Exit",
-        menu_path=("File",),
-        shortcut=None,
-        status_tip="Close the editor.",
-    ),
-    "edit_undo": ActionSpec(
-        action_id="edit_undo",
-        text="Undo",
-        menu_path=("Edit",),
-        shortcut="Ctrl+Z",
-        status_tip="Undo the last action.",
-    ),
-    "edit_redo": ActionSpec(
-        action_id="edit_redo",
-        text="Redo",
-        menu_path=("Edit",),
-        shortcut="Ctrl+Shift+Z",
-        status_tip="Redo the last undone action.",
-    ),
-    "find_item": ActionSpec(
-        action_id="find_item",
-        text="Find Item...",
-        menu_path=("Search",),
-        shortcut="Ctrl+F",
-        status_tip="Find all instances of an item type the map.",
-    ),
-    "replace_items": ActionSpec(
-        action_id="replace_items",
-        text="Replace Items...",
-        menu_path=("Edit",),
-        shortcut="Ctrl+Shift+F",
-        status_tip="Replaces all occurrences of one item with another.",
-    ),
-    "border_automagic": ActionSpec(
-        action_id="border_automagic",
-        text="Border Automagic",
-        menu_path=("Edit", "Border Options"),
-        shortcut="A",
-        status_tip="Toggle automagic border drawing.",
-    ),
-    "borderize_selection": ActionSpec(
-        action_id="borderize_selection",
-        text="Borderize Selection",
-        menu_path=("Edit", "Border Options"),
-        shortcut="Ctrl+B",
-        status_tip="Borderize the current selection.",
-    ),
-    "borderize_map": ActionSpec(
-        action_id="borderize_map",
-        text="Borderize Map",
-        menu_path=("Edit", "Border Options"),
-        shortcut=None,
-        status_tip="Borderize the current map.",
-    ),
-    "randomize_selection": ActionSpec(
-        action_id="randomize_selection",
-        text="Randomize Selection",
-        menu_path=("Edit", "Border Options"),
-        shortcut=None,
-        status_tip="Randomize the current selection.",
-    ),
-    "randomize_map": ActionSpec(
-        action_id="randomize_map",
-        text="Randomize Map",
-        menu_path=("Edit", "Border Options"),
-        shortcut=None,
-        status_tip="Randomize the current map.",
-    ),
-    "remove_items_by_id": ActionSpec(
-        action_id="remove_items_by_id",
-        text="Remove Items by ID...",
-        menu_path=("Edit", "Other Options"),
-        shortcut="Ctrl+Shift+R",
-        status_tip="Remove items by id.",
-    ),
-    "remove_all_corpses": ActionSpec(
-        action_id="remove_all_corpses",
-        text="Remove all Corpses...",
-        menu_path=("Edit", "Other Options"),
-        shortcut=None,
-        status_tip="Remove all corpses.",
-    ),
-    "remove_all_unreachable_tiles": ActionSpec(
-        action_id="remove_all_unreachable_tiles",
-        text="Remove all Unreachable Tiles...",
-        menu_path=("Edit", "Other Options"),
-        shortcut=None,
-        status_tip="Remove all unreachable tiles.",
-    ),
-    "clear_invalid_houses": ActionSpec(
-        action_id="clear_invalid_houses",
-        text="Clear Invalid Houses",
-        menu_path=("Edit", "Other Options"),
-        shortcut=None,
-        status_tip="Clear invalid houses.",
-    ),
-    "clear_modified_state": ActionSpec(
-        action_id="clear_modified_state",
-        text="Clear Modified State",
-        menu_path=("Edit", "Other Options"),
-        shortcut=None,
-        status_tip="Clear modified state.",
-    ),
-    "edit_cut": ActionSpec(
-        action_id="edit_cut",
-        text="Cut",
-        menu_path=("Edit",),
-        shortcut="Ctrl+X",
-        status_tip="Cut the current selection.",
-    ),
-    "edit_copy": ActionSpec(
-        action_id="edit_copy",
-        text="Copy",
-        menu_path=("Edit",),
-        shortcut="Ctrl+C",
-        status_tip="Copy the current selection.",
-    ),
-    "edit_paste": ActionSpec(
-        action_id="edit_paste",
-        text="Paste",
-        menu_path=("Edit",),
-        shortcut="Ctrl+V",
-        status_tip="Paste from the clipboard.",
-    ),
-    "map_properties": ActionSpec(
-        action_id="map_properties",
-        text="Properties...",
-        menu_path=("Map",),
-        shortcut="Ctrl+P",
-        status_tip="Show and change the map properties.",
-    ),
-    "map_statistics": ActionSpec(
-        action_id="map_statistics",
-        text="Statistics",
-        menu_path=("Map",),
-        shortcut="F8",
-        status_tip="Show map statistics.",
-    ),
-    "goto_position": ActionSpec(
-        action_id="goto_position",
-        text="Go to Position...",
-        menu_path=("Navigate",),
-        shortcut="Ctrl+G",
-        status_tip="Go to a specific XYZ position.",
-    ),
-    "goto_previous_position": ActionSpec(
-        action_id="goto_previous_position",
-        text="Go to Previous Position",
-        menu_path=("Navigate",),
-        shortcut="P",
-        status_tip="Go to the previous screen center position.",
-    ),
-    "jump_to_brush": ActionSpec(
-        action_id="jump_to_brush",
-        text="Jump to Brush...",
-        menu_path=("Navigate",),
-        shortcut="J",
-        status_tip="Jump to a brush.",
-    ),
-    "jump_to_item": ActionSpec(
-        action_id="jump_to_item",
-        text="Jump to Item...",
-        menu_path=("Navigate",),
-        shortcut="Ctrl+J",
-        status_tip="Jump to an item brush (RAW palette).",
-    ),
-    "window_minimap": ActionSpec(
-        action_id="window_minimap",
-        text="Minimap",
-        menu_path=("Window",),
-        shortcut="M",
-        status_tip="Displays the minimap window.",
-    ),
-    "window_tool_options": ActionSpec(
-        action_id="window_tool_options",
-        text="Tool Options",
-        menu_path=("Window",),
-        status_tip="Displays the tool options window.",
-    ),
-    "window_tile_properties": ActionSpec(
-        action_id="window_tile_properties",
-        text="Tile Properties",
-        menu_path=("Window",),
-        status_tip="Displays the tile properties panel.",
-    ),
-    "window_ingame_preview": ActionSpec(
-        action_id="window_ingame_preview",
-        text="In-game Preview",
-        menu_path=("Window",),
-        status_tip="Displays the in-game preview window.",
-    ),
-    "new_palette": ActionSpec(
-        action_id="new_palette",
-        text="New Palette",
-        menu_path=("Window",),
-        status_tip="Creates a new palette.",
-    ),
-    "select_palette_terrain": ActionSpec(
-        action_id="select_palette_terrain",
-        text="Terrain",
-        menu_path=("Window", "Palette"),
-        shortcut="T",
-        status_tip="Select the Terrain palette.",
-    ),
-    "select_palette_doodad": ActionSpec(
-        action_id="select_palette_doodad",
-        text="Doodad",
-        menu_path=("Window", "Palette"),
-        shortcut="D",
-        status_tip="Select the Doodad palette.",
-    ),
-    "select_palette_item": ActionSpec(
-        action_id="select_palette_item",
-        text="Item",
-        menu_path=("Window", "Palette"),
-        shortcut="I",
-        status_tip="Select the Item palette.",
-    ),
-    "select_palette_collection": ActionSpec(
-        action_id="select_palette_collection",
-        text="Collection",
-        menu_path=("Window", "Palette"),
-        shortcut="N",
-        status_tip="Select the Collection palette.",
-    ),
-    "select_palette_house": ActionSpec(
-        action_id="select_palette_house",
-        text="House",
-        menu_path=("Window", "Palette"),
-        shortcut="H",
-        status_tip="Select the House palette.",
-    ),
-    "select_palette_creature": ActionSpec(
-        action_id="select_palette_creature",
-        text="Creature",
-        menu_path=("Window", "Palette"),
-        shortcut="C",
-        status_tip="Select the Creature palette.",
-    ),
-    "select_palette_waypoint": ActionSpec(
-        action_id="select_palette_waypoint",
-        text="Waypoint",
-        menu_path=("Window", "Palette"),
-        shortcut="W",
-        status_tip="Select the Waypoint palette.",
-    ),
-    "select_palette_raw": ActionSpec(
-        action_id="select_palette_raw",
-        text="RAW",
-        menu_path=("Window", "Palette"),
-        shortcut="R",
-        status_tip="Select the RAW palette.",
-    ),
-    "view_toolbars_brushes": ActionSpec(
-        action_id="view_toolbars_brushes",
-        text="Brushes",
-        menu_path=("Window", "Toolbars"),
-        status_tip="Show or hide the Brushes toolbar.",
-    ),
-    "view_toolbars_position": ActionSpec(
-        action_id="view_toolbars_position",
-        text="Position",
-        menu_path=("Window", "Toolbars"),
-        status_tip="Show or hide the Position toolbar.",
-    ),
-    "view_toolbars_sizes": ActionSpec(
-        action_id="view_toolbars_sizes",
-        text="Sizes",
-        menu_path=("Window", "Toolbars"),
-        status_tip="Show or hide the Sizes toolbar.",
-    ),
-    "view_toolbars_standard": ActionSpec(
-        action_id="view_toolbars_standard",
-        text="Standard",
-        menu_path=("Window", "Toolbars"),
-        status_tip="Show or hide the Standard toolbar.",
-    ),
-    "show_grid": ActionSpec(
-        action_id="show_grid",
-        text="Show grid",
-        menu_path=("View",),
-        shortcut="Shift+G",
-        status_tip="Shows a grid over all items.",
-    ),
-    "ghost_higher_floors": ActionSpec(
-        action_id="ghost_higher_floors",
-        text="Ghost higher floors",
-        menu_path=("View",),
-        shortcut="Ctrl+L",
-        status_tip="Ghost floors.",
-    ),
-    "editor_new_view": ActionSpec(
-        action_id="editor_new_view",
-        text="New View",
-        menu_path=("Editor",),
-        shortcut="Ctrl+Shift+N",
-        status_tip="Creates a new view of the current map.",
-    ),
-    "editor_fullscreen": ActionSpec(
-        action_id="editor_fullscreen",
-        text="Enter Fullscreen",
-        menu_path=("Editor",),
-        shortcut="F11",
-        status_tip="Changes between fullscreen mode and windowed mode.",
-    ),
-    "editor_screenshot": ActionSpec(
-        action_id="editor_screenshot",
-        text="Take Screenshot",
-        menu_path=("Editor",),
-        shortcut="F10",
-        status_tip="Saves the current view to the disk.",
-    ),
-    "editor_zoom_in": ActionSpec(
-        action_id="editor_zoom_in",
-        text="Zoom In",
-        menu_path=("Editor", "Zoom"),
-        shortcut="Ctrl++",
-        status_tip="Increase the zoom.",
-    ),
-    "editor_zoom_out": ActionSpec(
-        action_id="editor_zoom_out",
-        text="Zoom Out",
-        menu_path=("Editor", "Zoom"),
-        shortcut="Ctrl+-",
-        status_tip="Decrease the zoom.",
-    ),
-    "editor_zoom_normal": ActionSpec(
-        action_id="editor_zoom_normal",
-        text="Zoom Normal",
-        menu_path=("Editor", "Zoom"),
-        shortcut="Ctrl+0",
-        status_tip="Normal zoom(100%).",
-    ),
+LEGACY_SEARCH_MENU_SEQUENCE = _sequence("Search")
+LEGACY_MAP_MENU_SEQUENCE = _sequence("Map")
+
+LEGACY_SELECTION_MENU_SEQUENCE = _sequence("Selection")
+LEGACY_SELECTION_FIND_ITEMS = _sequence("Selection", "Find on Selection")
+LEGACY_SELECTION_MODE_ITEMS = _sequence("Selection", "Selection Mode")
+LEGACY_SELECTION_MODE_DEFAULTS = {
+    "select_mode_compensate": True,
+    "select_mode_current": True,
+    "select_mode_lower": False,
+    "select_mode_visible": False,
 }
+
+LEGACY_VIEW_MENU_SEQUENCE = _sequence("View")
+LEGACY_VIEW_FLAG_DEFAULTS = {
+    "view_show_all_floors": True,
+    "view_show_as_minimap": False,
+    "view_only_show_colors": False,
+    "view_only_show_modified": False,
+    "view_always_show_zones": True,
+    "view_extended_house_shader": True,
+    "view_show_tooltips": True,
+    "show_grid": False,
+    "view_show_client_box": False,
+    "view_ghost_loose_items": False,
+    "ghost_higher_floors": False,
+    "view_show_shade": True,
+}
+
+LEGACY_SHOW_MENU_SEQUENCE = _sequence("Show")
+LEGACY_SHOW_FLAG_DEFAULTS = {
+    "show_animation": True,
+    "show_light": False,
+    "show_light_strength": True,
+    "show_technical_items": True,
+    "show_invalid_tiles": True,
+    "show_invalid_zones": True,
+    "show_creatures": True,
+    "show_spawns": True,
+    "show_special": True,
+    "show_houses": True,
+    "show_pathing": False,
+    "show_towns": False,
+    "show_waypoints": True,
+    "highlight_items": False,
+    "highlight_locked_doors": True,
+    "show_wall_hooks": False,
+}
+
+LEGACY_NAVIGATE_FLOOR_LABELS = _sequence("Navigate", "Floor")
+LEGACY_WINDOW_PRIMARY_ITEMS = tuple(
+    child.get("name", "")
+    for child in _menu_path("Window")
+    if child.tag == "item"
+)
+LEGACY_WINDOW_PALETTE_ITEMS = _sequence("Window", "Palette")
+LEGACY_WINDOW_TOOLBAR_ITEMS = _sequence("Window", "Toolbars")
+
+
+_ACTION_KEY_BY_XML_ID = {
+    "NEW": "file_new",
+    "OPEN": "file_open",
+    "SAVE": "file_save",
+    "SAVE_AS": "file_save_as",
+    "GENERATE_MAP": "file_generate_map",
+    "CLOSE": "file_close",
+    "IMPORT_MAP": "file_import_map",
+    "IMPORT_MONSTERS": "file_import_monsters",
+    "EXPORT_MINIMAP": "file_export_minimap",
+    "EXPORT_TILESETS": "file_export_tilesets",
+    "RELOAD_DATA": "file_reload_data",
+    "MISSING_ITEMS_REPORT": "file_missing_items_report",
+    "PREFERENCES": "file_preferences",
+    "EXIT": "file_exit",
+    "UNDO": "edit_undo",
+    "REDO": "edit_redo",
+    "REPLACE_ITEMS": "replace_items",
+    "AUTOMAGIC": "border_automagic",
+    "BORDERIZE_SELECTION": "borderize_selection",
+    "BORDERIZE_MAP": "borderize_map",
+    "RANDOMIZE_SELECTION": "randomize_selection",
+    "RANDOMIZE_MAP": "randomize_map",
+    "MAP_REMOVE_ITEMS": "remove_items_by_id",
+    "MAP_REMOVE_CORPSES": "remove_all_corpses",
+    "MAP_REMOVE_UNREACHABLE_TILES": "remove_all_unreachable_tiles",
+    "CLEAR_INVALID_HOUSES": "clear_invalid_houses",
+    "CLEAR_MODIFIED_STATE": "clear_modified_state",
+    "CUT": "edit_cut",
+    "COPY": "edit_copy",
+    "PASTE": "edit_paste",
+    "FIND_ITEM": "find_item",
+    "SEARCH_ON_MAP_UNIQUE": "search_on_map_unique",
+    "SEARCH_ON_MAP_ACTION": "search_on_map_action",
+    "SEARCH_ON_MAP_CONTAINER": "search_on_map_container",
+    "SEARCH_ON_MAP_WRITEABLE": "search_on_map_writeable",
+    "SEARCH_ON_MAP_EVERYTHING": "search_on_map_everything",
+    "EDIT_TOWNS": "map_edit_towns",
+    "MAP_CLEANUP": "map_cleanup_invalid_tiles",
+    "MAP_CLEAN_INVALID_ZONES": "map_cleanup_invalid_zones",
+    "MAP_PROPERTIES": "map_properties",
+    "MAP_STATISTICS": "map_statistics",
+    "REPLACE_ON_SELECTION_ITEMS": "replace_on_selection_items",
+    "SEARCH_ON_SELECTION_ITEM": "search_on_selection_item",
+    "REMOVE_ON_SELECTION_ITEM": "remove_on_selection_item",
+    "SEARCH_ON_SELECTION_EVERYTHING": "search_on_selection_everything",
+    "SEARCH_ON_SELECTION_UNIQUE": "search_on_selection_unique",
+    "SEARCH_ON_SELECTION_ACTION": "search_on_selection_action",
+    "SEARCH_ON_SELECTION_CONTAINER": "search_on_selection_container",
+    "SEARCH_ON_SELECTION_WRITEABLE": "search_on_selection_writeable",
+    "SELECT_MODE_COMPENSATE": "select_mode_compensate",
+    "SELECT_MODE_CURRENT": "select_mode_current",
+    "SELECT_MODE_LOWER": "select_mode_lower",
+    "SELECT_MODE_VISIBLE": "select_mode_visible",
+    "SHOW_ALL_FLOORS": "view_show_all_floors",
+    "SHOW_AS_MINIMAP": "view_show_as_minimap",
+    "SHOW_ONLY_COLORS": "view_only_show_colors",
+    "SHOW_ONLY_MODIFIED": "view_only_show_modified",
+    "ALWAYS_SHOW_ZONES": "view_always_show_zones",
+    "EXT_HOUSE_SHADER": "view_extended_house_shader",
+    "SHOW_TOOLTIPS": "view_show_tooltips",
+    "SHOW_GRID": "show_grid",
+    "SHOW_INGAME_BOX": "view_show_client_box",
+    "GHOST_ITEMS": "view_ghost_loose_items",
+    "GHOST_HIGHER_FLOORS": "ghost_higher_floors",
+    "SHOW_SHADE": "view_show_shade",
+    "SHOW_PREVIEW": "show_animation",
+    "SHOW_LIGHTS": "show_light",
+    "SHOW_LIGHT_STR": "show_light_strength",
+    "SHOW_TECHNICAL_ITEMS": "show_technical_items",
+    "SHOW_INVALID_TILES": "show_invalid_tiles",
+    "SHOW_INVALID_ZONES": "show_invalid_zones",
+    "SHOW_CREATURES": "show_creatures",
+    "SHOW_SPAWNS": "show_spawns",
+    "SHOW_SPECIAL": "show_special",
+    "SHOW_HOUSES": "show_houses",
+    "SHOW_PATHING": "show_pathing",
+    "SHOW_TOWNS": "show_towns",
+    "SHOW_WAYPOINTS": "show_waypoints",
+    "HIGHLIGHT_ITEMS": "highlight_items",
+    "HIGHLIGHT_LOCKED_DOORS": "highlight_locked_doors",
+    "SHOW_WALL_HOOKS": "show_wall_hooks",
+    "GOTO_POSITION": "goto_position",
+    "GOTO_PREVIOUS_POSITION": "goto_previous_position",
+    "JUMP_TO_BRUSH": "jump_to_brush",
+    "JUMP_TO_ITEM_BRUSH": "jump_to_item",
+    "WIN_MINIMAP": "window_minimap",
+    "WIN_TOOL_OPTIONS": "window_tool_options",
+    "WIN_TILE_PROPERTIES": "window_tile_properties",
+    "WIN_INGAME_PREVIEW": "window_ingame_preview",
+    "NEW_PALETTE": "new_palette",
+    "SELECT_TERRAIN": "select_palette_terrain",
+    "SELECT_DOODAD": "select_palette_doodad",
+    "SELECT_ITEM": "select_palette_item",
+    "SELECT_COLLECTION": "select_palette_collection",
+    "SELECT_HOUSE": "select_palette_house",
+    "SELECT_CREATURE": "select_palette_creature",
+    "SELECT_WAYPOINT": "select_palette_waypoint",
+    "SELECT_RAW": "select_palette_raw",
+    "VIEW_TOOLBARS_BRUSHES": "view_toolbars_brushes",
+    "VIEW_TOOLBARS_POSITION": "view_toolbars_position",
+    "VIEW_TOOLBARS_SIZES": "view_toolbars_sizes",
+    "VIEW_TOOLBARS_STANDARD": "view_toolbars_standard",
+    "NEW_VIEW": "editor_new_view",
+    "TOGGLE_FULLSCREEN": "editor_fullscreen",
+    "TAKE_SCREENSHOT": "editor_screenshot",
+    "ZOOM_IN": "editor_zoom_in",
+    "ZOOM_OUT": "editor_zoom_out",
+    "ZOOM_NORMAL": "editor_zoom_normal",
+    "EXPERIMENTAL_FOG": "experimental_fog",
+    "SCRIPTS_MANAGER": "scripts_manager",
+    "SCRIPTS_OPEN_FOLDER": "scripts_open_folder",
+    "SCRIPTS_RELOAD": "scripts_reload",
+    "EXTENSIONS": "about_extensions",
+    "GOTO_WEBSITE": "about_goto_website",
+    "ABOUT": "about",
+}
+
+_MENU_PATH_BY_ACTION_KEY = {
+    "file_new": ("File",),
+    "file_open": ("File",),
+    "file_save": ("File",),
+    "file_save_as": ("File",),
+    "file_generate_map": ("File",),
+    "file_close": ("File",),
+    "file_import_map": ("File", "Import"),
+    "file_import_monsters": ("File", "Import"),
+    "file_export_minimap": ("File", "Export"),
+    "file_export_tilesets": ("File", "Export"),
+    "file_reload_data": ("File", "Reload"),
+    "file_missing_items_report": ("File",),
+    "file_preferences": ("File",),
+    "file_exit": ("File",),
+    "edit_undo": ("Edit",),
+    "edit_redo": ("Edit",),
+    "replace_items": ("Edit",),
+    "border_automagic": ("Edit", "Border Options"),
+    "borderize_selection": ("Edit", "Border Options"),
+    "borderize_map": ("Edit", "Border Options"),
+    "randomize_selection": ("Edit", "Border Options"),
+    "randomize_map": ("Edit", "Border Options"),
+    "remove_items_by_id": ("Edit", "Other Options"),
+    "remove_all_corpses": ("Edit", "Other Options"),
+    "remove_all_unreachable_tiles": ("Edit", "Other Options"),
+    "clear_invalid_houses": ("Edit", "Other Options"),
+    "clear_modified_state": ("Edit", "Other Options"),
+    "edit_cut": ("Edit",),
+    "edit_copy": ("Edit",),
+    "edit_paste": ("Edit",),
+    "find_item": ("Search",),
+    "search_on_map_unique": ("Search",),
+    "search_on_map_action": ("Search",),
+    "search_on_map_container": ("Search",),
+    "search_on_map_writeable": ("Search",),
+    "search_on_map_everything": ("Search",),
+    "map_edit_towns": ("Map",),
+    "map_cleanup_invalid_tiles": ("Map",),
+    "map_cleanup_invalid_zones": ("Map",),
+    "map_properties": ("Map",),
+    "map_statistics": ("Map",),
+    "replace_on_selection_items": ("Selection",),
+    "search_on_selection_item": ("Selection",),
+    "remove_on_selection_item": ("Selection",),
+    "search_on_selection_everything": ("Selection", "Find on Selection"),
+    "search_on_selection_unique": ("Selection", "Find on Selection"),
+    "search_on_selection_action": ("Selection", "Find on Selection"),
+    "search_on_selection_container": ("Selection", "Find on Selection"),
+    "search_on_selection_writeable": ("Selection", "Find on Selection"),
+    "select_mode_compensate": ("Selection", "Selection Mode"),
+    "select_mode_current": ("Selection", "Selection Mode"),
+    "select_mode_lower": ("Selection", "Selection Mode"),
+    "select_mode_visible": ("Selection", "Selection Mode"),
+    "view_show_all_floors": ("View",),
+    "view_show_as_minimap": ("View",),
+    "view_only_show_colors": ("View",),
+    "view_only_show_modified": ("View",),
+    "view_always_show_zones": ("View",),
+    "view_extended_house_shader": ("View",),
+    "view_show_tooltips": ("View",),
+    "show_grid": ("View",),
+    "view_show_client_box": ("View",),
+    "view_ghost_loose_items": ("View",),
+    "ghost_higher_floors": ("View",),
+    "view_show_shade": ("View",),
+    "show_animation": ("Show",),
+    "show_light": ("Show",),
+    "show_light_strength": ("Show",),
+    "show_technical_items": ("Show",),
+    "show_invalid_tiles": ("Show",),
+    "show_invalid_zones": ("Show",),
+    "show_creatures": ("Show",),
+    "show_spawns": ("Show",),
+    "show_special": ("Show",),
+    "show_houses": ("Show",),
+    "show_pathing": ("Show",),
+    "show_towns": ("Show",),
+    "show_waypoints": ("Show",),
+    "highlight_items": ("Show",),
+    "highlight_locked_doors": ("Show",),
+    "show_wall_hooks": ("Show",),
+    "goto_position": ("Navigate",),
+    "goto_previous_position": ("Navigate",),
+    "jump_to_brush": ("Navigate",),
+    "jump_to_item": ("Navigate",),
+    "window_minimap": ("Window",),
+    "window_tool_options": ("Window",),
+    "window_tile_properties": ("Window",),
+    "window_ingame_preview": ("Window",),
+    "new_palette": ("Window",),
+    "select_palette_terrain": ("Window", "Palette"),
+    "select_palette_doodad": ("Window", "Palette"),
+    "select_palette_item": ("Window", "Palette"),
+    "select_palette_collection": ("Window", "Palette"),
+    "select_palette_house": ("Window", "Palette"),
+    "select_palette_creature": ("Window", "Palette"),
+    "select_palette_waypoint": ("Window", "Palette"),
+    "select_palette_raw": ("Window", "Palette"),
+    "view_toolbars_brushes": ("Window", "Toolbars"),
+    "view_toolbars_position": ("Window", "Toolbars"),
+    "view_toolbars_sizes": ("Window", "Toolbars"),
+    "view_toolbars_standard": ("Window", "Toolbars"),
+    "editor_new_view": ("Editor",),
+    "editor_fullscreen": ("Editor",),
+    "editor_screenshot": ("Editor",),
+    "editor_zoom_in": ("Editor", "Zoom"),
+    "editor_zoom_out": ("Editor", "Zoom"),
+    "editor_zoom_normal": ("Editor", "Zoom"),
+    "experimental_fog": ("Experimental",),
+    "scripts_manager": ("Scripts",),
+    "scripts_open_folder": ("Scripts",),
+    "scripts_reload": ("Scripts",),
+    "about_extensions": ("About",),
+    "about_goto_website": ("About",),
+    "about": ("About",),
+}
+
+
+def _build_action_specs() -> dict[str, ActionSpec]:
+    specs: dict[str, ActionSpec] = {}
+    for xml_id, action_key in _ACTION_KEY_BY_XML_ID.items():
+        node = _XML_ACTIONS.get(xml_id)
+        if node is None:
+            continue
+        specs[action_key] = ActionSpec(
+            action_id=action_key,
+            text=node.get("name", ""),
+            menu_path=_MENU_PATH_BY_ACTION_KEY[action_key],
+            shortcut=node.get("hotkey") or None,
+            status_tip=node.get("help") or None,
+        )
+    return specs
+
+
+PHASE1_ACTIONS: dict[str, ActionSpec] = _build_action_specs()

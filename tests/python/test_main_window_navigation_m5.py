@@ -26,7 +26,7 @@ def _setting_bool(settings: QSettings, key: str, default: bool = False) -> bool:
 
 def test_main_window_goto_position_updates_shell_state(
     qtbot,
-    tmp_path: Path,
+    settings_workspace: Path,
 ) -> None:
     class _GotoDialog:
         def __init__(self, parent=None) -> None:
@@ -39,7 +39,7 @@ def test_main_window_goto_position_updates_shell_state(
             return (32123, 32234, 6)
 
     window = MainWindow(
-        settings=_build_settings(tmp_path, "goto.ini"),
+        settings=_build_settings(settings_workspace, "goto.ini"),
         goto_dialog_factory=_GotoDialog,
     )
     qtbot.addWidget(window)
@@ -56,9 +56,9 @@ def test_main_window_goto_position_updates_shell_state(
 
 def test_main_window_floor_navigation_and_visibility_actions_drive_shell_state(
     qtbot,
-    tmp_path: Path,
+    settings_workspace: Path,
 ) -> None:
-    window = MainWindow(settings=_build_settings(tmp_path, "navigation.ini"))
+    window = MainWindow(settings=_build_settings(settings_workspace, "navigation.ini"))
     qtbot.addWidget(window)
 
     assert window.toggle_minimap_action is not None
@@ -92,9 +92,9 @@ def test_main_window_floor_navigation_and_visibility_actions_drive_shell_state(
 
 def test_main_window_persists_shell_state_with_qsettings(
     qtbot,
-    tmp_path: Path,
+    settings_workspace: Path,
 ) -> None:
-    settings_path = tmp_path / "main_window.ini"
+    settings_path = settings_workspace / "main_window.ini"
 
     settings = QSettings(str(settings_path), QSettings.Format.IniFormat)
     window = MainWindow(settings=settings)
