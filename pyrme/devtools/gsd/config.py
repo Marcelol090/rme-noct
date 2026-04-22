@@ -18,14 +18,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 
-def _safe_home() -> Path:
-    """Return a usable home directory fallback in restricted environments."""
-    try:
-        return Path.home()
-    except (OSError, RuntimeError):
-        return Path.cwd()
-
-
 @dataclass
 class GSDConfig:
     """GSD-2 project configuration.
@@ -87,7 +79,10 @@ class GSDConfig:
     @property
     def user_skills_dir(self) -> Path:
         """User-scope GSD skills directory."""
-        return _safe_home() / ".agents" / "skills"
+        try:
+            return Path.home() / ".agents" / "skills"
+        except (OSError, RuntimeError):
+            return Path.cwd() / ".agents" / "skills"
 
     @property
     def pi_skills_dir(self) -> Path:
