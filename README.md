@@ -121,10 +121,10 @@ This repo uses a multi-agent operating model:
   - `worker`
   - `docs_researcher`
   - `reviewer`
-- Codex skills live in `~/.codex/skills/`; this workspace currently relies on installed Caveman/OpenAI/system skills plus the external frontend-skill reference when UI design work needs it.
+- Codex skills are installed from `~/.agents/skills/` and may be supplemented by repo-local `.agents/skills/`; this workspace currently relies on installed Caveman/OpenAI/system skills plus the external frontend-skill reference when UI design work needs it.
 - **Superpowers** provides workflow discipline through skills such as `writing-plans`, `subagent-driven-development`, `using-git-worktrees`, `requesting-code-review`, and `finishing-a-development-branch`; project-scope skills live in `.pi/agent/skills/`.
 - **GSD 2** provides the worktree and verification layer through `.gsd/preferences.md`, `git.isolation: worktree`, and `verification_commands`.
-- **Repository contract** lives in root `AGENTS.md` and is validated by `npm run preflight` / `python -m pyrme stack`.
+- **Repository contract** lives in root `AGENTS.md` and is validated by `npm run preflight` / `python3 -m pyrme stack`.
 - **Context7** is the required documentation source for third-party tools, libraries, and agent terminology; it can be exposed either as a Codex MCP tool or as a local command.
 - **Jules** handles branch and PR automation through `.jules/agents/` and `.github/workflows/jules-*.yml`; set `JULES_API_KEY` in GitHub Secrets and use trusted `@jules /python`, `/rust`, `/bridge`, `/maintenance`, or `/ci` triggers.
 
@@ -133,7 +133,7 @@ The repo-wide contract and end-to-end example live in [docs/superpowers/workflow
 ## Repository Contract
 
 - Root `AGENTS.md` defines the repo-level working rules.
-- `npm run preflight` and `python -m pyrme stack` validate the local Codex/GSD/Superpowers stack, including the repo contract.
+- `npm run preflight` and `python3 -m pyrme stack` validate the local Codex/GSD/Superpowers stack, including the repo contract.
 - Read `README.md`, `PLAN.md`, and the active feature docs before changing behavior.
 - Use Context7 or official docs for third-party API questions instead of guessing.
 - Keep changes surgical and verify them with the smallest relevant test slice.

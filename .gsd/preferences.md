@@ -2,12 +2,12 @@
 version: 1
 
 # ── Model Selection ──────────────────────────────────────────
-# Local-first runtime: prefer the installed lightweight Ollama coder model for default phases
+# Codex/OpenAI runtime: prefer GPT models for default phases
 models:
-  research: ollama/qwen3-8b-gsd
-  planning: ollama/qwen3-8b-gsd
-  execution: ollama/qwen3-8b-gsd
-  completion: ollama/qwen3-8b-gsd
+  research: gpt-5.4-mini
+  planning: gpt-5.4
+  execution: gpt-5.4-mini
+  completion: gpt-5.4-mini
 
 # Keep search local when the planner needs web-style lookup
 search_provider: ollama
