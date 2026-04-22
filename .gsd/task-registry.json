@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project": "remeres-map-editor-redux",
-  "updated_at": "2026-04-07T17:49:05-03:00",
+  "updated_at": "2026-04-22T12:36:26-03:00",
   "tasks": [
     {
       "id": "GSD-RUNTIME-NODE22",
@@ -112,7 +112,7 @@
       "summary": "The repo's workflow contract now treats Codex as the runtime, Superpowers as process discipline, Context7 as evidence, and GSD as orchestration.",
       "done_criteria": [
         "Repo docs separate runtime, process, evidence, and orchestration responsibilities",
-        "GSD preferences use OpenAI models and local skill routing",
+        "GSD preferences use a local Ollama model mix and local skill routing",
         "Superpowers skill names in wrappers match the installed skills"
       ],
       "scope": [
@@ -417,6 +417,984 @@
       "recorded_at": "2026-04-07T17:49:05-03:00",
       "updated_at": "2026-04-07T17:49:05-03:00",
       "completed_at": "2026-04-07T17:49:05-03:00"
+    },
+    {
+      "id": "LEGACY-00-CONTRACT",
+      "title": "Establish legacy menu contract foundation",
+      "category": "feature",
+      "status": "verified",
+      "milestone": "M001",
+      "slice": "contract-foundation",
+      "summary": "The Python shell now exposes the legacy top-level menu tree and a declarative first-wave action contract that later parity slices can build on without hand-maintained menu drift.",
+      "done_criteria": [
+        "The top-level menu order matches the legacy C++ contract from menubar.xml",
+        "Phase-1 legacy-facing action metadata exists with labels, shortcuts, and status tips",
+        "MainWindow renders the legacy top-level menu tree from the contract surface",
+        "Contract tests prove the menu topology and first-wave action exposure"
+      ],
+      "scope": [
+        "pyrme/ui/legacy_menu_contract.py",
+        "pyrme/ui/main_window.py",
+        "pyrme/ui/canvas_host.py",
+        "pyrme/ui/dialogs/__init__.py",
+        "tests/python/test_legacy_menu_contract.py",
+        "tests/python/test_main_window_menu_contract_phase1.py",
+        "tests/python/test_canvas_seam_m4.py",
+        "tests/python/test_main_window_commands_m5.py",
+        "tests/python/test_main_window_navigation_m5.py"
+      ],
+      "files_modified": [
+        "pyrme/ui/legacy_menu_contract.py",
+        "pyrme/ui/main_window.py",
+        "pyrme/ui/canvas_host.py",
+        "pyrme/ui/dialogs/__init__.py",
+        "tests/python/test_legacy_menu_contract.py",
+        "tests/python/test_main_window_menu_contract_phase1.py",
+        "tests/python/test_canvas_seam_m4.py",
+        "tests/python/test_main_window_commands_m5.py",
+        "tests/python/test_main_window_navigation_m5.py"
+      ],
+      "tests_run": [
+        ".venv\\Scripts\\python.exe -m pytest -q tests/python/test_legacy_menu_contract.py tests/python/test_main_window_menu_contract_phase1.py tests/python/test_main_window_commands_m5.py tests/python/test_main_window_navigation_m5.py"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "The phase-1 contract surface exists in code and is backed by dedicated pytest coverage",
+          "This entry was backfilled on 2026-04-09 from already-present verified contract and shell tests"
+        ]
+      },
+      "notes": [
+        "This slice is the required foundation for later legacy parity work.",
+        "It should not be conflated with the broader Navigate/Window parity delta that landed later."
+      ],
+      "recorded_at": "2026-04-09T21:43:56.0445690-03:00",
+      "updated_at": "2026-04-09T21:43:56.0445690-03:00",
+      "completed_at": "2026-04-09T21:43:56.0445690-03:00"
+    },
+    {
+      "id": "LEGACY-90-NAVIGATE",
+      "title": "Match legacy Navigate menu contract",
+      "category": "feature",
+      "status": "verified",
+      "milestone": "M001",
+      "slice": "navigate",
+      "summary": "The Python shell now matches the legacy Navigate menu for the covered actions, including the legacy labels, shortcuts, previous-position flow, goto-position dialog seam, and the Floor 0..15 submenu.",
+      "done_criteria": [
+        "Navigate matches the legacy menu ordering and covered action labels from menubar.xml",
+        "Go to Previous Position and Go to Position reuse the existing shell-state and dialog seams",
+        "The Floor submenu exposes Floor 0 through Floor 15",
+        "XML-backed and shell-wiring tests prove the covered Navigate behavior"
+      ],
+      "scope": [
+        "pyrme/ui/main_window.py",
+        "tests/python/test_legacy_navigate_window_contract.py",
+        "tests/python/test_legacy_navigate_window_shell.py",
+        "tests/python/test_main_window_navigation_m5.py"
+      ],
+      "files_modified": [
+        "pyrme/ui/main_window.py",
+        "tests/python/test_legacy_navigate_window_contract.py",
+        "tests/python/test_legacy_navigate_window_shell.py",
+        "tests/python/test_main_window_navigation_m5.py"
+      ],
+      "tests_run": [
+        ".venv\\Scripts\\python.exe -m pytest -q tests/python/test_legacy_navigate_window_contract.py tests/python/test_legacy_navigate_window_shell.py tests/python/test_main_window_navigation_m5.py"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "The Navigate slice passed the XML-backed contract checks and the shell-state wiring checks",
+          "The 2026-04-09 narrow verification set passed in the current workspace"
+        ]
+      },
+      "notes": [
+        "This slice reuses the M5 shell-state foundation but claims only the new legacy Navigate delta.",
+        "Jump to Brush and Jump to Item stay wired to the existing shell entry points."
+      ],
+      "recorded_at": "2026-04-09T21:43:56.0445690-03:00",
+      "updated_at": "2026-04-09T21:43:56.0445690-03:00",
+      "completed_at": "2026-04-09T21:43:56.0445690-03:00"
+    },
+    {
+      "id": "LEGACY-100-WINDOW",
+      "title": "Match legacy Window menu contract",
+      "category": "feature",
+      "status": "verified",
+      "milestone": "M001",
+      "slice": "window",
+      "summary": "The Python shell now matches the legacy Window menu for the covered docks, palette selection, and toolbar visibility contract, using the existing dock and toolbar surfaces rather than introducing a second window model.",
+      "done_criteria": [
+        "Window matches the legacy ordering and covered action labels from menubar.xml",
+        "Minimap, Tool Options, Tile Properties, and In-game Preview toggle real local surfaces",
+        "The Palette and Toolbars submenus preserve the legacy structure",
+        "XML-backed and shell-wiring tests prove the covered Window behavior"
+      ],
+      "scope": [
+        "pyrme/ui/main_window.py",
+        "pyrme/ui/docks/tool_options.py",
+        "pyrme/ui/docks/ingame_preview.py",
+        "tests/python/test_legacy_navigate_window_contract.py",
+        "tests/python/test_legacy_navigate_window_shell.py",
+        "tests/python/test_main_window_commands_m5.py"
+      ],
+      "files_modified": [
+        "pyrme/ui/main_window.py",
+        "pyrme/ui/docks/tool_options.py",
+        "pyrme/ui/docks/ingame_preview.py",
+        "tests/python/test_legacy_navigate_window_contract.py",
+        "tests/python/test_legacy_navigate_window_shell.py",
+        "tests/python/test_main_window_commands_m5.py"
+      ],
+      "tests_run": [
+        ".venv\\Scripts\\python.exe -m pytest -q tests/python/test_legacy_navigate_window_contract.py tests/python/test_legacy_navigate_window_shell.py tests/python/test_main_window_commands_m5.py"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "The Window slice passed the XML-backed contract checks and the dock/toolbar visibility shell tests",
+          "The 2026-04-09 narrow verification set passed in the current workspace"
+        ]
+      },
+      "notes": [
+        "This slice keeps the work limited to the legacy Window contract and existing shell surfaces.",
+        "Palette selection and toolbar visibility now live under the correct legacy menu group."
+      ],
+      "recorded_at": "2026-04-09T21:43:56.0445690-03:00",
+      "updated_at": "2026-04-09T21:43:56.0445690-03:00",
+      "completed_at": "2026-04-09T21:43:56.0445690-03:00"
+    },
+    {
+      "id": "LEGACY-30-EDITOR",
+      "title": "Match legacy Editor menu contract",
+      "category": "feature",
+      "status": "verified",
+      "milestone": "M001",
+      "slice": "editor",
+      "summary": "The Python shell now matches the legacy Editor menu labels, shortcuts, and Zoom submenu, with New View opening a shared editor view and Take Screenshot recorded as a rendering backend gap.",
+      "done_criteria": [
+        "Editor matches the legacy ordering and covered action labels from menubar.xml",
+        "New View creates another view of the same editor/map context with copied shell state",
+        "Enter Fullscreen and Zoom actions drive real local shell state",
+        "Take Screenshot remains documented as an explicit backend gap for rendering work",
+        "XML-backed and shell-wiring tests prove the covered Editor behavior"
+      ],
+      "scope": [
+        "pyrme/editor/__init__.py",
+        "pyrme/editor/model.py",
+        "pyrme/ui/editor_context.py",
+        "pyrme/ui/canvas_host.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_legacy_editor_contract.py",
+        "tests/python/test_legacy_editor_shell.py",
+        "tests/python/test_main_window_editor_shell_actions.py",
+        "tests/python/test_main_window_new_view.py"
+      ],
+      "files_modified": [
+        "pyrme/editor/__init__.py",
+        "pyrme/editor/model.py",
+        "pyrme/ui/editor_context.py",
+        "pyrme/ui/canvas_host.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_legacy_editor_contract.py",
+        "tests/python/test_legacy_editor_shell.py",
+        "tests/python/test_main_window_editor_shell_actions.py",
+        "tests/python/test_main_window_new_view.py"
+      ],
+      "tests_run": [
+        "python3 -m pytest tests/python/test_main_window_new_view.py tests/python/test_canvas_seam_m4.py tests/python/test_main_window_editor_shell_actions.py tests/python/test_legacy_editor_contract.py tests/python/test_legacy_editor_shell.py tests/python/test_legacy_navigate_window_shell.py tests/python/test_legacy_navigate_window_contract.py tests/python/test_main_window_navigation_m5.py tests/python/test_main_window_commands_m5.py -v --tb=short",
+        "python3 -m ruff check pyrme/editor pyrme/ui/editor_context.py pyrme/ui/canvas_host.py pyrme/ui/main_window.py tests/python/test_main_window_new_view.py tests/python/test_canvas_seam_m4.py tests/python/test_main_window_editor_shell_actions.py tests/python/test_legacy_editor_shell.py",
+        "python3 -m mypy pyrme/editor pyrme/ui/editor_context.py pyrme/ui/canvas_host.py pyrme/ui/main_window.py --ignore-missing-imports"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "The Editor slice passed the XML-backed contract tests and focused shell-wiring tests",
+          "Navigate and Window regression tests stayed green after the central canvas changed to tabbed views",
+          "The broad all-menu parity audit remains out of scope until later menu-family slices"
+        ]
+      },
+      "notes": [
+        "This slice keeps the work limited to the legacy Editor contract.",
+        "New View shares the same editor/map backend and only copies per-view shell state.",
+        "Take Screenshot remains a documented R032 rendering/canvas backend gap."
+      ],
+      "recorded_at": "2026-04-10T20:05:30-03:00",
+      "updated_at": "2026-04-10T20:05:30-03:00",
+      "completed_at": "2026-04-10T20:05:30-03:00"
+    },
+    {
+      "id": "LEGACY-40-SEARCH",
+      "title": "Match legacy Search menu contract",
+      "category": "feature",
+      "status": "verified",
+      "milestone": "M001",
+      "slice": "search",
+      "summary": "The Python shell now matches the legacy Search menu structure for Find Item and map-wide search actions, consuming the existing FindItemDialog result seam and reporting missing map-search backends explicitly.",
+      "done_criteria": [
+        "Search matches the legacy menu ordering and separator layout from menubar.xml",
+        "Find Item keeps the existing local FindItemDialog seam and consumes selected item or Search on Map outcomes",
+        "Find Unique, Find Action, Find Container, Find Writeable, and Find Everything are exposed with legacy labels and help text",
+        "Map-wide search actions are safe explicit backend gaps until MapSearcher and SearchResultWindow exist",
+        "Search-focused contract and shell tests prove the covered behavior"
+      ],
+      "scope": [
+        "pyrme/ui/legacy_menu_contract.py",
+        "pyrme/ui/dialogs/find_item.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_legacy_search_menu.py",
+        ".gsd/milestones/M001-1pt4oy/slices/S05/S05-PLAN.md"
+      ],
+      "files_modified": [
+        "pyrme/ui/legacy_menu_contract.py",
+        "pyrme/ui/dialogs/find_item.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_legacy_search_menu.py",
+        ".gsd/milestones/M001-1pt4oy/slices/S05/S05-PLAN.md"
+      ],
+      "tests_run": [
+        "python3 -m pytest tests/python/test_legacy_search_menu.py -v --tb=short",
+        "python3 -m pytest tests/python/test_legacy_search_menu.py tests/python/test_legacy_menu_contract.py tests/python/test_main_window_menu_contract_phase1.py tests/python/test_main_window_commands_m5.py tests/python/test_find_item_tier2.py tests/python/test_tier2_style_contract.py -v --tb=short",
+        "python3 -m ruff check pyrme/ui/legacy_menu_contract.py pyrme/ui/main_window.py pyrme/ui/dialogs/find_item.py tests/python/test_legacy_search_menu.py",
+        "python3 -m mypy pyrme/ui/legacy_menu_contract.py pyrme/ui/main_window.py pyrme/ui/dialogs/find_item.py --ignore-missing-imports"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "The Search slice passed the focused menu contract and shell-stub tests",
+          "Find Item dialog regressions stayed green",
+          "MapSearcher and SearchResultWindow remain explicit backend gaps rather than fake complete behavior"
+        ]
+      },
+      "notes": [
+        "This slice keeps Selection -> Find on Selection out of scope.",
+        "Backend search work belongs in a later Rust/Python search pipeline slice."
+      ],
+      "recorded_at": "2026-04-11T13:13:57-03:00",
+      "updated_at": "2026-04-11T13:13:57-03:00",
+      "completed_at": "2026-04-11T13:13:57-03:00"
+    },
+    {
+      "id": "LEGACY-50-MAP",
+      "title": "Match legacy Map menu surface contract",
+      "category": "feature",
+      "status": "verified",
+      "milestone": "M001",
+      "slice": "map",
+      "summary": "The Python shell now matches the legacy Map menu surface structure, reusing the existing MapPropertiesDialog seam and reporting missing town editing, map cleanup, and statistics backends explicitly.",
+      "done_criteria": [
+        "Map surface matches the legacy menu ordering and separator layout from menubar.xml",
+        "Edit Towns, Cleanup invalid tiles, Cleanup invalid zones, Properties, and Statistics are exposed with legacy labels and help text",
+        "Map Properties keeps the existing local MapPropertiesDialog seam",
+        "Town editing, cleanup actions, and map statistics are safe explicit backend gaps until real editor/map handlers exist",
+        "Map-focused contract and shell tests prove the covered behavior"
+      ],
+      "scope": [
+        "pyrme/ui/legacy_menu_contract.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_legacy_map_menu.py",
+        ".gsd/milestones/M001-1pt4oy/slices/S06/S06-PLAN.md"
+      ],
+      "files_modified": [
+        "pyrme/ui/legacy_menu_contract.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_legacy_map_menu.py",
+        ".gsd/milestones/M001-1pt4oy/slices/S06/S06-PLAN.md"
+      ],
+      "tests_run": [
+        "python3 -m pytest tests/python/test_legacy_map_menu.py -v --tb=short",
+        "python3 -m pytest 'tests/python/test_main_window_parity_phase2.py::test_main_window_expanded_menu_matches_legacy_xml[menu_path10]' -v --tb=short",
+        "python3 -m pytest tests/python/test_legacy_map_menu.py tests/python/test_legacy_search_menu.py tests/python/test_legacy_menu_contract.py tests/python/test_main_window_menu_contract_phase1.py tests/python/test_main_window_commands_m5.py tests/python/test_map_properties_tier2.py tests/python/test_tier2_style_contract.py -v --tb=short",
+        "python3 -m ruff check pyrme/ui/legacy_menu_contract.py pyrme/ui/main_window.py tests/python/test_legacy_map_menu.py",
+        "python3 -m mypy pyrme/ui/legacy_menu_contract.py pyrme/ui/main_window.py --ignore-missing-imports"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "The Map slice passed the focused menu surface contract and shell-stub tests",
+          "The XML-backed Map param passed for menu_path10",
+          "MapPropertiesDialog regressions stayed green",
+          "Town editing, map cleanup, and statistics remain explicit backend gaps rather than fake complete behavior"
+        ]
+      },
+      "notes": [
+        "This slice excludes Edit Items and Edit Monsters because the legacy XML comments them as never implemented and the legacy action manager disables them.",
+        "Backend map/town/statistics work belongs in later editor/map implementation slices."
+      ],
+      "recorded_at": "2026-04-11T14:00:40-03:00",
+      "updated_at": "2026-04-11T14:00:40-03:00",
+      "completed_at": "2026-04-11T14:00:40-03:00"
+    },
+    {
+      "id": "LEGACY-70-VIEW",
+      "title": "Match legacy View menu surface contract",
+      "category": "feature",
+      "status": "verified",
+      "milestone": "M001",
+      "slice": "view",
+      "summary": "The Python shell now matches the legacy View menu surface, preserving checkable defaults, reusing the Show grid and Ghost higher floors canvas seams, and forwarding remaining View flags to the active canvas view-flag seam when available.",
+      "done_criteria": [
+        "View surface matches the legacy menu ordering and separator layout from menubar.xml",
+        "All View actions are exposed with legacy labels, shortcuts, help text, and checkable defaults",
+        "Show grid and Ghost higher floors keep the existing canvas shell seams",
+        "Remaining View flags are local check state and are forwarded to set_view_flag when available",
+        "Renderer-specific semantics remain explicit backend gaps until the real renderer owns them"
+      ],
+      "scope": [
+        "pyrme/ui/legacy_menu_contract.py",
+        "pyrme/ui/main_window.py",
+        "pyrme/ui/canvas_host.py",
+        "tests/python/test_legacy_view_menu.py",
+        ".gsd/milestones/M001-1pt4oy/slices/S07/S07-PLAN.md"
+      ],
+      "files_modified": [
+        "pyrme/ui/legacy_menu_contract.py",
+        "pyrme/ui/main_window.py",
+        "pyrme/ui/canvas_host.py",
+        "tests/python/test_legacy_view_menu.py",
+        ".gsd/milestones/M001-1pt4oy/slices/S07/S07-PLAN.md"
+      ],
+      "tests_run": [
+        "python3 -m pytest tests/python/test_legacy_view_menu.py -v --tb=short",
+        "python3 -m pytest 'tests/python/test_main_window_parity_phase2.py::test_main_window_expanded_menu_matches_legacy_xml[menu_path14]' -v --tb=short",
+        "python3 -m pytest tests/python/test_legacy_view_menu.py tests/python/test_legacy_map_menu.py tests/python/test_legacy_search_menu.py tests/python/test_legacy_menu_contract.py tests/python/test_main_window_menu_contract_phase1.py tests/python/test_main_window_commands_m5.py tests/python/test_waypoints_layers_tier2.py tests/python/test_main_window_new_view.py tests/python/test_canvas_seam_m4.py -v --tb=short",
+        "python3 -m ruff check pyrme/ui/legacy_menu_contract.py pyrme/ui/main_window.py pyrme/ui/canvas_host.py tests/python/test_legacy_view_menu.py",
+        "python3 -m mypy pyrme/ui/legacy_menu_contract.py pyrme/ui/main_window.py pyrme/ui/canvas_host.py --ignore-missing-imports"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "The View slice passed the focused menu contract and canvas-seam tests",
+          "The XML-backed View param passed for menu_path14",
+          "Editor/New View, canvas seam, Search, Map, and M5 command regressions stayed green",
+          "Renderer-specific View behavior remains an explicit backend gap rather than fake complete behavior"
+        ]
+      },
+      "notes": [
+        "This slice keeps the work limited to the legacy View menu family.",
+        "Show menu filters stay out of scope for LEGACY-80-SHOW.",
+        "Per-view View flags are now preserved in tab shell snapshots instead of leaking through window-global state."
+      ],
+      "recorded_at": "2026-04-11T14:41:51-03:00",
+      "updated_at": "2026-04-11T16:06:00-03:00",
+      "completed_at": "2026-04-11T14:41:51-03:00"
+    },
+    {
+      "id": "LEGACY-80-SHOW",
+      "title": "Match legacy Show menu surface contract",
+      "category": "feature",
+      "status": "verified",
+      "milestone": "M001",
+      "slice": "show",
+      "summary": "The Python shell now matches the legacy Show menu surface, preserving checkable defaults and forwarding display toggles through honest local per-view shell state plus the optional canvas show-flag seam.",
+      "done_criteria": [
+        "Show surface matches the legacy menu ordering and separator layout from menubar.xml",
+        "All Show actions are exposed with legacy labels, shortcuts, help text, and checkable defaults",
+        "Show toggles are preserved per view/tab shell snapshot instead of leaking through window-global state",
+        "Display flags are forwarded to set_show_flag when the active canvas exposes that seam",
+        "Renderer-specific semantics remain explicit backend gaps until the real renderer owns them"
+      ],
+      "scope": [
+        "pyrme/ui/legacy_menu_contract.py",
+        "pyrme/ui/main_window.py",
+        "pyrme/ui/canvas_host.py",
+        "pyrme/ui/editor_context.py",
+        "tests/python/test_legacy_show_menu.py",
+        "tests/python/test_main_window_new_view.py",
+        ".gsd/milestones/M001-1pt4oy/slices/S08/S08-PLAN.md"
+      ],
+      "files_modified": [
+        "pyrme/ui/legacy_menu_contract.py",
+        "pyrme/ui/main_window.py",
+        "pyrme/ui/canvas_host.py",
+        "pyrme/ui/editor_context.py",
+        "tests/python/test_legacy_show_menu.py",
+        "tests/python/test_main_window_new_view.py",
+        ".gsd/milestones/M001-1pt4oy/slices/S08/S08-PLAN.md"
+      ],
+      "tests_run": [
+        "python3 -m pytest tests/python/test_legacy_show_menu.py tests/python/test_legacy_view_menu.py tests/python/test_main_window_new_view.py -v --tb=short",
+        "python3 -m pytest 'tests/python/test_main_window_parity_phase2.py::test_main_window_expanded_menu_matches_legacy_xml[menu_path15]' -v --tb=short",
+        "python3 -m ruff check pyrme/ui/canvas_host.py pyrme/ui/editor_context.py pyrme/ui/legacy_menu_contract.py pyrme/ui/main_window.py tests/python/test_legacy_show_menu.py tests/python/test_legacy_view_menu.py tests/python/test_main_window_new_view.py",
+        "python3 -m mypy pyrme/ui/canvas_host.py pyrme/ui/editor_context.py pyrme/ui/legacy_menu_contract.py pyrme/ui/main_window.py --ignore-missing-imports"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "The Show slice passed the focused menu contract and shell-state tests",
+          "The XML-backed Show param passed for menu_path15",
+          "View and New View regressions stayed green after per-view display state was expanded",
+          "Renderer-specific Show behavior remains an explicit backend gap rather than fake complete behavior"
+        ]
+      },
+      "notes": [
+        "This slice keeps the work limited to the legacy Show menu family.",
+        "Display toggles use local shell state plus the optional canvas seam; they do not claim full renderer parity."
+      ],
+      "recorded_at": "2026-04-11T16:06:00-03:00",
+      "updated_at": "2026-04-11T16:06:00-03:00",
+      "completed_at": "2026-04-11T16:06:00-03:00"
+    },
+    {
+      "id": "LEGACY-20-EDIT",
+      "title": "Match legacy Edit menu surface contract",
+      "category": "feature",
+      "status": "verified",
+      "milestone": "M001",
+      "slice": "edit",
+      "summary": "The Python shell now matches the legacy Edit menu surface, including Border Options and Other Options, while keeping backend-heavy handlers as safe explicit gaps and restoring Border Automagic through persisted settings with legacy-style status text.",
+      "done_criteria": [
+        "Edit surface matches the legacy menu ordering and separator layout from menubar.xml",
+        "Undo, Redo, Replace Items, clipboard actions, Border Options, and Other Options are exposed with legacy labels, shortcuts, and help text",
+        "Border Automagic is checkable with the legacy default and restores from persisted settings",
+        "Borderize, randomize, removal, undo/redo, and clipboard-backed handlers remain safe explicit backend gaps until real editor backends exist",
+        "Edit-focused contract and XML-backed parity tests prove the covered behavior"
+      ],
+      "scope": [
+        "pyrme/ui/legacy_menu_contract.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_legacy_edit_menu.py",
+        ".gsd/milestones/M001-1pt4oy/slices/S09/S09-PLAN.md"
+      ],
+      "files_modified": [
+        "pyrme/ui/legacy_menu_contract.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_legacy_edit_menu.py",
+        ".gsd/milestones/M001-1pt4oy/slices/S09/S09-PLAN.md"
+      ],
+      "tests_run": [
+        "python3 -m pytest tests/python/test_legacy_edit_menu.py -v --tb=short",
+        "python3 -m pytest 'tests/python/test_main_window_parity_phase2.py::test_main_window_expanded_menu_matches_legacy_xml[menu_path4]' 'tests/python/test_main_window_parity_phase2.py::test_main_window_expanded_menu_matches_legacy_xml[menu_path5]' 'tests/python/test_main_window_parity_phase2.py::test_main_window_expanded_menu_matches_legacy_xml[menu_path6]' -v --tb=short",
+        "python3 -m pytest tests/python/test_legacy_edit_menu.py tests/python/test_legacy_show_menu.py tests/python/test_legacy_view_menu.py tests/python/test_legacy_map_menu.py tests/python/test_legacy_search_menu.py tests/python/test_legacy_menu_contract.py tests/python/test_main_window_menu_contract_phase1.py tests/python/test_main_window_commands_m5.py tests/python/test_waypoints_layers_tier2.py tests/python/test_main_window_new_view.py tests/python/test_canvas_seam_m4.py -v --tb=short",
+        "python3 -m ruff check pyrme/ui/main_window.py tests/python/test_legacy_edit_menu.py",
+        "python3 -m mypy pyrme/ui/main_window.py --ignore-missing-imports"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "The Edit slice passed the focused menu contract tests and XML-backed parity checks for menu_path4..6",
+          "A broader menu regression batch stayed green after the Edit surface was added",
+          "Border Automagic now restores from persisted settings and uses the legacy-style enable/disable status text",
+          "Undo/redo, clipboard, borderize, randomize, and removal semantics remain explicit backend gaps rather than fake complete behavior"
+        ]
+      },
+      "notes": [
+        "This slice keeps the work limited to the legacy Edit menu family.",
+        "Selection remains separate follow-on work in LEGACY-60-SELECTION.",
+        "Border Automagic is treated as persisted editor shell state, not a fake completed backend."
+      ],
+      "recorded_at": "2026-04-11T15:56:55-03:00",
+      "updated_at": "2026-04-11T15:56:55-03:00",
+      "completed_at": "2026-04-11T15:56:55-03:00"
+    },
+    {
+      "id": "LEGACY-60-SELECTION",
+      "title": "Match legacy Selection menu surface contract",
+      "category": "feature",
+      "status": "verified",
+      "milestone": "M001",
+      "slice": "selection",
+      "summary": "The Python shell now matches the legacy Selection menu surface, including Find on Selection and Selection Mode, while keeping backend-heavy handlers as safe explicit gaps and coupling selection mode honestly to persisted settings and View -> Show all Floors.",
+      "done_criteria": [
+        "Selection surface matches the legacy menu ordering and separator layout from menubar.xml",
+        "Find on Selection and Selection Mode submenus match legacy order and labels",
+        "Compensate Selection and Current/Lower/Visible defaults restore from persisted settings",
+        "Selection-dependent actions are gated on real local selection presence and show-all-floors coupling is preserved",
+        "Selection-focused contract and XML-backed parity tests prove the covered behavior"
+      ],
+      "scope": [
+        "pyrme/ui/legacy_menu_contract.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_legacy_selection_menu.py",
+        ".gsd/milestones/M001-1pt4oy/slices/S10/S10-PLAN.md"
+      ],
+      "files_modified": [
+        "pyrme/ui/legacy_menu_contract.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_legacy_selection_menu.py",
+        "tests/python/test_legacy_edit_menu.py",
+        ".gsd/milestones/M001-1pt4oy/slices/S10/S10-PLAN.md"
+      ],
+      "tests_run": [
+        "python3 -m pytest tests/python/test_legacy_selection_menu.py -v --tb=short",
+        "python3 -m pytest 'tests/python/test_main_window_parity_phase2.py::test_main_window_expanded_menu_matches_legacy_xml[menu_path11]' 'tests/python/test_main_window_parity_phase2.py::test_main_window_expanded_menu_matches_legacy_xml[menu_path12]' 'tests/python/test_main_window_parity_phase2.py::test_main_window_expanded_menu_matches_legacy_xml[menu_path13]' tests/python/test_legacy_menu_contract.py -v --tb=short",
+        "python3 -m pytest tests/python/test_legacy_selection_menu.py tests/python/test_legacy_view_menu.py tests/python/test_legacy_edit_menu.py tests/python/test_legacy_show_menu.py tests/python/test_legacy_map_menu.py tests/python/test_legacy_search_menu.py tests/python/test_legacy_menu_contract.py tests/python/test_main_window_menu_contract_phase1.py tests/python/test_main_window_commands_m5.py tests/python/test_main_window_parity_phase2.py::test_main_window_expanded_menu_matches_legacy_xml[menu_path4] tests/python/test_main_window_parity_phase2.py::test_main_window_expanded_menu_matches_legacy_xml[menu_path5] tests/python/test_main_window_parity_phase2.py::test_main_window_expanded_menu_matches_legacy_xml[menu_path6] tests/python/test_main_window_parity_phase2.py::test_main_window_expanded_menu_matches_legacy_xml[menu_path7] tests/python/test_main_window_parity_phase2.py::test_main_window_expanded_menu_matches_legacy_xml[menu_path8] tests/python/test_main_window_parity_phase2.py::test_main_window_expanded_menu_matches_legacy_xml[menu_path9] tests/python/test_main_window_parity_phase2.py::test_main_window_expanded_menu_matches_legacy_xml[menu_path10] tests/python/test_main_window_parity_phase2.py::test_main_window_expanded_menu_matches_legacy_xml[menu_path11] tests/python/test_main_window_parity_phase2.py::test_main_window_expanded_menu_matches_legacy_xml[menu_path12] tests/python/test_main_window_parity_phase2.py::test_main_window_expanded_menu_matches_legacy_xml[menu_path13] tests/python/test_main_window_parity_phase2.py::test_main_window_expanded_menu_matches_legacy_xml[menu_path14] tests/python/test_main_window_parity_phase2.py::test_main_window_expanded_menu_matches_legacy_xml[menu_path15] tests/python/test_legacy_editor_contract.py tests/python/test_legacy_editor_shell.py tests/python/test_main_window_new_view.py tests/python/test_canvas_seam_m4.py tests/python/test_waypoints_layers_tier2.py -v --tb=short",
+        "python3 -m ruff check pyrme/ui/legacy_menu_contract.py pyrme/ui/main_window.py tests/python/test_legacy_selection_menu.py tests/python/test_legacy_edit_menu.py",
+        "python3 -m mypy pyrme/ui/legacy_menu_contract.py pyrme/ui/main_window.py --ignore-missing-imports"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "The Selection slice passed focused menu contract tests and XML-backed parity checks for menu_path11..13",
+          "A covered 60-test regression batch stayed green after selection-mode persistence and view coupling were added",
+          "Selection-dependent actions now gate on real local selection presence",
+          "Selection search/replace/remove semantics remain explicit backend gaps rather than fake complete behavior"
+        ]
+      },
+      "notes": [
+        "This slice keeps the work limited to the legacy Selection menu family.",
+        "File, Experimental, Scripts, and About remain intentionally open and are excluded from covered parity batches.",
+        "Selection Mode persistence and Show all Floors coupling are now part of shell contract, not ad hoc state."
+      ],
+      "recorded_at": "2026-04-11T16:12:52-03:00",
+      "updated_at": "2026-04-11T16:12:52-03:00",
+      "completed_at": "2026-04-11T16:12:52-03:00"
+    },
+    {
+      "id": "CANVAS-10-RENDERER-HOST",
+      "title": "Adopt RendererHostCanvasWidget as default canvas host",
+      "category": "feature",
+      "status": "verified",
+      "milestone": "M002",
+      "slice": "renderer-host",
+      "summary": "The production default canvas is now a real QOpenGLWidget host with an honest diagnostic overlay, while the existing shell-state, input, callback, and multi-view seams remain verified.",
+      "done_criteria": [
+        "MainWindow defaults to RendererHostCanvasWidget instead of PlaceholderCanvasWidget",
+        "The renderer host keeps the existing base canvas, activation, tool, callback, and point-mapping seams",
+        "Offscreen tests stay honest when QOpenGLWidget lacks a valid GL context",
+        "Adjacent canvas and view/show regressions remain green"
+      ],
+      "scope": [
+        "pyrme/ui/canvas_host.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_canvas_seam_m4.py",
+        ".gsd/milestones/M002-canvas-renderer/M002-canvas-renderer-CONTEXT.md",
+        ".gsd/milestones/M002-canvas-renderer/M002-canvas-renderer-ROADMAP.md",
+        ".gsd/milestones/M002-canvas-renderer/slices/S01/S01-PLAN.md",
+        ".gsd/STATE.md",
+        ".gsd/PROJECT.md",
+        ".gsd/REQUIREMENTS.md",
+        ".gsd/DECISIONS.md"
+      ],
+      "files_modified": [
+        "pyrme/ui/canvas_host.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_canvas_seam_m4.py",
+        ".gsd/milestones/M002-canvas-renderer/M002-canvas-renderer-CONTEXT.md",
+        ".gsd/milestones/M002-canvas-renderer/M002-canvas-renderer-ROADMAP.md",
+        ".gsd/milestones/M002-canvas-renderer/M002-canvas-renderer-META.json",
+        ".gsd/milestones/M002-canvas-renderer/slices/S01/S01-PLAN.md",
+        ".gsd/STATE.md",
+        ".gsd/PROJECT.md",
+        ".gsd/REQUIREMENTS.md",
+        ".gsd/DECISIONS.md"
+      ],
+      "tests_run": [
+        ".venv\\Scripts\\python.exe -m pytest tests/python/test_canvas_seam_m4.py -q",
+        ".venv\\Scripts\\python.exe -m pytest tests/python/test_canvas_seam_m4.py tests/python/test_main_window_new_view.py tests/python/test_editor_activation_backend.py tests/python/test_legacy_view_menu.py tests/python/test_legacy_show_menu.py tests/python/test_main_window_editor_shell_actions.py tests/python/test_core_bridge.py -q",
+        ".venv\\Scripts\\python.exe -m ruff check pyrme/ui/canvas_host.py pyrme/ui/main_window.py tests/python/test_canvas_seam_m4.py tests/python/test_main_window_new_view.py tests/python/test_legacy_view_menu.py tests/python/test_legacy_show_menu.py tests/python/test_main_window_editor_shell_actions.py tests/python/test_core_bridge.py"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "The narrow canvas seam batch passed with the new renderer host as the production default.",
+          "The adjacent multi-view, activation-backend, View, Show, editor-shell-actions, and core-bridge tests stayed green.",
+          "The host reports offscreen OpenGL context unavailability honestly instead of pretending rendering is active."
+        ]
+      },
+      "notes": [
+        "PlaceholderCanvasWidget remains available for explicit fallback and test injection only.",
+        "Viewport ownership and legacy-style screen/map translation remain follow-on slices in M002."
+      ],
+      "recorded_at": "2026-04-18T00:00:00-03:00",
+      "updated_at": "2026-04-18T00:00:00-03:00",
+      "completed_at": "2026-04-18T00:00:00-03:00"
+    },
+    {
+      "id": "CANVAS-20-VIEWPORT-MODEL",
+      "title": "Move viewport ownership into per-view EditorViewport",
+      "category": "feature",
+      "status": "verified",
+      "milestone": "M002",
+      "slice": "viewport-model",
+      "summary": "Each editor view now owns an EditorViewport for center, floor, zoom, scroll origin, previous-position history, and snapshot/restore while MainWindow keeps compatibility mirrors only.",
+      "done_criteria": [
+        "Viewport owner stores center, floor, zoom, scroll origin, and previous-position history per view",
+        "ShellStateSnapshot no longer duplicates viewport state",
+        "New views clone viewport state and then diverge independently",
+        "Tab switching restores active viewport state into the shell and canvas seams"
+      ],
+      "scope": [
+        "pyrme/ui/viewport.py",
+        "pyrme/ui/editor_context.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_viewport_model.py",
+        "tests/python/test_main_window_viewport_model.py",
+        "tests/python/test_main_window_new_view.py"
+      ],
+      "files_modified": [
+        "pyrme/ui/viewport.py",
+        "pyrme/ui/editor_context.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/conftest.py",
+        "tests/python/test_main_window_new_view.py",
+        "tests/python/test_main_window_viewport_model.py",
+        ".gsd/milestones/M002-canvas-renderer/slices/S02/S02-PLAN.md",
+        ".gsd/milestones/M002-canvas-renderer/M002-canvas-VALIDATION.md",
+        ".gsd/STATE.md",
+        ".gsd/PROJECT.md",
+        ".gsd/REQUIREMENTS.md",
+        ".gsd/DECISIONS.md"
+      ],
+      "tests_run": [
+        ".venv\\Scripts\\python.exe -m pytest tests/python/test_main_window_viewport_model.py tests/python/test_main_window_new_view.py -q",
+        ".venv\\Scripts\\python.exe -m pytest tests/python/test_viewport_model.py tests/python/test_canvas_seam_m4.py tests/python/test_main_window_new_view.py tests/python/test_main_window_viewport_model.py tests/python/test_editor_activation_backend.py tests/python/test_legacy_view_menu.py tests/python/test_legacy_show_menu.py tests/python/test_main_window_editor_shell_actions.py tests/python/test_core_bridge.py -q",
+        ".venv\\Scripts\\python.exe -m ruff check pyrme/ui/viewport.py pyrme/ui/editor_context.py pyrme/ui/main_window.py tests/python/conftest.py tests/python/test_main_window_new_view.py tests/python/test_main_window_viewport_model.py"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "The S02 ownership tests pass and lock per-view independence.",
+          "ShellStateSnapshot no longer exposes position, zoom, or previous-position fields.",
+          "The fallback qtbot now supports wait(), unblocking the local no-pytest-qt path."
+        ]
+      },
+      "notes": [
+        "MainWindow compatibility mirrors remain temporary until all shell code stops reading them directly.",
+        "Canvas protocols did not change in this slice."
+      ],
+      "recorded_at": "2026-04-18T00:00:00-03:00",
+      "updated_at": "2026-04-18T00:00:00-03:00",
+      "completed_at": "2026-04-18T00:00:00-03:00"
+    },
+    {
+      "id": "CANVAS-30-MAP-VIEW-MATH",
+      "title": "Route canvas point mapping through legacy-style viewport math",
+      "category": "feature",
+      "status": "verified",
+      "milestone": "M002",
+      "slice": "map-view-math",
+      "summary": "EditorViewport now provides screen/map conversion and visible-rect math, and default canvas clicks apply tools at viewport-mapped map positions.",
+      "done_criteria": [
+        "Viewport model exposes legacy-style screen_to_map, map_to_screen, and visible_rect behavior",
+        "Default canvas point mapping consumes the active viewport snapshot",
+        "Keyboard tool application remains centered on current focus position",
+        "Offscreen renderer-host diagnostics remain honest"
+      ],
+      "scope": [
+        "pyrme/ui/viewport.py",
+        "pyrme/ui/canvas_host.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_viewport_model.py",
+        "tests/python/test_canvas_seam_m4.py"
+      ],
+      "files_modified": [
+        "pyrme/ui/viewport.py",
+        "pyrme/ui/canvas_host.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_viewport_model.py",
+        "tests/python/test_canvas_seam_m4.py",
+        ".gsd/milestones/M002-canvas-renderer/slices/S03/S03-PLAN.md",
+        ".gsd/milestones/M002-canvas-renderer/M002-canvas-SUMMARY.md"
+      ],
+      "tests_run": [
+        ".venv\\Scripts\\python.exe -m pytest tests/python/test_viewport_model.py -q",
+        ".venv\\Scripts\\python.exe -m pytest tests/python/test_canvas_seam_m4.py::test_placeholder_canvas_uses_viewport_math_for_default_point_mapping -q",
+        ".venv\\Scripts\\python.exe -m pytest tests/python/test_viewport_model.py tests/python/test_canvas_seam_m4.py tests/python/test_main_window_new_view.py tests/python/test_main_window_viewport_model.py tests/python/test_editor_activation_backend.py tests/python/test_legacy_view_menu.py tests/python/test_legacy_show_menu.py tests/python/test_main_window_editor_shell_actions.py tests/python/test_core_bridge.py -q"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "Viewport math model tests pass.",
+          "The default point-mapping regression passes through the fallback qtbot path.",
+          "The adjacent renderer-host, viewport, new-view, activation, View, Show, and core-bridge batch stayed green."
+        ]
+      },
+      "notes": [
+        "Real renderer drawing, sprite batching, screenshots, and wgpu remain future work.",
+        "This slice validates math and input routing only."
+      ],
+      "recorded_at": "2026-04-18T00:00:00-03:00",
+      "updated_at": "2026-04-18T00:00:00-03:00",
+      "completed_at": "2026-04-18T00:00:00-03:00"
+    },
+    {
+      "id": "CANVAS-40-RENDER-FRAME-PLAN",
+      "title": "Build first renderer frame plan from map model and viewport",
+      "category": "feature",
+      "status": "verified",
+      "milestone": "M003",
+      "slice": "render-frame-plan",
+      "summary": "The renderer path now builds a stable tile command frame plan from MapModel and EditorViewport, and the renderer host reports that plan without claiming sprite drawing.",
+      "done_criteria": [
+        "MapModel exposes tiles in stable map-position order",
+        "Frame planning includes only visible same-floor tiles from EditorViewport.visible_rect()",
+        "Tile commands preserve ground and stack item IDs without sprite lookup",
+        "RendererHostCanvasWidget reports the frame plan through an optional canvas seam",
+        "Existing canvas, viewport, activation, and core bridge regressions remain green"
+      ],
+      "scope": [
+        "pyrme/rendering/frame_plan.py",
+        "pyrme/rendering/__init__.py",
+        "pyrme/editor/model.py",
+        "pyrme/ui/canvas_host.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_render_frame_plan.py",
+        "tests/python/test_renderer_frame_plan_integration.py"
+      ],
+      "files_modified": [
+        "pyrme/rendering/frame_plan.py",
+        "pyrme/rendering/__init__.py",
+        "pyrme/editor/model.py",
+        "pyrme/ui/canvas_host.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_render_frame_plan.py",
+        "tests/python/test_renderer_frame_plan_integration.py",
+        ".gsd/milestones/M003-render/M003-render-CONTEXT.md",
+        ".gsd/milestones/M003-render/M003-render-ROADMAP.md",
+        ".gsd/milestones/M003-render/M003-render-SUMMARY.md",
+        ".gsd/milestones/M003-render/M003-render-VALIDATION.md",
+        ".gsd/milestones/M003-render/slices/S01/S01-PLAN.md",
+        ".gsd/STATE.md",
+        ".gsd/PROJECT.md",
+        ".gsd/REQUIREMENTS.md",
+        ".gsd/DECISIONS.md"
+      ],
+      "tests_run": [
+        ".venv\\Scripts\\python.exe -m pytest tests/python/test_render_frame_plan.py tests/python/test_renderer_frame_plan_integration.py -q",
+        ".venv\\Scripts\\python.exe -m pytest tests/python/test_render_frame_plan.py tests/python/test_renderer_frame_plan_integration.py tests/python/test_canvas_seam_m4.py tests/python/test_viewport_model.py tests/python/test_main_window_new_view.py tests/python/test_main_window_viewport_model.py tests/python/test_editor_activation_backend.py tests/python/test_legacy_view_menu.py tests/python/test_legacy_show_menu.py tests/python/test_main_window_editor_shell_actions.py tests/python/test_core_bridge.py -q",
+        ".venv\\Scripts\\python.exe -m ruff check pyrme/rendering pyrme/editor/model.py pyrme/ui/canvas_host.py pyrme/ui/main_window.py tests/python/test_render_frame_plan.py tests/python/test_renderer_frame_plan_integration.py tests/python/test_canvas_seam_m4.py",
+        ".venv\\Scripts\\python.exe -m json.tool .gsd/task-registry.json",
+        "node scripts/run-gsd.mjs headless query"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "Focused frame-plan tests pass.",
+          "Adjacent canvas, viewport, new-view, activation, View, Show, editor-shell-actions, and core-bridge regressions pass.",
+          "Ruff passes for the new renderer path and touched shell files.",
+          "GSD degraded filesystem query reports all milestones complete."
+        ]
+      },
+      "notes": [
+        "Real sprite drawing, atlas loading, screenshots, and wgpu remain future renderer work.",
+        "This slice validates the MapDrawer-style planning seam only."
+      ],
+      "recorded_at": "2026-04-18T00:00:00-03:00",
+      "updated_at": "2026-04-18T00:00:00-03:00",
+      "completed_at": "2026-04-18T00:00:00-03:00"
+    },
+    {
+      "id": "CANVAS-50-DIAGNOSTIC-TILE-PRIMITIVES",
+      "title": "Project frame plans into diagnostic tile primitives",
+      "category": "feature",
+      "status": "verified",
+      "milestone": "M004",
+      "slice": "diagnostic-tile-primitives",
+      "summary": "Frame-plan tile commands now project into screen-space diagnostic rectangles consumed by RendererHostCanvasWidget without claiming sprite renderer parity.",
+      "done_criteria": [
+        "Tile commands map to stable widget-space rectangles through EditorViewport.map_to_screen()",
+        "Primitive size follows viewport zoom",
+        "Primitive order preserves frame-plan order",
+        "RendererHostCanvasWidget receives primitive tuples through an explicit optional seam",
+        "Diagnostics expose primitive count"
+      ],
+      "scope": [
+        "pyrme/rendering/diagnostic_primitives.py",
+        "pyrme/rendering/__init__.py",
+        "pyrme/ui/canvas_host.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_diagnostic_tile_primitives.py",
+        "tests/python/test_renderer_frame_plan_integration.py"
+      ],
+      "files_modified": [
+        "pyrme/rendering/diagnostic_primitives.py",
+        "pyrme/rendering/__init__.py",
+        "pyrme/ui/canvas_host.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_diagnostic_tile_primitives.py",
+        "tests/python/test_renderer_frame_plan_integration.py",
+        ".gsd/milestones/M004-render-primitives/M004-render-primitives-CONTEXT.md",
+        ".gsd/milestones/M004-render-primitives/M004-render-primitives-ROADMAP.md",
+        ".gsd/milestones/M004-render-primitives/M004-render-primitives-SUMMARY.md",
+        ".gsd/milestones/M004-render-primitives/M004-render-primitives-VALIDATION.md",
+        ".gsd/milestones/M004-render-primitives/slices/S01/S01-PLAN.md",
+        ".gsd/STATE.md",
+        ".gsd/PROJECT.md",
+        ".gsd/REQUIREMENTS.md",
+        ".gsd/DECISIONS.md"
+      ],
+      "tests_run": [
+        ".venv\\Scripts\\python.exe -m pytest tests/python/test_diagnostic_tile_primitives.py tests/python/test_renderer_frame_plan_integration.py -q",
+        ".venv\\Scripts\\python.exe -m pytest tests/python/test_diagnostic_tile_primitives.py tests/python/test_render_frame_plan.py tests/python/test_renderer_frame_plan_integration.py tests/python/test_canvas_seam_m4.py tests/python/test_viewport_model.py tests/python/test_main_window_new_view.py tests/python/test_main_window_viewport_model.py tests/python/test_editor_activation_backend.py tests/python/test_legacy_view_menu.py tests/python/test_legacy_show_menu.py tests/python/test_main_window_editor_shell_actions.py tests/python/test_core_bridge.py -q",
+        ".venv\\Scripts\\python.exe -m ruff check pyrme/rendering pyrme/editor/model.py pyrme/ui/canvas_host.py pyrme/ui/main_window.py tests/python/test_diagnostic_tile_primitives.py tests/python/test_render_frame_plan.py tests/python/test_renderer_frame_plan_integration.py tests/python/test_canvas_seam_m4.py",
+        ".venv\\Scripts\\python.exe -m json.tool .gsd/task-registry.json",
+        "node scripts/run-gsd.mjs headless query"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "Focused primitive tests pass.",
+          "Adjacent frame-plan, canvas, viewport, new-view, activation, View, Show, editor-shell-actions, and core-bridge regressions pass.",
+          "Ruff passes for renderer and touched shell files.",
+          "GSD degraded filesystem query reports all milestones complete."
+        ]
+      },
+      "notes": [
+        "Real sprite atlas lookup, artwork draw rules, screenshots, lighting, and wgpu remain future work.",
+        "This slice validates diagnostic draw primitives only."
+      ],
+      "recorded_at": "2026-04-18T00:00:00-03:00",
+      "updated_at": "2026-04-18T00:00:00-03:00",
+      "completed_at": "2026-04-18T00:00:00-03:00"
+    },
+    {
+      "id": "WORKFLOW-HEALTH-PREFLIGHT",
+      "title": "Stabilize Codex/GSD preflight in integrated session",
+      "category": "workflow",
+      "status": "verified",
+      "milestone": "Workflow",
+      "slice": "preflight-health",
+      "summary": "Preflight now passes in the current Windows Codex session by using the repo venv Python, tolerating optional local agent TOML files and Context7 CLI, and repairing GSD internal package aliases.",
+      "done_criteria": [
+        "Ollama model probe works with required Windows socket environment",
+        "pyrme stack works when HOME/USERPROFILE are absent",
+        "npm run preflight passes with repo-local .venv Python",
+        "Full Python test suite passes",
+        "GSD headless bootstrap test materializes the canonical skeleton"
+      ],
+      "scope": [
+        "package.json",
+        ".npmrc",
+        "README.md",
+        "pyrme/devtools/codex/agents.py",
+        "pyrme/devtools/codex/stack_report.py",
+        "scripts/patch-gsd-pi.mjs",
+        "tests/python/test_codex_stack_report.py",
+        "tests/python/test_gsd_headless_milestone_bootstrap.py",
+        ".gsd/STATE.md",
+        ".gsd/DECISIONS.md"
+      ],
+      "files_modified": [
+        "package.json",
+        ".npmrc",
+        "README.md",
+        "pyrme/devtools/codex/agents.py",
+        "pyrme/devtools/codex/stack_report.py",
+        "scripts/patch-gsd-pi.mjs",
+        "tests/python/test_codex_stack_report.py",
+        "tests/python/test_gsd_headless_milestone_bootstrap.py",
+        ".gsd/STATE.md",
+        ".gsd/DECISIONS.md",
+        ".gsd/task-registry.json"
+      ],
+      "tests_run": [
+        ".venv\\Scripts\\python.exe -m pytest tests/python/test_codex_stack_report.py tests/python/test_codex_agents.py -q",
+        ".venv\\Scripts\\python.exe -m pytest tests/python/test_gsd_headless_milestone_bootstrap.py -q",
+        ".venv\\Scripts\\python.exe -m pytest tests/python -q --tb=short",
+        "npm run preflight",
+        "curl.exe -s http://127.0.0.1:11434/v1/models"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "Full Python suite passed: 236 passed.",
+          "npm run preflight reports Validation: ok.",
+          "Ollama returned six local model IDs when SystemRoot/windir are present.",
+          "GSD headless milestone bootstrap regression passes after patcher repair."
+        ]
+      },
+      "notes": [
+        "The standalone c7-mcp-server command remains optional because Context7 is available through Codex MCP in this session.",
+        "Local planner/worker/docs_researcher/reviewer TOML agents remain optional when the active Codex runtime provides agents directly."
+      ],
+      "recorded_at": "2026-04-18T00:00:00-03:00",
+      "updated_at": "2026-04-18T00:00:00-03:00",
+      "completed_at": "2026-04-18T00:00:00-03:00"
+    },
+    {
+      "id": "BRUSH-20-SHELL-COMMAND-WIRING",
+      "title": "Wire brush shell commands into the canonical backend",
+      "category": "primary-user-loop",
+      "status": "verified",
+      "milestone": "M008-brush-shell-wiring",
+      "slice": "S01",
+      "summary": "The pending local shell wiring delta is now recorded and verified: Jump to Brush, Jump to Item, palette switching, brush mode toolbar state, and WSL preflight all align the UI shell with the canonical brush backend contract.",
+      "done_criteria": [
+        "FindBrushDialog and FindBrushResult are exported for local Jump to Brush flow",
+        "Jump to Brush handles palette and item-backed results",
+        "Jump to Item handles accepted item activation and rejected search-on-map gap honestly",
+        "Palette switching clears stale shared search and stale item activation",
+        "Brush mode toolbar updates session mode and Tool Options label from one source of truth",
+        "npm run preflight passes in WSL with the repo-local Python launcher"
+      ],
+      "scope": [
+        "package.json",
+        ".npmrc",
+        "scripts/run-python.mjs",
+        "pyrme/ui/dialogs/find_brush.py",
+        "pyrme/ui/dialogs/__init__.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_find_brush_tier2.py",
+        "tests/python/test_main_window_commands_m5.py",
+        "tests/python/test_main_window_editor_shell_actions.py",
+        "tests/python/test_editor_activation_backend.py",
+        "tests/python/test_main_window_new_view.py",
+        "tests/python/test_canvas_seam_m4.py",
+        "pyrme/ui/AGENTS.md",
+        ".gsd/PROJECT.md",
+        ".gsd/REQUIREMENTS.md",
+        ".gsd/DECISIONS.md",
+        ".gsd/STATE.md"
+      ],
+      "files_modified": [
+        "package.json",
+        ".npmrc",
+        "scripts/run-python.mjs",
+        "pyrme/ui/dialogs/find_brush.py",
+        "pyrme/ui/dialogs/__init__.py",
+        "pyrme/ui/main_window.py",
+        "tests/python/test_find_brush_tier2.py",
+        "tests/python/test_main_window_commands_m5.py",
+        "tests/python/test_main_window_editor_shell_actions.py",
+        "pyrme/ui/AGENTS.md",
+        ".gsd/milestones/M008-brush-shell-wiring/M008-brush-shell-wiring-CONTEXT.md",
+        ".gsd/milestones/M008-brush-shell-wiring/M008-brush-shell-wiring-META.json",
+        ".gsd/milestones/M008-brush-shell-wiring/M008-brush-shell-wiring-ROADMAP.md",
+        ".gsd/milestones/M008-brush-shell-wiring/M008-brush-shell-wiring-SUMMARY.md",
+        ".gsd/milestones/M008-brush-shell-wiring/slices/S01/S01-CONTEXT.md",
+        ".gsd/milestones/M008-brush-shell-wiring/slices/S01/S01-PLAN.md",
+        ".gsd/milestones/M008-brush-shell-wiring/slices/S01/S01-SUMMARY.md",
+        ".gsd/milestones/M008-brush-shell-wiring/slices/S01/tasks/T01-SUMMARY.md",
+        ".gsd/milestones/M008-brush-shell-wiring/slices/S01/tasks/T02-SUMMARY.md",
+        ".gsd/milestones/M008-brush-shell-wiring/slices/S01/tasks/T03-SUMMARY.md",
+        ".gsd/milestones/M008-brush-shell-wiring/slices/S01/tasks/T04-SUMMARY.md",
+        ".gsd/milestones/M008-brush-shell-wiring/slices/S01/tasks/T05-SUMMARY.md",
+        ".gsd/PROJECT.md",
+        ".gsd/REQUIREMENTS.md",
+        ".gsd/DECISIONS.md",
+        ".gsd/STATE.md",
+        ".gsd/task-registry.json"
+      ],
+      "tests_run": [
+        "./.venv/bin/python3.12 -m ruff check pyrme/ui/main_window.py pyrme/ui/dialogs/find_brush.py pyrme/ui/dialogs/__init__.py tests/python/test_main_window_commands_m5.py tests/python/test_main_window_editor_shell_actions.py tests/python/test_find_brush_tier2.py",
+        "./.venv/bin/python3.12 -m mypy pyrme/ui/main_window.py pyrme/ui/dialogs/find_brush.py pyrme/ui/dialogs/__init__.py --ignore-missing-imports",
+        "./.venv/bin/python3.12 -m pytest -q -s --tb=short tests/python/test_find_brush_tier2.py tests/python/test_main_window_commands_m5.py tests/python/test_main_window_editor_shell_actions.py",
+        "./.venv/bin/python3.12 -m pytest -q -s --tb=short tests/python/test_editor_activation_backend.py tests/python/test_main_window_new_view.py tests/python/test_canvas_seam_m4.py",
+        "./.venv/bin/python3.12 -m pytest -q -s --tb=short tests/python/test_find_brush_tier2.py tests/python/test_main_window_commands_m5.py tests/python/test_main_window_editor_shell_actions.py tests/python/test_editor_activation_backend.py tests/python/test_main_window_new_view.py tests/python/test_canvas_seam_m4.py",
+        "./.venv/bin/python3.12 -m pytest tests/python/ -q -s --tb=short",
+        "npm run preflight --silent",
+        "env QT_QPA_PLATFORM=offscreen ./.venv/bin/python3.12 -m pyrme"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "Focused shell wiring tests passed: 17 tests.",
+          "Adjacent backend/new-view/canvas regressions passed: 36 tests.",
+          "Combined slice verification passed: 53 tests.",
+          "Scoped mypy check passed for the touched UI/dialog modules.",
+          "Full Python suite passed: 266 tests.",
+          "npm run preflight reports Validation: ok in WSL.",
+          "Offscreen startup smoke reached the event loop, and the stale `pyrme --dev` AGENTS command was corrected."
+        ]
+      },
+      "notes": [
+        "The surrounding worktree remains mixed and still requires selective staging by hunk before any commit or publish step.",
+        "npm run gsd:status --silent timed out in this WSL session, so M008 closeout used direct artifact updates instead of GSD status output."
+      ],
+      "recorded_at": "2026-04-22T12:36:26-03:00",
+      "updated_at": "2026-04-22T12:36:26-03:00",
+      "completed_at": "2026-04-22T12:36:26-03:00"
     }
   ]
 }

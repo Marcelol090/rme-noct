@@ -6,7 +6,7 @@
 
 **Architecture:** This phase creates a contract-first menu/action layer, ports the reusable canvas and shell-state seam from the verified M5 worktree, and proves parity for the first execution wave with targeted XML-backed tests. The work executes in the dedicated worktree `.worktrees/feat-legacy-menu-parity`, while the root session remains the Operator-style orchestrator and GSD tracker.
 
-**Tech Stack:** Python 3.10, PyQt6, QSettings, pytest, pytest-qt, XML parsing, GSD 2, Superpowers workflow
+**Tech Stack:** Python 3.12+, PyQt6, QSettings, pytest, pytest-qt, XML parsing, GSD 2, Superpowers workflow
 
 ---
 

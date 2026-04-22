@@ -1,36 +1,60 @@
-# Codex-First Superpowers + GSD Workflow Contract
+# Codex, Superpowers, and GSD Workflow Contract
+
+## Purpose
+
+This document defines the repo's multi-agent operating model. Codex is the orchestrator, Superpowers supplies workflow discipline, GSD supplies worktree isolation and verification, and Context7 supplies the official documentation source. When behavior already exists in the legacy redux C++ tree, that source remains the behavioral authority.
 
 ## Runtime Ownership
 
-- `Codex/OpenAI` is the primary runtime contract for this repo.
+- `Codex` is the operator and routing layer for subagents.
 - `AGENTS.md`, `config.toml`, MCP wiring, skills, subagents, and workflow surfaces follow Codex semantics first.
-- `Context7` is the required documentation source for third-party tools and libraries.
+- Optional Codex agent definitions may live in `~/.codex/agents/`.
+- Installed Codex and project skills should be validated from `~/.agents/skills/`, `.agents/skills/`, and repo-local workflow docs.
+- `Context7` is the required documentation source for third-party tools, libraries, and agent workflow terminology.
 
 ## Workflow Ownership
 
 - `Superpowers` is the workflow-discipline layer, not a replacement runtime.
-- The required sequence is:
-  - `using-superpowers`
-  - `brainstorming`
-  - `using-git-worktrees`
+- The recommended sequence is:
   - `writing-plans`
-  - `subagent-driven-development` or `executing-plans`
-  - `test-driven-development`
+  - `subagent-driven-development`
+  - `using-git-worktrees`
   - `requesting-code-review`
   - `finishing-a-development-branch`
-- In Codex, subagents are explicit. When a Superpowers workflow calls for subagents, Codex must spawn them intentionally rather than assuming automatic fan-out.
+- Use `executing-plans` when the work is already decomposed and does not benefit from additional orchestration.
+- When a task is parallelizable, Codex should dispatch subagents explicitly instead of pretending the fan-out is automatic.
+- Verification is required for each slice, but it should be driven by the legacy contract and repo tests rather than by inventing a separate workflow layer.
+- `caveman` handles closeout formatting:
+  - `caveman-review` for terse review comments
+  - `caveman-commit` for concise commit messages
+  - `compress` for token-efficient memory/doc compression when needed
+
+## Preferred Agent Topology
+
+- Planning and coordination: one orchestrator agent using `writing-plans`.
+- Parallel execution: up to eight `gpt-5.4-mini` worker agents using `subagent-driven-development`.
+- Review and quality: up to two `gpt-5.4-mini` reviewer agents using `requesting-code-review` and evaluator passes.
+- Utility tasks: lightweight `gpt-5.4-mini` agents for codebase lookup, API docs, and contract validation.
+- Repo-local subagent contracts live in `.jules/newagents/` so repeat work does not need ad hoc prompts.
+- The orchestrator owns final merge decisions and keeps the work scoped to one active plan.
 
 ## Orchestration Ownership
 
-- `GSD 2` starts after spec and plan approval.
-- `GSD 2` owns:
-  - milestone/worktree isolation
+- `GSD` starts after the plan is approved.
+- `GSD` owns:
+  - milestone and worktree isolation
   - status and progress tracking
   - budget and supervision policy
   - verification commands
-  - skill routing hints in `.gsd/preferences.md`
+  - routing hints in `.gsd/preferences.md`
 - Durable task memory lives in `.gsd/task-registry.json` and follows `.gsd/task-registry.schema.json`; update it as tasks complete so future sessions can see what has already been done.
-- `GSD` skill rules are routing metadata only. They must point toward the same skills Codex already knows how to use.
+- `git.isolation: worktree` is the standard execution mode.
+
+## Implementation Split
+
+- Python should stay focused on the visible editor shell: menus, dialogs, docks, preferences, and interaction wiring.
+- Rust should own performance-sensitive work: parsing, map data, search, rendering, and concurrency-heavy logic.
+- Keep the Python side responsive by pushing long-running work into Rust threads, worker pools, or background tasks.
 
 ## Example End-to-End Chain
 
@@ -39,27 +63,24 @@
    - `config.toml`
    - active MCP servers
    - repo-local docs
-2. Use Superpowers to define the work:
-   - brainstorm the design
-   - write the implementation plan
-3. Start the milestone in `GSD 2`:
+2. Use Context7 to validate the contract for any external tool or library.
+3. Use Superpowers to define the work:
+   - write the plan
+   - split the work into parallel slices when useful
+4. Start the milestone in GSD:
    - assign the milestone ID
    - create the isolated worktree
    - track progress and verification
-4. Execute inside Codex:
+5. Execute inside Codex:
    - inline for small slices
-   - explicit subagents for parallelizable plan tasks
-5. Finish with both:
+   - explicit subagents for parallelizable tasks
+6. Finish with both:
    - Superpowers review and branch-close workflow
    - Codex-native verification and review workflow
 
 ## References
 
 - Superpowers via Context7: `/obra/superpowers`
-- GSD 2 via Context7: `/gsd-build/gsd-2`
-- Codex docs:
-  - `https://developers.openai.com/codex/guides/agents-md`
-  - `https://developers.openai.com/codex/mcp`
-  - `https://developers.openai.com/codex/skills`
-  - `https://developers.openai.com/codex/subagents`
-  - `https://developers.openai.com/codex/workflows`
+- GSD via Context7: `/gsd-build/gsd-2`
+- OpenAI docs via Context7: `/websites/developers_openai`
+- Jules docs via Context7: `/websites/developers_google_jules`
