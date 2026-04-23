@@ -1,5 +1,10 @@
 """Renderer planning helpers for the Python editor shell."""
 
+from pyrme.rendering.client_asset_discovery import (
+    ClientAssetFiles,
+    ClientSpriteAssetBundle,
+    discover_client_asset_files,
+)
 from pyrme.rendering.diagnostic_primitives import (
     DiagnosticTilePrimitive,
     build_diagnostic_tile_primitives,
@@ -39,6 +44,8 @@ from pyrme.rendering.sprite_frame import (
 
 __all__ = [
     "DiagnosticTilePrimitive",
+    "ClientAssetFiles",
+    "ClientSpriteAssetBundle",
     "DatSpriteRecord",
     "RenderFramePlan",
     "RenderTileCommand",
@@ -56,6 +63,7 @@ __all__ = [
     "SpriteTileCommand",
     "StaticSpriteDrawAssetProvider",
     "build_diagnostic_tile_primitives",
+    "discover_client_asset_files",
     "build_render_frame_plan",
     "build_sprite_draw_asset_bundle",
     "build_sprite_catalog_from_asset_records",

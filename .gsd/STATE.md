@@ -4,9 +4,9 @@
 **Active Slice:** none
 **Active Task:** none
 **Phase:** complete
-**Next Action:** Connect the fixture asset bundle to real client asset discovery, still without binary parsing beyond existing records, pixel decoding, atlas textures, or sprite painting.
-**Last Updated:** 2026-04-23T19:14:05-03:00
-**Requirements Status:** 0 active · 27 validated · 0 deferred · 3 out of scope
+**Next Action:** Read DAT/SPR signatures from discovered client files, still without extracting item records, decoding pixels, constructing atlas textures, or painting sprites.
+**Last Updated:** 2026-04-23T20:35:52-03:00
+**Requirements Status:** 0 active · 28 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
@@ -37,6 +37,7 @@
 - `CANVAS-110-LIVE-SPRITE-DRAW-PLAN` is complete: canvas hosts now derive sprite draw plan diagnostics from live `CanvasFrame` data using injected fixture `SpriteCatalog` and `SpriteAtlas` inputs, while explicit draw-plan injection remains an override.
 - `CANVAS-120-SPRITE-ASSET-PROVIDER` is complete: canvas hosts now consume live sprite draw assets through a provider seam that supplies catalog and atlas inputs together, while direct fixture inputs and explicit draw-plan overrides remain supported.
 - `CANVAS-130-SPRITE-ASSET-BUNDLE` is complete: sprite draw assets can now be grouped as a fixture bundle of DAT-like records, SPR-like frames, and atlas regions that implements the provider seam without file IO or pixel work.
+- `CANVAS-140-CLIENT-ASSET-DISCOVERY` is complete: renderer asset discovery now resolves configured DAT/SPR files under a client root, falls back to `Tibia.dat`/`Tibia.spr`, and pairs discovery with fixture bundle providers without opening files.
 
 ## Blockers
 

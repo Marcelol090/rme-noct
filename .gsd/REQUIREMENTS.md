@@ -10,6 +10,17 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 ## Validated
 
+### R053 - Renderer asset provider must discover client DAT/SPR paths before parsing
+- Class: core-capability
+- Status: validated
+- Description: The renderer asset path must locate configured client metadata and sprite files under a selected client root, with fallback to `Tibia.dat` and `Tibia.spr`, before reading or parsing those files.
+- Why it matters: This mirrors the legacy client asset detection boundary and creates a safe discovery seam before signature reads, binary parsing, pixel decoding, or texture ownership.
+- Source: execution
+- Primary owning slice: CANVAS-140-CLIENT-ASSET-DISCOVERY
+- Supporting slices: CANVAS-130-SPRITE-ASSET-BUNDLE, CANVAS-120-SPRITE-ASSET-PROVIDER
+- Validation: validated
+- Notes: Verified by `tests/python/test_client_asset_discovery.py`; discovery sanitizes configured names to basenames, prefers configured files, falls back to `Tibia.dat`/`Tibia.spr`, reports legacy-style missing-root/file warnings, and can be paired with an existing fixture sprite asset bundle provider.
+
 ### R052 - Sprite draw provider must support fixture asset bundles
 - Class: core-capability
 - Status: validated

@@ -629,6 +629,78 @@
       "recorded_at": "2026-04-23T19:14:05-03:00",
       "updated_at": "2026-04-23T19:14:05-03:00",
       "completed_at": "2026-04-23T19:14:05-03:00"
+    },
+    {
+      "id": "CANVAS-140-CLIENT-ASSET-DISCOVERY",
+      "title": "Discover client DAT and SPR asset paths",
+      "category": "core-capability",
+      "status": "verified",
+      "milestone": "M013",
+      "slice": "S01",
+      "summary": "Renderer asset discovery now resolves configured DAT/SPR files under a client root, falls back to Tibia.dat and Tibia.spr, and pairs discovery with fixture bundle providers without opening files.",
+      "done_criteria": [
+        "ClientAssetFiles exists",
+        "discover_client_asset_files sanitizes configured file names to basenames",
+        "Configured metadata and sprite names are preferred before fallback names",
+        "Fallback names are Tibia.dat and Tibia.spr",
+        "Missing root, DAT, and SPR cases report legacy-style warnings",
+        "ClientSpriteAssetBundle pairs discovery results with an existing fixture bundle provider",
+        "No signature reads, binary parsing, pixel decoding, texture upload, sprite painting, screenshots, lighting, or wgpu work is added"
+      ],
+      "scope": [
+        "pyrme/rendering/client_asset_discovery.py",
+        "pyrme/rendering/__init__.py",
+        "tests/python/test_client_asset_discovery.py",
+        ".gsd/milestones/M013/M013-CONTEXT.md",
+        ".gsd/milestones/M013/M013-ROADMAP.md",
+        ".gsd/milestones/M013/M013-SUMMARY.md",
+        ".gsd/milestones/M013/slices/S01/S01-PLAN.md",
+        ".gsd/milestones/M013/slices/S01/tasks/T04-SUMMARY.md",
+        ".gsd/DECISIONS.md",
+        ".gsd/PROJECT.md",
+        ".gsd/REQUIREMENTS.md",
+        ".gsd/STATE.md",
+        ".gsd/task-registry.json"
+      ],
+      "files_modified": [
+        "pyrme/rendering/client_asset_discovery.py",
+        "pyrme/rendering/__init__.py",
+        "tests/python/test_client_asset_discovery.py",
+        ".gsd/milestones/M013/M013-CONTEXT.md",
+        ".gsd/milestones/M013/M013-ROADMAP.md",
+        ".gsd/milestones/M013/M013-SUMMARY.md",
+        ".gsd/milestones/M013/slices/S01/S01-PLAN.md",
+        ".gsd/milestones/M013/slices/S01/tasks/T04-SUMMARY.md",
+        ".gsd/DECISIONS.md",
+        ".gsd/PROJECT.md",
+        ".gsd/REQUIREMENTS.md",
+        ".gsd/STATE.md",
+        ".gsd/task-registry.json"
+      ],
+      "tests_run": [
+        "python3 -m pytest tests/python/test_client_asset_discovery.py -q --tb=short",
+        "python3 -m pytest tests/python/test_client_asset_discovery.py tests/python/test_canvas_sprite_draw_diagnostics.py tests/python/test_sprite_asset_provider.py tests/python/test_canvas_seam_m4.py tests/python/test_renderer_frame_plan_integration.py tests/python/test_sprite_draw_commands.py tests/python/test_sprite_catalog_adapter.py tests/python/test_sprite_frame.py tests/python/test_render_frame_plan.py tests/python/test_diagnostic_tile_primitives.py -q --tb=short",
+        "python3 -m ruff check pyrme/rendering/client_asset_discovery.py pyrme/rendering/__init__.py tests/python/test_client_asset_discovery.py",
+        "python3 -m json.tool .gsd/task-registry.json",
+        "git diff --check"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "Focused client asset discovery tests passed: 5 tests.",
+          "Adjacent canvas/render/sprite planning regression slice passed: 67 tests.",
+          "Ruff passed for touched rendering and test files.",
+          "Task registry JSON validation passed.",
+          "git diff --check passed."
+        ]
+      },
+      "notes": [
+        "Discovery checks directory and file existence only.",
+        "DAT/SPR signature reads, binary parsing, atlas texture ownership, pixel painting, screenshots, lighting, and wgpu remain future work."
+      ],
+      "recorded_at": "2026-04-23T20:35:52-03:00",
+      "updated_at": "2026-04-23T20:35:52-03:00",
+      "completed_at": "2026-04-23T20:35:52-03:00"
     }
   ]
 }
