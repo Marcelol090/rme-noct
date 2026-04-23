@@ -559,6 +559,76 @@
       "recorded_at": "2026-04-23T18:48:07-03:00",
       "updated_at": "2026-04-23T18:48:07-03:00",
       "completed_at": "2026-04-23T18:48:07-03:00"
+    },
+    {
+      "id": "CANVAS-130-SPRITE-ASSET-BUNDLE",
+      "title": "Add fixture sprite draw asset bundle",
+      "category": "core-capability",
+      "status": "verified",
+      "milestone": "M012",
+      "slice": "S01",
+      "summary": "Sprite draw assets can now be grouped as a fixture bundle of DAT-like records, SPR-like frames, and atlas regions that implements the provider seam without file IO, pixel decoding, texture upload, or sprite painting.",
+      "done_criteria": [
+        "SpriteDrawAssetBundle exists",
+        "build_sprite_draw_asset_bundle snapshots incoming iterables",
+        "The bundle implements sprite_draw_inputs",
+        "The bundle reuses existing catalog adapter and atlas region planner types",
+        "No real DAT/SPR file loading, pixel painting, GL upload, screenshots, lighting, or wgpu work is added"
+      ],
+      "scope": [
+        "pyrme/rendering/sprite_asset_provider.py",
+        "pyrme/rendering/__init__.py",
+        "tests/python/test_sprite_asset_provider.py",
+        ".gsd/milestones/M012/M012-CONTEXT.md",
+        ".gsd/milestones/M012/M012-ROADMAP.md",
+        ".gsd/milestones/M012/M012-SUMMARY.md",
+        ".gsd/milestones/M012/slices/S01/S01-PLAN.md",
+        ".gsd/milestones/M012/slices/S01/tasks/T04-SUMMARY.md",
+        ".gsd/DECISIONS.md",
+        ".gsd/PROJECT.md",
+        ".gsd/REQUIREMENTS.md",
+        ".gsd/STATE.md",
+        ".gsd/task-registry.json"
+      ],
+      "files_modified": [
+        "pyrme/rendering/sprite_asset_provider.py",
+        "pyrme/rendering/__init__.py",
+        "tests/python/test_sprite_asset_provider.py",
+        ".gsd/milestones/M012/M012-CONTEXT.md",
+        ".gsd/milestones/M012/M012-ROADMAP.md",
+        ".gsd/milestones/M012/M012-SUMMARY.md",
+        ".gsd/milestones/M012/slices/S01/S01-PLAN.md",
+        ".gsd/milestones/M012/slices/S01/tasks/T04-SUMMARY.md",
+        ".gsd/DECISIONS.md",
+        ".gsd/PROJECT.md",
+        ".gsd/REQUIREMENTS.md",
+        ".gsd/STATE.md",
+        ".gsd/task-registry.json"
+      ],
+      "tests_run": [
+        "python3 -m pytest tests/python/test_sprite_asset_provider.py -q --tb=short",
+        "python3 -m pytest tests/python/test_canvas_sprite_draw_diagnostics.py tests/python/test_sprite_asset_provider.py tests/python/test_canvas_seam_m4.py tests/python/test_renderer_frame_plan_integration.py tests/python/test_sprite_draw_commands.py tests/python/test_sprite_catalog_adapter.py tests/python/test_sprite_frame.py tests/python/test_render_frame_plan.py tests/python/test_diagnostic_tile_primitives.py -q --tb=short",
+        "python3 -m ruff check pyrme/rendering/sprite_asset_provider.py pyrme/rendering/__init__.py tests/python/test_sprite_asset_provider.py",
+        "python3 -m json.tool .gsd/task-registry.json",
+        "git diff --check"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "Focused provider tests passed: 5 tests.",
+          "Adjacent canvas/render/sprite planning regression slice passed: 62 tests.",
+          "Ruff passed for touched rendering and test files.",
+          "Task registry JSON validation passed.",
+          "git diff --check passed."
+        ]
+      },
+      "notes": [
+        "The bundle owns already-materialized records only.",
+        "Real DAT/SPR discovery, binary parsing, atlas texture ownership, pixel painting, screenshots, lighting, and wgpu remain future work."
+      ],
+      "recorded_at": "2026-04-23T19:14:05-03:00",
+      "updated_at": "2026-04-23T19:14:05-03:00",
+      "completed_at": "2026-04-23T19:14:05-03:00"
     }
   ]
 }

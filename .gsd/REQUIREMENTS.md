@@ -10,6 +10,17 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 ## Validated
 
+### R052 - Sprite draw provider must support fixture asset bundles
+- Class: core-capability
+- Status: validated
+- Description: Sprite draw assets must be groupable as an immutable fixture bundle of DAT-like records, SPR-like frame records, and atlas regions before real asset discovery exists.
+- Why it matters: This gives future discovery and atlas lifecycle work a single record-owner seam while keeping binary parsing, pixel decoding, texture upload, and drawing out of the provider layer.
+- Source: execution
+- Primary owning slice: CANVAS-130-SPRITE-ASSET-BUNDLE
+- Supporting slices: CANVAS-120-SPRITE-ASSET-PROVIDER, CANVAS-110-LIVE-SPRITE-DRAW-PLAN, CANVAS-90-SPRITE-DRAW-COMMAND-PLAN
+- Validation: validated
+- Notes: Verified by `tests/python/test_sprite_asset_provider.py`; `SpriteDrawAssetBundle` builds provider inputs from existing DAT-like, SPR-like, and atlas-region records, and `build_sprite_draw_asset_bundle()` snapshots incoming iterables.
+
 ### R051 - Canvas host must consume sprite draw assets through a provider seam
 - Class: core-capability
 - Status: validated

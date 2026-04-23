@@ -10,9 +10,11 @@ from pyrme.rendering.frame_plan import (
     build_render_frame_plan,
 )
 from pyrme.rendering.sprite_asset_provider import (
+    SpriteDrawAssetBundle,
     SpriteDrawAssetInputs,
     SpriteDrawAssetProvider,
     StaticSpriteDrawAssetProvider,
+    build_sprite_draw_asset_bundle,
 )
 from pyrme.rendering.sprite_catalog_adapter import (
     DatSpriteRecord,
@@ -45,6 +47,7 @@ __all__ = [
     "SpriteAtlasRegion",
     "SpriteCatalog",
     "SpriteCatalogEntry",
+    "SpriteDrawAssetBundle",
     "SpriteDrawAssetInputs",
     "SpriteDrawAssetProvider",
     "SpriteDrawCommand",
@@ -54,6 +57,7 @@ __all__ = [
     "StaticSpriteDrawAssetProvider",
     "build_diagnostic_tile_primitives",
     "build_render_frame_plan",
+    "build_sprite_draw_asset_bundle",
     "build_sprite_catalog_from_asset_records",
     "build_sprite_catalog_from_dat_records",
     "build_sprite_draw_plan",

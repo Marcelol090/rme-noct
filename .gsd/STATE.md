@@ -4,9 +4,9 @@
 **Active Slice:** none
 **Active Task:** none
 **Phase:** complete
-**Next Action:** Connect the sprite asset provider seam to real DAT/SPR discovery or a fixture asset bundle owner, still without pixel decoding, atlas textures, or sprite painting.
-**Last Updated:** 2026-04-23T18:48:07-03:00
-**Requirements Status:** 0 active · 26 validated · 0 deferred · 3 out of scope
+**Next Action:** Connect the fixture asset bundle to real client asset discovery, still without binary parsing beyond existing records, pixel decoding, atlas textures, or sprite painting.
+**Last Updated:** 2026-04-23T19:14:05-03:00
+**Requirements Status:** 0 active · 27 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
@@ -36,6 +36,7 @@
 - `CANVAS-100-SPRITE-DRAW-DIAGNOSTICS` is complete: the canvas host now accepts sprite draw plans and reports command counts plus unresolved sprite ids in diagnostics, without painting sprites.
 - `CANVAS-110-LIVE-SPRITE-DRAW-PLAN` is complete: canvas hosts now derive sprite draw plan diagnostics from live `CanvasFrame` data using injected fixture `SpriteCatalog` and `SpriteAtlas` inputs, while explicit draw-plan injection remains an override.
 - `CANVAS-120-SPRITE-ASSET-PROVIDER` is complete: canvas hosts now consume live sprite draw assets through a provider seam that supplies catalog and atlas inputs together, while direct fixture inputs and explicit draw-plan overrides remain supported.
+- `CANVAS-130-SPRITE-ASSET-BUNDLE` is complete: sprite draw assets can now be grouped as a fixture bundle of DAT-like records, SPR-like frames, and atlas regions that implements the provider seam without file IO or pixel work.
 
 ## Blockers
 
