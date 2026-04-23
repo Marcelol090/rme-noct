@@ -10,6 +10,17 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 ## Validated
 
+### R051 - Canvas host must consume sprite draw assets through a provider seam
+- Class: core-capability
+- Status: validated
+- Description: Live sprite draw planning must accept a provider that supplies `SpriteCatalog` and `SpriteAtlas` together instead of requiring the canvas host to own only raw tuple wiring.
+- Why it matters: This creates the ownership seam needed for future real DAT/SPR discovery and atlas lifecycle work while keeping frame planning independent from file loading and pixel painting.
+- Source: execution
+- Primary owning slice: CANVAS-120-SPRITE-ASSET-PROVIDER
+- Supporting slices: CANVAS-110-LIVE-SPRITE-DRAW-PLAN, CANVAS-100-SPRITE-DRAW-DIAGNOSTICS, CANVAS-90-SPRITE-DRAW-COMMAND-PLAN
+- Validation: validated
+- Notes: Verified by `tests/python/test_sprite_asset_provider.py` and `tests/python/test_canvas_sprite_draw_diagnostics.py`; canvas hosts accept `set_sprite_asset_provider(provider)`, refresh provider inputs during live frame synchronization, preserve direct fixture inputs, and keep explicit `set_sprite_draw_plan()` as an override.
+
 ### R050 - Canvas host must build sprite draw plans from live frame data
 - Class: core-capability
 - Status: validated

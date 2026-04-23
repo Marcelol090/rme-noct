@@ -484,6 +484,81 @@
       "recorded_at": "2026-04-23T17:49:12-03:00",
       "updated_at": "2026-04-23T17:49:12-03:00",
       "completed_at": "2026-04-23T17:49:12-03:00"
+    },
+    {
+      "id": "CANVAS-120-SPRITE-ASSET-PROVIDER",
+      "title": "Add sprite draw asset provider seam",
+      "category": "core-capability",
+      "status": "verified",
+      "milestone": "M011",
+      "slice": "S01",
+      "summary": "Canvas hosts now consume live sprite draw assets through a provider seam that supplies SpriteCatalog and SpriteAtlas inputs together, while direct fixture inputs and explicit draw-plan override behavior remain supported.",
+      "done_criteria": [
+        "A renderer-facing sprite draw asset provider contract exists",
+        "A static provider exists for tests and fixture-backed flows",
+        "Canvas hosts accept a provider and use it for live sprite draw diagnostics",
+        "Provider inputs refresh when canvas frame synchronization runs",
+        "Direct fixture inputs and explicit draw-plan overrides remain supported",
+        "No pixel painting, GL upload, real asset loading, screenshots, lighting, or wgpu work is added"
+      ],
+      "scope": [
+        "pyrme/rendering/sprite_asset_provider.py",
+        "pyrme/rendering/__init__.py",
+        "pyrme/ui/canvas_host.py",
+        "tests/python/test_sprite_asset_provider.py",
+        "tests/python/test_canvas_sprite_draw_diagnostics.py",
+        ".gsd/milestones/M011/M011-CONTEXT.md",
+        ".gsd/milestones/M011/M011-ROADMAP.md",
+        ".gsd/milestones/M011/M011-SUMMARY.md",
+        ".gsd/milestones/M011/slices/S01/S01-PLAN.md",
+        ".gsd/milestones/M011/slices/S01/tasks/T04-SUMMARY.md",
+        ".gsd/DECISIONS.md",
+        ".gsd/PROJECT.md",
+        ".gsd/REQUIREMENTS.md",
+        ".gsd/STATE.md",
+        ".gsd/task-registry.json"
+      ],
+      "files_modified": [
+        "pyrme/rendering/sprite_asset_provider.py",
+        "pyrme/rendering/__init__.py",
+        "pyrme/ui/canvas_host.py",
+        "tests/python/test_sprite_asset_provider.py",
+        "tests/python/test_canvas_sprite_draw_diagnostics.py",
+        ".gsd/milestones/M011/M011-CONTEXT.md",
+        ".gsd/milestones/M011/M011-ROADMAP.md",
+        ".gsd/milestones/M011/M011-SUMMARY.md",
+        ".gsd/milestones/M011/slices/S01/S01-PLAN.md",
+        ".gsd/milestones/M011/slices/S01/tasks/T04-SUMMARY.md",
+        ".gsd/DECISIONS.md",
+        ".gsd/PROJECT.md",
+        ".gsd/REQUIREMENTS.md",
+        ".gsd/STATE.md",
+        ".gsd/task-registry.json"
+      ],
+      "tests_run": [
+        "python3 -m pytest tests/python/test_sprite_asset_provider.py tests/python/test_canvas_sprite_draw_diagnostics.py -q --tb=short",
+        "python3 -m pytest tests/python/test_canvas_sprite_draw_diagnostics.py tests/python/test_sprite_asset_provider.py tests/python/test_canvas_seam_m4.py tests/python/test_renderer_frame_plan_integration.py tests/python/test_sprite_draw_commands.py tests/python/test_sprite_catalog_adapter.py tests/python/test_sprite_frame.py tests/python/test_render_frame_plan.py tests/python/test_diagnostic_tile_primitives.py -q --tb=short",
+        "python3 -m ruff check pyrme/rendering/sprite_asset_provider.py pyrme/rendering/__init__.py pyrme/ui/canvas_host.py tests/python/test_sprite_asset_provider.py tests/python/test_canvas_sprite_draw_diagnostics.py",
+        "python3 -m json.tool .gsd/task-registry.json",
+        "git diff --check"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "Focused provider and canvas diagnostics tests passed: 14 tests.",
+          "Adjacent canvas/render/sprite planning regression slice passed: 59 tests.",
+          "Ruff passed for touched rendering, canvas, and test files.",
+          "Task registry JSON validation passed.",
+          "git diff --check passed."
+        ]
+      },
+      "notes": [
+        "The provider seam carries already-materialized SpriteCatalog and SpriteAtlas values only.",
+        "Real DAT/SPR loading, atlas texture ownership, pixel painting, screenshots, lighting, and wgpu remain future work."
+      ],
+      "recorded_at": "2026-04-23T18:48:07-03:00",
+      "updated_at": "2026-04-23T18:48:07-03:00",
+      "completed_at": "2026-04-23T18:48:07-03:00"
     }
   ]
 }

@@ -9,6 +9,11 @@ from pyrme.rendering.frame_plan import (
     RenderTileCommand,
     build_render_frame_plan,
 )
+from pyrme.rendering.sprite_asset_provider import (
+    SpriteDrawAssetInputs,
+    SpriteDrawAssetProvider,
+    StaticSpriteDrawAssetProvider,
+)
 from pyrme.rendering.sprite_catalog_adapter import (
     DatSpriteRecord,
     SprFrameRecord,
@@ -40,10 +45,13 @@ __all__ = [
     "SpriteAtlasRegion",
     "SpriteCatalog",
     "SpriteCatalogEntry",
+    "SpriteDrawAssetInputs",
+    "SpriteDrawAssetProvider",
     "SpriteDrawCommand",
     "SpriteDrawPlan",
     "SpriteFrame",
     "SpriteTileCommand",
+    "StaticSpriteDrawAssetProvider",
     "build_diagnostic_tile_primitives",
     "build_render_frame_plan",
     "build_sprite_catalog_from_asset_records",

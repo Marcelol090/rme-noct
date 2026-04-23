@@ -25,6 +25,8 @@ from pyrme.rendering import (
     RenderTileCommand,
     SpriteAtlas,
     SpriteCatalog,
+    SpriteDrawAssetInputs,
+    SpriteDrawAssetProvider,
     SpriteDrawPlan,
     build_sprite_draw_plan,
     build_sprite_frame,
@@ -216,7 +218,8 @@ class _CanvasShellStateMixin:
         self._frame_summary = self._canvas_frame.summary()
         self._frame_primitives: tuple[DiagnosticTilePrimitive, ...] = ()
         self._sprite_draw_plan = SpriteDrawPlan((), ())
-        self._sprite_draw_inputs: tuple[SpriteCatalog, SpriteAtlas] | None = None
+        self._sprite_draw_inputs: SpriteDrawAssetInputs | None = None
+        self._sprite_draw_asset_provider: SpriteDrawAssetProvider | None = None
         self._core_mode = "native" if self._shell_core.is_native() else "python-fallback"
         self._editor_mode = "drawing"
         self._active_brush_name = "Select"
@@ -379,6 +382,7 @@ class _CanvasShellStateMixin:
         return len(self._frame_primitives)
 
     def set_sprite_draw_plan(self, plan: SpriteDrawPlan) -> None:
+        self._sprite_draw_asset_provider = None
         self._sprite_draw_inputs = None
         self._sprite_draw_plan = SpriteDrawPlan(
             commands=tuple(plan.commands),
@@ -391,7 +395,13 @@ class _CanvasShellStateMixin:
         catalog: SpriteCatalog,
         atlas: SpriteAtlas,
     ) -> None:
-        self._sprite_draw_inputs = (catalog, atlas)
+        self._sprite_draw_asset_provider = None
+        self._sprite_draw_inputs = SpriteDrawAssetInputs(catalog=catalog, atlas=atlas)
+        self._state_changed()
+
+    def set_sprite_asset_provider(self, provider: SpriteDrawAssetProvider) -> None:
+        self._sprite_draw_asset_provider = provider
+        self._sprite_draw_inputs = None
         self._state_changed()
 
     def sprite_draw_command_count(self) -> int:
@@ -475,20 +485,25 @@ class _CanvasShellStateMixin:
             self._frame_primitives = ()
 
     def _sync_live_sprite_draw_plan(self) -> None:
-        if self._sprite_draw_inputs is None:
-            return
         try:
-            catalog, atlas = self._sprite_draw_inputs
+            inputs = self._active_sprite_draw_inputs()
+            if inputs is None:
+                return
             frame_plan = _render_frame_plan_from_canvas_frame(self._canvas_frame)
-            sprite_frame = build_sprite_frame(frame_plan, catalog)
+            sprite_frame = build_sprite_frame(frame_plan, inputs.catalog)
             self._sprite_draw_plan = build_sprite_draw_plan(
                 sprite_frame,
-                atlas,
+                inputs.atlas,
                 EditorViewport(self._canvas_frame.viewport_snapshot),
             )
         except Exception as exc:
             self._sprite_draw_plan = SpriteDrawPlan((), ())
             self._render_summary = f"sprite draw plan unavailable: {exc}"
+
+    def _active_sprite_draw_inputs(self) -> SpriteDrawAssetInputs | None:
+        if self._sprite_draw_asset_provider is not None:
+            return self._sprite_draw_asset_provider.sprite_draw_inputs()
+        return self._sprite_draw_inputs
 
 
 class PlaceholderCanvasWidget(_CanvasShellStateMixin, QLabel):
