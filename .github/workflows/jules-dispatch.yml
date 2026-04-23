@@ -1,0 +1,170 @@
+name: Jules Dispatch
+
+on:
+  issue_comment:
+    types:
+      - 'created'
+  pull_request_review_comment:
+    types:
+      - 'created'
+  workflow_dispatch:
+    inputs:
+      focus:
+        description: 'auto, python, rust, bridge, review, test, utility, maintenance, ci'
+        type: choice
+        options:
+          - 'auto'
+          - 'python'
+          - 'rust'
+          - 'bridge'
+          - 'review'
+          - 'test'
+          - 'utility'
+          - 'maintenance'
+          - 'ci'
+        required: false
+        default: 'auto'
+      additional_context:
+        description: 'Extra context for Jules'
+        type: string
+        required: false
+        default: ''
+      starting_branch:
+        description: 'Optional branch override'
+        type: string
+        required: false
+        default: ''
+
+concurrency:
+  group: '${{ github.workflow }}-${{ github.event_name }}-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}'
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: 'bash'
+
+jobs:
+  prepare:
+    runs-on: 'ubuntu-latest'
+    permissions:
+      contents: 'read'
+      issues: 'read'
+      pull-requests: 'read'
+    outputs:
+      additional_context: '${{ steps.context.outputs.additional_context }}'
+      focus: '${{ steps.context.outputs.focus }}'
+      include_commit_log: '${{ steps.context.outputs.include_commit_log }}'
+      include_last_commit: '${{ steps.context.outputs.include_last_commit }}'
+      should_run: '${{ steps.context.outputs.should_run }}'
+      starting_branch: '${{ steps.context.outputs.starting_branch }}'
+    steps:
+      - name: Resolve request context
+        id: context
+        uses: 'actions/github-script@v7'
+        with:
+          script: |-
+            const trusted = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
+            const defaultBranch = context.payload.repository.default_branch;
+            const eventName = context.eventName;
+            const isManual = eventName === 'workflow_dispatch';
+            const inputs = context.payload.inputs || {};
+
+            let focus = (inputs.focus || 'auto').toLowerCase();
+            let additionalContext = (inputs.additional_context || '').trim();
+            let startingBranch = (inputs.starting_branch || defaultBranch).trim();
+            let includeLastCommit = 'false';
+            let includeCommitLog = 'false';
+            let shouldRun = 'true';
+
+            const appendContext = (...entries) => {
+              const values = entries.filter(Boolean).map((value) => String(value).trim()).filter(Boolean);
+              if (values.length > 0) {
+                additionalContext = [additionalContext, ...values].filter(Boolean).join('\n').trim();
+              }
+            };
+
+            if (!isManual) {
+              const comment = context.payload.comment || context.payload.review || {};
+              const association = (comment.author_association || '').toUpperCase();
+              if (!trusted.has(association)) {
+                core.setOutput('should_run', 'false');
+                return;
+              }
+
+              const body = (comment.body || '').trimStart();
+              const firstLine = body.split(/\r?\n/, 1)[0] || '';
+              const match = firstLine.match(/^@jules(?:\s+\/(?<focus>auto|python|rust|bridge|review|test|utility|maintenance|ci))?(?:\s+(?<rest>.*))?$/i);
+              if (!match) {
+                core.setOutput('should_run', 'false');
+                return;
+              }
+
+              focus = (match.groups?.focus || 'auto').toLowerCase();
+              const restOfLine = (match.groups?.rest || '').trim();
+              const remainingLines = body.split(/\r?\n/).slice(1).join('\n').trim();
+              additionalContext = [restOfLine, remainingLines].filter(Boolean).join('\n').trim();
+
+              const prPayload = context.payload.pull_request || null;
+              const issuePayload = context.payload.issue || null;
+              const hasPullRequest = Boolean(prPayload) || Boolean(issuePayload && issuePayload.pull_request);
+
+              if (hasPullRequest) {
+                const prNumber = prPayload?.number || issuePayload.number;
+                const pr = prPayload || (await github.rest.pulls.get({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: prNumber,
+                })).data;
+                const sameRepo = pr.head?.repo?.full_name === `${context.repo.owner}/${context.repo.repo}`;
+                startingBranch = sameRepo ? pr.head.ref : pr.base.ref;
+                includeLastCommit = 'true';
+                appendContext(
+                  `issue_or_pr_number=${prNumber}`,
+                  `pull_request_title=${pr.title || ''}`,
+                  `pull_request_body=${(pr.body || '').trim()}`,
+                  `pull_request_url=${pr.html_url || ''}`,
+                  `head_branch=${pr.head?.ref || ''}`,
+                  `base_branch=${pr.base?.ref || ''}`,
+                  `same_repo=${sameRepo}`,
+                );
+              } else if (issuePayload?.number) {
+                appendContext(
+                  `issue_or_pr_number=${issuePayload.number}`,
+                  `issue_title=${issuePayload.title || ''}`,
+                  `issue_body=${(issuePayload.body || '').trim()}`,
+                  `issue_url=${issuePayload.html_url || ''}`,
+                );
+              }
+
+              appendContext(
+                `comment_author=${comment.user?.login || ''}`,
+                `comment_url=${comment.html_url || ''}`,
+              );
+            }
+
+            if (focus === 'maintenance') {
+              includeCommitLog = 'true';
+            }
+            if (focus === 'ci') {
+              includeLastCommit = 'true';
+            }
+
+            core.setOutput('focus', focus);
+            core.setOutput('additional_context', additionalContext);
+            core.setOutput('starting_branch', startingBranch);
+            core.setOutput('include_last_commit', includeLastCommit);
+            core.setOutput('include_commit_log', includeCommitLog);
+            core.setOutput('should_run', shouldRun);
+
+  invoke:
+    needs:
+      - 'prepare'
+    if: ${{ needs.prepare.outputs.should_run == 'true' }}
+    uses: './.github/workflows/jules-invoke.yml'
+    secrets: 'inherit'
+    with:
+      additional_context: '${{ needs.prepare.outputs.additional_context }}'
+      focus: '${{ needs.prepare.outputs.focus }}'
+      include_commit_log: '${{ fromJSON(needs.prepare.outputs.include_commit_log) }}'
+      include_last_commit: '${{ fromJSON(needs.prepare.outputs.include_last_commit) }}'
+      starting_branch: '${{ needs.prepare.outputs.starting_branch }}'
