@@ -10,6 +10,17 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 ## Validated
 
+### R050 - Canvas host must build sprite draw plans from live frame data
+- Class: core-capability
+- Status: validated
+- Description: The canvas host must derive sprite draw diagnostics from the current `CanvasFrame` when fixture sprite catalog and atlas inputs are provided.
+- Why it matters: This proves the shell can connect live map/frame state to sprite draw command planning before real asset loading or pixel painting exists.
+- Source: execution
+- Primary owning slice: CANVAS-110-LIVE-SPRITE-DRAW-PLAN
+- Supporting slices: CANVAS-100-SPRITE-DRAW-DIAGNOSTICS, CANVAS-90-SPRITE-DRAW-COMMAND-PLAN, CANVAS-80-SPR-FRAME-METADATA
+- Validation: validated
+- Notes: Verified by `tests/python/test_canvas_sprite_draw_diagnostics.py`; live inputs regenerate command diagnostics from visible frame tiles, refresh when frame data changes, and explicit `set_sprite_draw_plan()` remains a manual override.
+
 ### R049 - Renderer host must expose sprite draw plan diagnostics before painting
 - Class: core-capability
 - Status: validated
@@ -337,6 +348,11 @@ Use it to track what is actively in scope, what has been validated by completed 
 | R043 | primary-user-loop | validated | CANVAS-30-MAP-VIEW-MATH | CANVAS-10-RENDERER-HOST, CANVAS-20-VIEWPORT-MODEL | validated |
 | R044 | core-capability | validated | CANVAS-40-RENDER-FRAME-PLAN | CANVAS-10-RENDERER-HOST, CANVAS-20-VIEWPORT-MODEL, CANVAS-30-MAP-VIEW-MATH | validated |
 | R045 | core-capability | validated | CANVAS-50-DIAGNOSTIC-TILE-PRIMITIVES | CANVAS-40-RENDER-FRAME-PLAN, CANVAS-30-MAP-VIEW-MATH | validated |
+| R046 | core-capability | validated | CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER | CANVAS-60-SPRITE-CATALOG-SEAM | validated |
+| R047 | core-capability | validated | CANVAS-80-SPR-FRAME-METADATA | CANVAS-60-SPRITE-CATALOG-SEAM, CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER | validated |
+| R048 | core-capability | validated | CANVAS-90-SPRITE-DRAW-COMMAND-PLAN | CANVAS-60-SPRITE-CATALOG-SEAM, CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER, CANVAS-80-SPR-FRAME-METADATA | validated |
+| R049 | core-capability | validated | CANVAS-100-SPRITE-DRAW-DIAGNOSTICS | CANVAS-60-SPRITE-CATALOG-SEAM, CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER, CANVAS-80-SPR-FRAME-METADATA, CANVAS-90-SPRITE-DRAW-COMMAND-PLAN | validated |
+| R050 | core-capability | validated | CANVAS-110-LIVE-SPRITE-DRAW-PLAN | CANVAS-100-SPRITE-DRAW-DIAGNOSTICS, CANVAS-90-SPRITE-DRAW-COMMAND-PLAN, CANVAS-80-SPR-FRAME-METADATA | validated |
 | R030 | anti-feature | out-of-scope | none | none | n/a |
 | R031 | constraint | out-of-scope | none | none | n/a |
 | R032 | constraint | out-of-scope | none | none | n/a |
@@ -344,6 +360,6 @@ Use it to track what is actively in scope, what has been validated by completed 
 ## Coverage Summary
 
 - Active requirements: 0
-- Mapped to slices: 20
-- Validated: 20
+- Mapped to slices: 25
+- Validated: 25
 - Unmapped active requirements: 0

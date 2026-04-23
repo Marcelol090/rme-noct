@@ -417,6 +417,73 @@
       "recorded_at": "2026-04-07T17:49:05-03:00",
       "updated_at": "2026-04-07T17:49:05-03:00",
       "completed_at": "2026-04-07T17:49:05-03:00"
+    },
+    {
+      "id": "CANVAS-110-LIVE-SPRITE-DRAW-PLAN",
+      "title": "Build live sprite draw plans from canvas frame data",
+      "category": "core-capability",
+      "status": "verified",
+      "milestone": "M010",
+      "slice": "S01",
+      "summary": "Canvas hosts now derive sprite draw plan diagnostics from the current CanvasFrame when fixture SpriteCatalog and SpriteAtlas inputs are provided, while explicit draw-plan injection remains a manual override.",
+      "done_criteria": [
+        "Canvas hosts expose a fixture catalog and atlas input seam",
+        "Live inputs regenerate SpriteDrawPlan diagnostics from visible canvas frame tiles",
+        "Frame changes refresh sprite draw command diagnostics",
+        "Explicit set_sprite_draw_plan remains supported as an override",
+        "Failed sprite draw generation clears stale commands without discarding a valid frame plan",
+        "No pixel painting, GL upload, real asset loading, screenshots, lighting, or wgpu work is added"
+      ],
+      "scope": [
+        "pyrme/ui/canvas_host.py",
+        "tests/python/test_canvas_sprite_draw_diagnostics.py",
+        ".gsd/milestones/M010/M010-CONTEXT.md",
+        ".gsd/milestones/M010/M010-ROADMAP.md",
+        ".gsd/milestones/M010/M010-SUMMARY.md",
+        ".gsd/milestones/M010/slices/S01/S01-PLAN.md",
+        ".gsd/milestones/M010/slices/S01/tasks/T04-SUMMARY.md",
+        ".gsd/DECISIONS.md",
+        ".gsd/PROJECT.md",
+        ".gsd/REQUIREMENTS.md",
+        ".gsd/STATE.md",
+        ".gsd/task-registry.json"
+      ],
+      "files_modified": [
+        "pyrme/ui/canvas_host.py",
+        "tests/python/test_canvas_sprite_draw_diagnostics.py",
+        ".gsd/milestones/M010/M010-CONTEXT.md",
+        ".gsd/milestones/M010/M010-ROADMAP.md",
+        ".gsd/milestones/M010/M010-SUMMARY.md",
+        ".gsd/milestones/M010/slices/S01/S01-PLAN.md",
+        ".gsd/milestones/M010/slices/S01/tasks/T04-SUMMARY.md",
+        ".gsd/DECISIONS.md",
+        ".gsd/PROJECT.md",
+        ".gsd/REQUIREMENTS.md",
+        ".gsd/STATE.md",
+        ".gsd/task-registry.json"
+      ],
+      "tests_run": [
+        "python3 -m pytest tests/python/test_canvas_sprite_draw_diagnostics.py -q --tb=short",
+        "python3 - <<'PY'\nimport enum\nimport pytest\nif not hasattr(enum, 'StrEnum'):\n    class StrEnum(str, enum.Enum):\n        pass\n    enum.StrEnum = StrEnum\nraise SystemExit(pytest.main([\n    'tests/python/test_canvas_sprite_draw_diagnostics.py',\n    'tests/python/test_canvas_seam_m4.py',\n    'tests/python/test_renderer_frame_plan_integration.py',\n    'tests/python/test_sprite_draw_commands.py',\n    'tests/python/test_sprite_catalog_adapter.py',\n    'tests/python/test_sprite_frame.py',\n    'tests/python/test_render_frame_plan.py',\n    'tests/python/test_diagnostic_tile_primitives.py',\n    '-q',\n    '--tb=short',\n]))\nPY",
+        "python3 -m ruff check pyrme/ui/canvas_host.py tests/python/test_canvas_sprite_draw_diagnostics.py",
+        "git diff --check"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "Focused sprite draw diagnostics tests passed: 8 tests.",
+          "Adjacent canvas/render/sprite planning regression slice passed with the Python 3.10 StrEnum shim: 53 tests.",
+          "Ruff passed for the touched canvas host and tests.",
+          "git diff --check passed."
+        ]
+      },
+      "notes": [
+        "Live sprite draw planning uses fixture catalog and atlas inputs only.",
+        "Real asset provider ownership, atlas textures, pixel painting, screenshots, lighting, and wgpu remain future work."
+      ],
+      "recorded_at": "2026-04-23T17:49:12-03:00",
+      "updated_at": "2026-04-23T17:49:12-03:00",
+      "completed_at": "2026-04-23T17:49:12-03:00"
     }
   ]
 }

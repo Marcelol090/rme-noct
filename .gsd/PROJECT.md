@@ -10,7 +10,7 @@ Legacy parity should advance in small, verifiable slices with XML-backed tests, 
 
 ## Current State
 
-Milestone `M001-1pt4oy` remains closed on disk: all legacy parity slices `LEGACY-00-CONTRACT` through `LEGACY-140-FINAL-AUDIT` are completed and summarized, and the Python shell is verified against `remeres-map-editor-redux/data/menubar.xml` for every in-scope top-level legacy menu family. Milestone `M002-canvas-renderer` is closed: the production default canvas is a real `QOpenGLWidget` host, each editor view owns an independent viewport model, and default canvas input uses legacy-style screen/map translation over that viewport model. Milestone `M003-render` is closed with the first draw-planning seam: map tiles are converted into a stable frame plan. Milestone `M004-render-primitives` is closed with diagnostic tile primitives, while real sprite drawing remains future work.
+Milestone `M001-1pt4oy` remains closed on disk: all legacy parity slices `LEGACY-00-CONTRACT` through `LEGACY-140-FINAL-AUDIT` are completed and summarized, and the Python shell is verified against `remeres-map-editor-redux/data/menubar.xml` for every in-scope top-level legacy menu family. Milestone `M002-canvas-renderer` is closed: the production default canvas is a real `QOpenGLWidget` host, each editor view owns an independent viewport model, and default canvas input uses legacy-style screen/map translation over that viewport model. Milestone `M003-render` is closed with the first draw-planning seam: map tiles are converted into a stable frame plan. Milestone `M004-render-primitives` is closed with diagnostic tile primitives. Milestones `M005` through `M010` now close the sprite planning ladder from catalog seam through live canvas-frame draw-plan diagnostics, while real sprite painting remains future work.
 
 ## Architecture / Key Patterns
 
@@ -30,3 +30,9 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract and slice owners
 | M002-canvas-renderer | Renderer-backed canvas foundation | Complete - `S01 / CANVAS-10-RENDERER-HOST`, `S02 / CANVAS-20-VIEWPORT-MODEL`, and `S03 / CANVAS-30-MAP-VIEW-MATH` verified and summarized |
 | M003-render | Renderer draw foundation | Complete - `S01 / CANVAS-40-RENDER-FRAME-PLAN` verified and summarized |
 | M004-render-primitives | Diagnostic tile primitives | Complete - `S01 / CANVAS-50-DIAGNOSTIC-TILE-PRIMITIVES` verified and summarized |
+| M005 | Sprite catalog seam | Complete - `S01 / CANVAS-60-SPRITE-CATALOG-SEAM` verified and summarized |
+| M006 | Sprite catalog DAT adapter | Complete - `S01 / CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER` verified and summarized |
+| M007 | SPR frame metadata | Complete - `S01 / CANVAS-80-SPR-FRAME-METADATA` verified and summarized |
+| M008 | Sprite draw command plan | Complete - `S01 / CANVAS-90-SPRITE-DRAW-COMMAND-PLAN` verified and summarized |
+| M009 | Sprite draw diagnostics | Complete - `S01 / CANVAS-100-SPRITE-DRAW-DIAGNOSTICS` verified and summarized |
+| M010 | Live sprite draw plan integration | Complete - `S01 / CANVAS-110-LIVE-SPRITE-DRAW-PLAN` verified and summarized |

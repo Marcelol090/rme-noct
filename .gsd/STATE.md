@@ -4,8 +4,8 @@
 **Active Slice:** none
 **Active Task:** none
 **Phase:** complete
-**Next Action:** Connect sprite draw plan generation to live canvas frame data with fixture catalog and atlas inputs, still without real pixel painting.
-**Last Updated:** 2026-04-20T17:25:58-03:00
+**Next Action:** Promote fixture catalog/atlas inputs toward a real asset provider seam, still without adding pixel painting until command generation and asset ownership are stable.
+**Last Updated:** 2026-04-23T17:49:12-03:00
 **Requirements Status:** 0 active · 25 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
@@ -34,6 +34,7 @@
 - `CANVAS-80-SPR-FRAME-METADATA` is complete: SPR-like frame records now attach sorted frame metadata to matching `SpriteCatalog` entries without parsing files, decoding pixels, or planning atlas placement.
 - `CANVAS-90-SPRITE-DRAW-COMMAND-PLAN` is complete: resolved sprite-frame data now converts into deterministic atlas-backed draw commands with source/destination rectangles and missing draw-input reporting, without painting pixels.
 - `CANVAS-100-SPRITE-DRAW-DIAGNOSTICS` is complete: the canvas host now accepts sprite draw plans and reports command counts plus unresolved sprite ids in diagnostics, without painting sprites.
+- `CANVAS-110-LIVE-SPRITE-DRAW-PLAN` is complete: canvas hosts now derive sprite draw plan diagnostics from live `CanvasFrame` data using injected fixture `SpriteCatalog` and `SpriteAtlas` inputs, while explicit draw-plan injection remains an override.
 
 ## Blockers
 

@@ -19,7 +19,16 @@ from PyQt6.QtWidgets import QLabel, QWidget
 from pyrme import __app_name__
 from pyrme.core_bridge import create_editor_shell_state
 from pyrme.editor import MapPosition
-from pyrme.rendering import DiagnosticTilePrimitive, SpriteDrawPlan
+from pyrme.rendering import (
+    DiagnosticTilePrimitive,
+    RenderFramePlan,
+    RenderTileCommand,
+    SpriteAtlas,
+    SpriteCatalog,
+    SpriteDrawPlan,
+    build_sprite_draw_plan,
+    build_sprite_frame,
+)
 from pyrme.ui.canvas_frame import CanvasFrame, build_canvas_frame
 from pyrme.ui.styles import qss_color
 from pyrme.ui.theme import THEME, TYPOGRAPHY
@@ -207,6 +216,7 @@ class _CanvasShellStateMixin:
         self._frame_summary = self._canvas_frame.summary()
         self._frame_primitives: tuple[DiagnosticTilePrimitive, ...] = ()
         self._sprite_draw_plan = SpriteDrawPlan((), ())
+        self._sprite_draw_inputs: tuple[SpriteCatalog, SpriteAtlas] | None = None
         self._core_mode = "native" if self._shell_core.is_native() else "python-fallback"
         self._editor_mode = "drawing"
         self._active_brush_name = "Select"
@@ -369,10 +379,19 @@ class _CanvasShellStateMixin:
         return len(self._frame_primitives)
 
     def set_sprite_draw_plan(self, plan: SpriteDrawPlan) -> None:
+        self._sprite_draw_inputs = None
         self._sprite_draw_plan = SpriteDrawPlan(
             commands=tuple(plan.commands),
             unresolved_sprite_ids=tuple(sorted(set(plan.unresolved_sprite_ids))),
         )
+        self._state_changed()
+
+    def set_sprite_draw_inputs(
+        self,
+        catalog: SpriteCatalog,
+        atlas: SpriteAtlas,
+    ) -> None:
+        self._sprite_draw_inputs = (catalog, atlas)
         self._state_changed()
 
     def sprite_draw_command_count(self) -> int:
@@ -449,10 +468,27 @@ class _CanvasShellStateMixin:
                 )
                 for tile in self._canvas_frame.tiles
             )
+            self._sync_live_sprite_draw_plan()
         except Exception as exc:
             self._canvas_frame = build_canvas_frame(None, self._viewport)
             self._frame_summary = f"frame plan unavailable: {exc}"
             self._frame_primitives = ()
+
+    def _sync_live_sprite_draw_plan(self) -> None:
+        if self._sprite_draw_inputs is None:
+            return
+        try:
+            catalog, atlas = self._sprite_draw_inputs
+            frame_plan = _render_frame_plan_from_canvas_frame(self._canvas_frame)
+            sprite_frame = build_sprite_frame(frame_plan, catalog)
+            self._sprite_draw_plan = build_sprite_draw_plan(
+                sprite_frame,
+                atlas,
+                EditorViewport(self._canvas_frame.viewport_snapshot),
+            )
+        except Exception as exc:
+            self._sprite_draw_plan = SpriteDrawPlan((), ())
+            self._render_summary = f"sprite draw plan unavailable: {exc}"
 
 
 class PlaceholderCanvasWidget(_CanvasShellStateMixin, QLabel):
@@ -588,6 +624,21 @@ def _format_unresolved_sprite_ids(sprite_ids: tuple[int, ...]) -> str:
     if not sprite_ids:
         return "none"
     return ", ".join(str(sprite_id) for sprite_id in sprite_ids)
+
+
+def _render_frame_plan_from_canvas_frame(frame: CanvasFrame) -> RenderFramePlan:
+    return RenderFramePlan(
+        viewport=frame.viewport_snapshot,
+        visible_rect=frame.visible_rect,
+        tile_commands=tuple(
+            RenderTileCommand(
+                position=tile.position,
+                ground_item_id=tile.ground_item_id,
+                item_ids=tile.item_ids,
+            )
+            for tile in frame.tiles
+        ),
+    )
 
 
 def _tile_label(ground_item_id: int | None, item_ids: tuple[int, ...]) -> str:
