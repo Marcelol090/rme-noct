@@ -161,26 +161,14 @@ impl EditorShellState {
     /// Sets ground item on tile at position. Creates tile if needed.
     fn set_tile_ground(&mut self, x: i32, y: i32, z: i32, item_id: u16) -> bool {
         let pos = MapPosition::new(x, y, z);
-        if let Some(tile) = self.map.get_tile_mut(&pos) {
-            tile.set_ground(Some(Item::new(item_id)));
-        } else {
-            let mut tile = Tile::new(pos);
-            tile.set_ground(Some(Item::new(item_id)));
-            self.map.set_tile(tile);
-        }
+        self.map.get_or_create_tile(pos).set_ground(Some(Item::new(item_id)));
         true
     }
 
     /// Adds an item to the tile stack at position. Creates tile if needed.
     fn add_tile_item(&mut self, x: i32, y: i32, z: i32, item_id: u16) -> bool {
         let pos = MapPosition::new(x, y, z);
-        if let Some(tile) = self.map.get_tile_mut(&pos) {
-            tile.add_item(Item::new(item_id));
-        } else {
-            let mut tile = Tile::new(pos);
-            tile.add_item(Item::new(item_id));
-            self.map.set_tile(tile);
-        }
+        self.map.get_or_create_tile(pos).add_item(Item::new(item_id));
         true
     }
 

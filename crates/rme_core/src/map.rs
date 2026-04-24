@@ -239,6 +239,14 @@ impl MapModel {
         self.tiles.get_mut(pos)
     }
 
+    /// Returns a mutable reference to the tile, creating an empty one if absent.
+    pub fn get_or_create_tile(&mut self, pos: MapPosition) -> &mut Tile {
+        self.tiles.entry(pos).or_insert_with(|| {
+            self.generation += 1;
+            Tile::new(pos)
+        })
+    }
+
     /// Inserts or replaces a tile. Returns the previous tile if any.
     pub fn set_tile(&mut self, tile: Tile) -> Option<Tile> {
         self.generation += 1;
