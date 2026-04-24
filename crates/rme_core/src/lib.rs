@@ -11,6 +11,7 @@ use pyo3::prelude::*;
 pub mod brushes;
 pub mod editor;
 pub mod io;
+pub mod item;
 pub mod map;
 pub mod rendering;
 

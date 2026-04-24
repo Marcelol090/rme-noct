@@ -3,7 +3,11 @@
 //! Keep map representation data-oriented so hot paths can stay cache-friendly
 //! and easy to parallelize later with Rayon.
 
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
+
+use crate::item::Item;
 
 pub const DEFAULT_X: u16 = 32_000;
 pub const DEFAULT_Y: u16 = 32_000;
@@ -12,7 +16,7 @@ pub const MAX_XY: u16 = 65_000;
 pub const MAX_Z: u8 = 15;
 
 /// Minimal map position model used by the shell bridge.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct MapPosition {
     x: u16,
     y: u16,
@@ -55,10 +59,128 @@ impl MapPosition {
     }
 }
 
-/// Minimal map model placeholder for the Rust-first split.
+/// Tile representation matching legacy C++ tile.h contract.
+///
+/// Owns a ground item slot, ordered item stack, house association,
+/// and flag bitfields for map state and internal status.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Tile {
+    position: MapPosition,
+    ground: Option<Item>,
+    items: Vec<Item>,
+    house_id: u32,
+    mapflags: u32,
+    statflags: u16,
+}
+
+impl Tile {
+    /// Creates an empty tile at the given position.
+    pub fn new(position: MapPosition) -> Self {
+        Self {
+            position,
+            ground: None,
+            items: Vec::new(),
+            house_id: 0,
+            mapflags: 0,
+            statflags: 0,
+        }
+    }
+
+    pub const fn position(&self) -> MapPosition {
+        self.position
+    }
+
+    pub fn ground(&self) -> Option<&Item> {
+        self.ground.as_ref()
+    }
+
+    pub fn set_ground(&mut self, item: Option<Item>) {
+        self.ground = item;
+    }
+
+    pub fn items(&self) -> &[Item] {
+        &self.items
+    }
+
+    pub fn add_item(&mut self, item: Item) {
+        self.items.push(item);
+    }
+
+    pub fn remove_item(&mut self, index: usize) -> Option<Item> {
+        if index < self.items.len() {
+            Some(self.items.remove(index))
+        } else {
+            None
+        }
+    }
+
+    pub fn item_count(&self) -> usize {
+        self.items.len()
+    }
+
+    /// Total size: ground (if any) + stack items.
+    pub fn size(&self) -> usize {
+        let ground_count = if self.ground.is_some() { 1 } else { 0 };
+        ground_count + self.items.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.size() == 0
+    }
+
+    pub const fn house_id(&self) -> u32 {
+        self.house_id
+    }
+
+    pub fn set_house_id(&mut self, id: u32) {
+        self.house_id = id;
+    }
+
+    pub fn is_house_tile(&self) -> bool {
+        self.house_id != 0
+    }
+
+    pub const fn mapflags(&self) -> u32 {
+        self.mapflags
+    }
+
+    pub fn set_mapflags(&mut self, flags: u32) {
+        self.mapflags = flags;
+    }
+
+    pub const fn statflags(&self) -> u16 {
+        self.statflags
+    }
+
+    pub fn set_statflags(&mut self, flags: u16) {
+        self.statflags = flags;
+    }
+
+    /// Legacy TILESTATE_MODIFIED = 0x0040.
+    pub fn is_modified(&self) -> bool {
+        self.statflags & 0x0040 != 0
+    }
+
+    pub fn mark_modified(&mut self) {
+        self.statflags |= 0x0040;
+    }
+}
+
+/// Map model with sparse tile storage, viewport position, and map metadata.
 #[derive(Debug, Default, Clone)]
 pub struct MapModel {
     position: MapPosition,
+    tiles: HashMap<MapPosition, Tile>,
+    generation: u64,
+    // Map metadata — matches legacy map.h header
+    name: String,
+    description: String,
+    width: u16,
+    height: u16,
+    spawnfile: String,
+    housefile: String,
+    waypointfile: String,
+    is_dirty: bool,
 }
 
 impl MapModel {
@@ -70,12 +192,22 @@ impl MapModel {
                 i32::from(DEFAULT_Y),
                 i32::from(DEFAULT_Z),
             ),
+            tiles: HashMap::new(),
+            generation: 0,
+            name: String::new(),
+            description: String::new(),
+            width: 0,
+            height: 0,
+            spawnfile: String::new(),
+            housefile: String::new(),
+            waypointfile: String::new(),
+            is_dirty: false,
         }
     }
 
-    /// Returns `true` for the current scaffolded state.
-    pub const fn is_empty(&self) -> bool {
-        true
+    /// Returns `true` when no tiles are stored.
+    pub fn is_empty(&self) -> bool {
+        self.tiles.is_empty()
     }
 
     /// Returns the current viewport position.
@@ -96,6 +228,115 @@ impl MapModel {
         self.position = next;
         next
     }
+
+    /// Returns a reference to the tile at the given position.
+    pub fn get_tile(&self, pos: &MapPosition) -> Option<&Tile> {
+        self.tiles.get(pos)
+    }
+
+    /// Returns a mutable reference to the tile at the given position.
+    pub fn get_tile_mut(&mut self, pos: &MapPosition) -> Option<&mut Tile> {
+        self.tiles.get_mut(pos)
+    }
+
+    /// Inserts or replaces a tile. Returns the previous tile if any.
+    pub fn set_tile(&mut self, tile: Tile) -> Option<Tile> {
+        self.generation += 1;
+        self.tiles.insert(tile.position(), tile)
+    }
+
+    /// Removes and returns the tile at the given position.
+    pub fn remove_tile(&mut self, pos: &MapPosition) -> Option<Tile> {
+        let removed = self.tiles.remove(pos);
+        if removed.is_some() {
+            self.generation += 1;
+        }
+        removed
+    }
+
+    /// Returns the number of stored tiles.
+    pub fn tile_count(&self) -> usize {
+        self.tiles.len()
+    }
+
+    /// Returns the mutation generation counter.
+    pub const fn generation(&self) -> u64 {
+        self.generation
+    }
+
+    /// Removes all tiles and increments generation.
+    pub fn clear(&mut self) {
+        if !self.tiles.is_empty() {
+            self.tiles.clear();
+            self.generation += 1;
+        }
+    }
+
+    // --- Map metadata accessors ---
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn set_name(&mut self, name: impl Into<String>) {
+        self.name = name.into();
+        self.is_dirty = true;
+    }
+
+    pub fn description(&self) -> &str {
+        &self.description
+    }
+
+    pub fn set_description(&mut self, desc: impl Into<String>) {
+        self.description = desc.into();
+        self.is_dirty = true;
+    }
+
+    pub const fn width(&self) -> u16 {
+        self.width
+    }
+
+    pub const fn height(&self) -> u16 {
+        self.height
+    }
+
+    pub fn set_dimensions(&mut self, width: u16, height: u16) {
+        self.width = width;
+        self.height = height;
+        self.is_dirty = true;
+    }
+
+    pub fn spawnfile(&self) -> &str {
+        &self.spawnfile
+    }
+
+    pub fn set_spawnfile(&mut self, path: impl Into<String>) {
+        self.spawnfile = path.into();
+    }
+
+    pub fn housefile(&self) -> &str {
+        &self.housefile
+    }
+
+    pub fn set_housefile(&mut self, path: impl Into<String>) {
+        self.housefile = path.into();
+    }
+
+    pub fn waypointfile(&self) -> &str {
+        &self.waypointfile
+    }
+
+    pub fn set_waypointfile(&mut self, path: impl Into<String>) {
+        self.waypointfile = path.into();
+    }
+
+    pub const fn is_dirty(&self) -> bool {
+        self.is_dirty
+    }
+
+    pub fn mark_clean(&mut self) {
+        self.is_dirty = false;
+    }
 }
 
 #[cfg(test)]
@@ -112,8 +353,239 @@ mod tests {
     fn map_model_updates_floor_without_touching_xy() {
         let mut model = MapModel::new();
         model.set_position(32123, 32234, 7);
-
         let updated = model.set_floor(3);
         assert_eq!(updated.as_tuple(), (32123, 32234, 3));
+    }
+
+    // --- Tile tests ---
+
+    #[test]
+    fn tile_new_is_empty() {
+        let tile = Tile::new(MapPosition::new(100, 200, 7));
+        assert!(tile.is_empty());
+        assert_eq!(tile.size(), 0);
+        assert!(tile.ground().is_none());
+        assert_eq!(tile.item_count(), 0);
+        assert_eq!(tile.house_id(), 0);
+        assert!(!tile.is_house_tile());
+        assert!(!tile.is_modified());
+    }
+
+    #[test]
+    fn tile_set_ground_makes_non_empty() {
+        let mut tile = Tile::new(MapPosition::new(100, 200, 7));
+        tile.set_ground(Some(Item::new(4526)));
+        assert!(!tile.is_empty());
+        assert_eq!(tile.size(), 1);
+        assert_eq!(tile.ground().unwrap().id(), 4526);
+    }
+
+    #[test]
+    fn tile_add_items_to_stack() {
+        let mut tile = Tile::new(MapPosition::new(100, 200, 7));
+        tile.add_item(Item::new(2148));
+        tile.add_item(Item::new(2160));
+        assert_eq!(tile.item_count(), 2);
+        assert_eq!(tile.items()[0].id(), 2148);
+        assert_eq!(tile.items()[1].id(), 2160);
+    }
+
+    #[test]
+    fn tile_remove_item_by_index() {
+        let mut tile = Tile::new(MapPosition::new(100, 200, 7));
+        tile.add_item(Item::new(2148));
+        tile.add_item(Item::new(2160));
+        let removed = tile.remove_item(0);
+        assert_eq!(removed.unwrap().id(), 2148);
+        assert_eq!(tile.item_count(), 1);
+        assert_eq!(tile.items()[0].id(), 2160);
+    }
+
+    #[test]
+    fn tile_remove_item_out_of_bounds_returns_none() {
+        let mut tile = Tile::new(MapPosition::new(100, 200, 7));
+        assert!(tile.remove_item(0).is_none());
+    }
+
+    #[test]
+    fn tile_size_counts_ground_plus_items() {
+        let mut tile = Tile::new(MapPosition::new(100, 200, 7));
+        tile.set_ground(Some(Item::new(4526)));
+        tile.add_item(Item::new(2148));
+        assert_eq!(tile.size(), 2);
+    }
+
+    #[test]
+    fn tile_house_id_operations() {
+        let mut tile = Tile::new(MapPosition::new(100, 200, 7));
+        assert!(!tile.is_house_tile());
+        tile.set_house_id(42);
+        assert!(tile.is_house_tile());
+        assert_eq!(tile.house_id(), 42);
+    }
+
+    #[test]
+    fn tile_flag_operations() {
+        let mut tile = Tile::new(MapPosition::new(100, 200, 7));
+        tile.set_mapflags(0x0001); // PZ
+        assert_eq!(tile.mapflags(), 0x0001);
+        tile.mark_modified();
+        assert!(tile.is_modified());
+    }
+
+    // --- MapModel tile storage tests ---
+
+    #[test]
+    fn map_model_starts_empty() {
+        let model = MapModel::new();
+        assert!(model.is_empty());
+        assert_eq!(model.tile_count(), 0);
+        assert_eq!(model.generation(), 0);
+    }
+
+    #[test]
+    fn map_model_set_tile_increments_generation() {
+        let mut model = MapModel::new();
+        let tile = Tile::new(MapPosition::new(100, 200, 7));
+        model.set_tile(tile);
+        assert_eq!(model.tile_count(), 1);
+        assert_eq!(model.generation(), 1);
+        assert!(!model.is_empty());
+    }
+
+    #[test]
+    fn map_model_get_tile_returns_stored() {
+        let mut model = MapModel::new();
+        let pos = MapPosition::new(100, 200, 7);
+        let mut tile = Tile::new(pos);
+        tile.set_ground(Some(Item::new(4526)));
+        model.set_tile(tile);
+        let got = model.get_tile(&pos).unwrap();
+        assert_eq!(got.ground().unwrap().id(), 4526);
+    }
+
+    #[test]
+    fn map_model_remove_tile_decrements_count() {
+        let mut model = MapModel::new();
+        let pos = MapPosition::new(100, 200, 7);
+        model.set_tile(Tile::new(pos));
+        assert_eq!(model.tile_count(), 1);
+        let removed = model.remove_tile(&pos);
+        assert!(removed.is_some());
+        assert_eq!(model.tile_count(), 0);
+        assert_eq!(model.generation(), 2); // set + remove
+    }
+
+    #[test]
+    fn map_model_remove_nonexistent_no_generation_bump() {
+        let mut model = MapModel::new();
+        let pos = MapPosition::new(999, 999, 0);
+        let removed = model.remove_tile(&pos);
+        assert!(removed.is_none());
+        assert_eq!(model.generation(), 0);
+    }
+
+    #[test]
+    fn map_model_clear_empties_tiles() {
+        let mut model = MapModel::new();
+        model.set_tile(Tile::new(MapPosition::new(1, 1, 0)));
+        model.set_tile(Tile::new(MapPosition::new(2, 2, 0)));
+        assert_eq!(model.tile_count(), 2);
+        model.clear();
+        assert!(model.is_empty());
+        assert_eq!(model.generation(), 3); // 2 sets + 1 clear
+    }
+
+    #[test]
+    fn map_model_clear_empty_no_generation_bump() {
+        let mut model = MapModel::new();
+        model.clear();
+        assert_eq!(model.generation(), 0);
+    }
+
+    #[test]
+    fn map_model_replace_tile_returns_old() {
+        let mut model = MapModel::new();
+        let pos = MapPosition::new(100, 200, 7);
+        let mut t1 = Tile::new(pos);
+        t1.set_ground(Some(Item::new(100)));
+        model.set_tile(t1);
+
+        let mut t2 = Tile::new(pos);
+        t2.set_ground(Some(Item::new(200)));
+        let old = model.set_tile(t2);
+        assert_eq!(old.unwrap().ground().unwrap().id(), 100);
+        assert_eq!(model.get_tile(&pos).unwrap().ground().unwrap().id(), 200);
+    }
+
+    // --- Map metadata tests ---
+
+    #[test]
+    fn map_metadata_defaults_empty() {
+        let model = MapModel::new();
+        assert_eq!(model.name(), "");
+        assert_eq!(model.description(), "");
+        assert_eq!(model.width(), 0);
+        assert_eq!(model.height(), 0);
+        assert_eq!(model.spawnfile(), "");
+        assert_eq!(model.housefile(), "");
+        assert_eq!(model.waypointfile(), "");
+        assert!(!model.is_dirty());
+    }
+
+    #[test]
+    fn map_metadata_set_name_marks_dirty() {
+        let mut model = MapModel::new();
+        model.set_name("Test Map");
+        assert_eq!(model.name(), "Test Map");
+        assert!(model.is_dirty());
+    }
+
+    #[test]
+    fn map_metadata_set_description_marks_dirty() {
+        let mut model = MapModel::new();
+        model.set_description("A test map");
+        assert_eq!(model.description(), "A test map");
+        assert!(model.is_dirty());
+    }
+
+    #[test]
+    fn map_metadata_set_dimensions_marks_dirty() {
+        let mut model = MapModel::new();
+        model.set_dimensions(256, 256);
+        assert_eq!(model.width(), 256);
+        assert_eq!(model.height(), 256);
+        assert!(model.is_dirty());
+    }
+
+    #[test]
+    fn map_metadata_mark_clean_clears_dirty() {
+        let mut model = MapModel::new();
+        model.set_name("dirty");
+        assert!(model.is_dirty());
+        model.mark_clean();
+        assert!(!model.is_dirty());
+    }
+
+    #[test]
+    fn map_metadata_file_paths() {
+        let mut model = MapModel::new();
+        model.set_spawnfile("spawn.xml");
+        model.set_housefile("house.xml");
+        model.set_waypointfile("waypoint.xml");
+        assert_eq!(model.spawnfile(), "spawn.xml");
+        assert_eq!(model.housefile(), "house.xml");
+        assert_eq!(model.waypointfile(), "waypoint.xml");
+    }
+
+    #[test]
+    fn map_dirty_from_tile_mutation() {
+        let mut model = MapModel::new();
+        assert!(!model.is_dirty());
+        // Tile mutations track via generation, not dirty flag.
+        // dirty flag is metadata-only. This is by design.
+        model.set_tile(Tile::new(MapPosition::new(1, 1, 0)));
+        assert!(!model.is_dirty()); // tile ops don't set metadata dirty
+        assert_eq!(model.generation(), 1); // generation tracks tile ops
     }
 }

@@ -8,7 +8,8 @@ use std::collections::BTreeMap;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
-use crate::map::{MapModel, DEFAULT_X, DEFAULT_Y, DEFAULT_Z};
+use crate::item::Item;
+use crate::map::{MapModel, MapPosition, Tile, DEFAULT_X, DEFAULT_Y, DEFAULT_Z};
 use crate::rendering::{RenderBudget, RenderState};
 
 /// Minimal editor state placeholder.
@@ -143,6 +144,61 @@ impl EditorShellState {
             )
             .as_tuple()
     }
+
+    // --- Tile storage bridge ---
+
+    /// Returns tile data as a Python dict-friendly tuple, or None.
+    /// Format: (ground_id_or_none, [item_ids], house_id, mapflags)
+    fn get_tile_data(&self, x: i32, y: i32, z: i32) -> Option<(Option<u16>, Vec<u16>, u32, u32)> {
+        let pos = MapPosition::new(x, y, z);
+        self.map.get_tile(&pos).map(|t| {
+            let ground_id = t.ground().map(|g| g.id());
+            let item_ids: Vec<u16> = t.items().iter().map(|i| i.id()).collect();
+            (ground_id, item_ids, t.house_id(), t.mapflags())
+        })
+    }
+
+    /// Sets ground item on tile at position. Creates tile if needed.
+    fn set_tile_ground(&mut self, x: i32, y: i32, z: i32, item_id: u16) -> bool {
+        let pos = MapPosition::new(x, y, z);
+        if let Some(tile) = self.map.get_tile_mut(&pos) {
+            tile.set_ground(Some(Item::new(item_id)));
+        } else {
+            let mut tile = Tile::new(pos);
+            tile.set_ground(Some(Item::new(item_id)));
+            self.map.set_tile(tile);
+        }
+        true
+    }
+
+    /// Adds an item to the tile stack at position. Creates tile if needed.
+    fn add_tile_item(&mut self, x: i32, y: i32, z: i32, item_id: u16) -> bool {
+        let pos = MapPosition::new(x, y, z);
+        if let Some(tile) = self.map.get_tile_mut(&pos) {
+            tile.add_item(Item::new(item_id));
+        } else {
+            let mut tile = Tile::new(pos);
+            tile.add_item(Item::new(item_id));
+            self.map.set_tile(tile);
+        }
+        true
+    }
+
+    /// Removes tile at position. Returns true if tile existed.
+    fn remove_tile(&mut self, x: i32, y: i32, z: i32) -> bool {
+        let pos = MapPosition::new(x, y, z);
+        self.map.remove_tile(&pos).is_some()
+    }
+
+    /// Returns number of stored tiles.
+    fn tile_count(&self) -> usize {
+        self.map.tile_count()
+    }
+
+    /// Returns the map mutation generation counter.
+    fn map_generation(&self) -> u64 {
+        self.map.generation()
+    }
 }
 
 #[cfg(test)]
@@ -164,5 +220,41 @@ mod tests {
         assert!(shell.set_show_flag("show_spawns", true).unwrap());
         assert!(shell.show_flag("show_spawns").unwrap());
         assert!(shell.render_summary().contains("worker_threads="));
+    }
+
+    #[test]
+    fn editor_bridge_set_and_get_tile() {
+        let mut shell = EditorShellState::default();
+        assert!(shell.set_tile_ground(100, 200, 7, 4526));
+        let data = shell.get_tile_data(100, 200, 7).unwrap();
+        assert_eq!(data.0, Some(4526)); // ground_id
+        assert!(data.1.is_empty()); // no stack items
+        assert_eq!(shell.tile_count(), 1);
+    }
+
+    #[test]
+    fn editor_bridge_add_tile_item() {
+        let mut shell = EditorShellState::default();
+        assert!(shell.add_tile_item(100, 200, 7, 2148));
+        assert!(shell.add_tile_item(100, 200, 7, 2160));
+        let data = shell.get_tile_data(100, 200, 7).unwrap();
+        assert_eq!(data.1, vec![2148, 2160]);
+    }
+
+    #[test]
+    fn editor_bridge_remove_tile() {
+        let mut shell = EditorShellState::default();
+        shell.set_tile_ground(100, 200, 7, 4526);
+        assert!(shell.remove_tile(100, 200, 7));
+        assert!(!shell.remove_tile(100, 200, 7)); // already gone
+        assert_eq!(shell.tile_count(), 0);
+    }
+
+    #[test]
+    fn editor_bridge_generation_tracks_mutations() {
+        let mut shell = EditorShellState::default();
+        assert_eq!(shell.map_generation(), 0);
+        shell.set_tile_ground(1, 1, 0, 100);
+        assert!(shell.map_generation() > 0);
     }
 }
