@@ -66,7 +66,9 @@
 - `BRUSH-20-SHELL-COMMAND-WIRING/T04` is complete: activation backend, new-view, and canvas seam regressions remain green alongside the new shell wiring tests.
 - `BRUSH-20-SHELL-COMMAND-WIRING/T05` is complete: M008 closeout recorded real verification, corrected the stale UI smoke command, and kept next action limited to scoped review/staging.
 - `BRUSH-20-SHELL-COMMAND-WIRING` is complete: S01 verified shell wiring behavior with 53 targeted Python tests passing, preflight passing in WSL, and an honest offscreen startup smoke that kept the known `QOpenGLWidget` limitation explicit.
-
+- `M015-core-map-model` is complete: basic sparse map storage and metadata logic was ported to `rme_core` and exposed via PyO3, with 50 targeted Rust tests passing and 268 Python tests passing.
+- `M016-otbm-persistence` (Read phase) is complete: binary tree parsing of OTBM nodes, metadata attributes, tile areas, and items successfully ported to `rme_core`, with 59 targeted Rust tests and 268 Python tests passing.
+- `M017-otbm-persistence` (Write phase) is complete: binary tree generation of OTBM nodes, metadata attributes, tile areas, and items successfully ported to `rme_core`, integrating Python bridge test coverage for `save_otbm`.
 ## Blockers
 
 - `GSD auto` still stalls with the installed local `qwen2.5-coder:3b` model: it completes with 0 tool calls while planning `M001-1pt4oy/S12`. Manual materialization was used for S12-S15 after local verification.

@@ -3,9 +3,10 @@
 //! Reads `.otbm` binary map files into `MapModel`, matching the legacy
 //! C++ `iomap_otbm.cpp` + `otbm/` serialization contract.
 
-use crate::io::binary_tree::{OtbNode, OtbTreeReader, ParserError, PayloadReader};
+use crate::io::binary_tree::{OtbNode, OtbTreeReader, ParserError, PayloadReader, PayloadWriter};
 use crate::item::Item;
 use crate::map::{MapModel, MapPosition, Tile};
+use std::collections::BTreeMap;
 
 // ── OTBM Node Types (matches legacy otbm_types.h) ──────────────────
 
@@ -57,11 +58,18 @@ pub enum OtbmError {
     InvalidTile,
     UnexpectedEof,
     UnsupportedVersion(u32),
+    IoError(std::io::ErrorKind),
 }
 
 impl From<ParserError> for OtbmError {
     fn from(e: ParserError) -> Self {
         OtbmError::TreeParseError(e)
+    }
+}
+
+impl From<std::io::Error> for OtbmError {
+    fn from(e: std::io::Error) -> Self {
+        OtbmError::IoError(e.kind())
     }
 }
 
@@ -98,6 +106,23 @@ pub fn read_header(root: &OtbNode) -> Result<OtbmHeader, OtbmError> {
     })
 }
 
+/// Builds OTBM root node (header) from a MapModel.
+pub fn write_header(map: &MapModel) -> OtbNode {
+    let mut writer = PayloadWriter::new();
+    writer.write_u8(0); // type byte inside payload is 0 for root
+    writer.write_u32(2); // version = OTBM v2
+    writer.write_u16(map.width() as u16);
+    writer.write_u16(map.height() as u16);
+    writer.write_u32(1); // items_major
+    writer.write_u32(0); // items_minor
+
+    OtbNode {
+        node_type: OTBM_ROOTV1,
+        data: writer.into_inner(),
+        children: vec![],
+    }
+}
+
 /// Reads map attributes (description, spawnfile, housefile) from MAP_DATA node.
 /// Matches legacy `readMapAttributes`.
 pub fn read_map_attributes(map_data_node: &OtbNode, map: &mut MapModel) -> Result<(), OtbmError> {
@@ -131,6 +156,32 @@ pub fn read_map_attributes(map_data_node: &OtbNode, map: &mut MapModel) -> Resul
         }
     }
     Ok(())
+}
+
+/// Builds MAP_DATA node with map attributes from a MapModel.
+pub fn write_map_attributes(map: &MapModel) -> OtbNode {
+    let mut writer = PayloadWriter::new();
+    // First byte of payload is node type again
+    writer.write_u8(OTBM_MAP_DATA);
+
+    if !map.description().is_empty() {
+        writer.write_u8(OTBM_ATTR_DESCRIPTION);
+        writer.write_string(map.description());
+    }
+    if !map.spawnfile().is_empty() {
+        writer.write_u8(OTBM_ATTR_EXT_SPAWN_FILE);
+        writer.write_string(map.spawnfile());
+    }
+    if !map.housefile().is_empty() {
+        writer.write_u8(OTBM_ATTR_EXT_HOUSE_FILE);
+        writer.write_string(map.housefile());
+    }
+
+    OtbNode {
+        node_type: OTBM_MAP_DATA,
+        data: writer.into_inner(),
+        children: vec![],
+    }
 }
 
 // ── S02: Tile Area Reader ───────────────────────────────────────────
@@ -296,6 +347,107 @@ pub fn read_tile_areas(map_data_node: &OtbNode, map: &mut MapModel) -> Result<u3
     Ok(tile_count)
 }
 
+/// Builds an OTBM_ITEM node for a single item on a stack.
+pub fn write_item(item: &Item) -> OtbNode {
+    let mut w = PayloadWriter::new();
+    w.write_u8(OTBM_ITEM);
+    w.write_u16(item.id());
+
+    if item.count() > 1 {
+        w.write_u8(OTBM_ATTR_COUNT);
+        w.write_u8(item.count());
+    }
+    if item.action_id() != 0 {
+        w.write_u8(OTBM_ATTR_ACTION_ID);
+        w.write_u16(item.action_id());
+    }
+    if item.unique_id() != 0 {
+        w.write_u8(OTBM_ATTR_UNIQUE_ID);
+        w.write_u16(item.unique_id());
+    }
+
+    OtbNode {
+        node_type: OTBM_ITEM,
+        data: w.into_inner(),
+        children: vec![],
+    }
+}
+
+/// Builds an OTBM_TILE or OTBM_HOUSETILE node from a MapModel Tile.
+pub fn write_tile(tile: &Tile, base_x: u16, base_y: u16) -> OtbNode {
+    let mut w = PayloadWriter::new();
+    let pos = tile.position();
+    let offset_x = (pos.x() - base_x) as u8;
+    let offset_y = (pos.y() - base_y) as u8;
+
+    let node_type = if tile.is_house_tile() { OTBM_HOUSETILE } else { OTBM_TILE };
+    w.write_u8(node_type);
+    w.write_u8(offset_x);
+    w.write_u8(offset_y);
+
+    if tile.is_house_tile() {
+        w.write_u32(tile.house_id());
+    }
+
+    if tile.mapflags() != 0 {
+        w.write_u8(OTBM_ATTR_TILE_FLAGS);
+        w.write_u32(tile.mapflags());
+    }
+
+    // Inline item (ground)
+    if let Some(ground) = tile.ground() {
+        w.write_u8(OTBM_ATTR_ITEM);
+        w.write_u16(ground.id());
+    }
+
+    let mut children = Vec::new();
+    for item in tile.items() {
+        children.push(write_item(item));
+    }
+
+    OtbNode {
+        node_type,
+        data: w.into_inner(),
+        children,
+    }
+}
+
+/// Iterates all tiles in the map, groups them by 256x256 areas,
+/// and appends OTBM_TILE_AREA nodes to the given map_data_node.
+pub fn write_tile_areas(map: &MapModel, map_data_node: &mut OtbNode) {
+    let mut areas: BTreeMap<(u16, u16, u8), Vec<&Tile>> = BTreeMap::new();
+
+    for tile in map.iter_tiles() {
+        let pos = tile.position();
+        let base_x = pos.x() & 0xFF00;
+        let base_y = pos.y() & 0xFF00;
+        let base_z = pos.z();
+
+        areas.entry((base_x, base_y, base_z)).or_default().push(tile);
+    }
+
+    for ((base_x, base_y, base_z), tiles) in areas {
+        let mut area_node = OtbNode {
+            node_type: OTBM_TILE_AREA,
+            data: {
+                let mut w = PayloadWriter::new();
+                w.write_u8(OTBM_TILE_AREA); // payload type
+                w.write_u16(base_x);
+                w.write_u16(base_y);
+                w.write_u8(base_z);
+                w.into_inner()
+            },
+            children: vec![],
+        };
+
+        for tile in tiles {
+            area_node.children.push(write_tile(tile, base_x, base_y));
+        }
+
+        map_data_node.children.push(area_node);
+    }
+}
+
 // ── Full OTBM Load ─────────────────────────────────────────────────
 
 /// Loads an OTBM file from raw bytes into a new MapModel.
@@ -327,6 +479,23 @@ pub fn load_otbm(data: &[u8]) -> Result<(OtbmHeader, MapModel), OtbmError> {
     map.mark_clean();
 
     Ok((header, map))
+}
+
+/// Saves a MapModel to an OTBM file at the specified path.
+pub fn save_otbm(map: &MapModel, path: &str) -> Result<(), OtbmError> {
+    let mut root = write_header(map);
+    let mut map_data = write_map_attributes(map);
+
+    write_tile_areas(map, &mut map_data);
+
+    root.children.push(map_data);
+
+    let mut out = Vec::new();
+    out.extend_from_slice(&[0u8; 4]); // 4-byte OTBM identifier
+    root.write_to(&mut out);
+
+    std::fs::write(path, out)?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -524,5 +693,68 @@ mod tests {
     fn otbm_too_short_returns_error() {
         let data = vec![0u8; 2];
         assert!(load_otbm(&data).is_err());
+    }
+
+    #[test]
+    fn test_otbm_roundtrip_serialization() {
+        let mut original_map = MapModel::new();
+        original_map.set_description("Roundtrip Map");
+        original_map.set_spawnfile("spawns.xml");
+        original_map.set_housefile("houses.xml");
+        original_map.set_dimensions(256, 256);
+
+        let mut t1 = Tile::new(MapPosition::new(1005, 1003, 7));
+        t1.set_ground(Some(Item::new(4526)));
+        t1.set_mapflags(42);
+        
+        let mut item1 = Item::new(100);
+        item1.set_count(5);
+        t1.add_item(item1);
+
+        let mut item2 = Item::new(200);
+        item2.set_action_id(1234);
+        item2.set_unique_id(5678);
+        t1.add_item(item2);
+        
+        original_map.set_tile(t1);
+
+        let mut t2 = Tile::new(MapPosition::new(1006, 1003, 7));
+        t2.set_ground(Some(Item::new(4527)));
+        t2.set_house_id(99);
+        original_map.set_tile(t2);
+
+        // Serialize to bytes using same logic as save_otbm
+        let mut root = write_header(&original_map);
+        let mut map_data = write_map_attributes(&original_map);
+        write_tile_areas(&original_map, &mut map_data);
+        root.children.push(map_data);
+
+        let mut out = Vec::new();
+        out.extend_from_slice(&[0u8; 4]);
+        root.write_to(&mut out);
+
+        // Deserialize
+        let (_header, loaded_map) = load_otbm(&out).expect("Failed to load serialized map");
+
+        assert_eq!(loaded_map.description(), original_map.description());
+        assert_eq!(loaded_map.spawnfile(), original_map.spawnfile());
+        assert_eq!(loaded_map.housefile(), original_map.housefile());
+        assert_eq!(loaded_map.width(), original_map.width());
+        assert_eq!(loaded_map.height(), original_map.height());
+        assert_eq!(loaded_map.tile_count(), original_map.tile_count());
+
+        let t1_loaded = loaded_map.get_tile(&MapPosition::new(1005, 1003, 7)).unwrap();
+        assert_eq!(t1_loaded.ground().unwrap().id(), 4526);
+        assert_eq!(t1_loaded.mapflags(), 42);
+        assert_eq!(t1_loaded.item_count(), 2);
+        assert_eq!(t1_loaded.items()[0].id(), 100);
+        assert_eq!(t1_loaded.items()[0].count(), 5);
+        assert_eq!(t1_loaded.items()[1].id(), 200);
+        assert_eq!(t1_loaded.items()[1].action_id(), 1234);
+        assert_eq!(t1_loaded.items()[1].unique_id(), 5678);
+
+        let t2_loaded = loaded_map.get_tile(&MapPosition::new(1006, 1003, 7)).unwrap();
+        assert_eq!(t2_loaded.ground().unwrap().id(), 4527);
+        assert_eq!(t2_loaded.house_id(), 99);
     }
 }

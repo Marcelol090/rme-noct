@@ -267,6 +267,11 @@ impl MapModel {
         self.tiles.len()
     }
 
+    /// Returns an iterator over all stored tiles.
+    pub fn iter_tiles(&self) -> impl Iterator<Item = &Tile> {
+        self.tiles.values()
+    }
+
     /// Returns the mutation generation counter.
     pub const fn generation(&self) -> u64 {
         self.generation

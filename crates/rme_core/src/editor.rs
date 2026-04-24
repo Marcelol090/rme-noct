@@ -202,6 +202,14 @@ impl EditorShellState {
         Ok((header.width, header.height, tile_count))
     }
 
+    /// Saves the current map to an OTBM file.
+    fn save_otbm(&mut self, path: &str) -> PyResult<()> {
+        crate::io::otbm::save_otbm(&self.map, path)
+            .map_err(|e| PyValueError::new_err(format!("OTBM save error: {e:?}")))?;
+        self.map.mark_clean();
+        Ok(())
+    }
+
     /// Returns map name.
     fn map_name(&self) -> &str {
         self.map.name()
