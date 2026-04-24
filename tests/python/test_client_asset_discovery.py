@@ -5,6 +5,7 @@ from pyrme.rendering import (
     SpriteAtlasRegion,
     build_sprite_draw_asset_bundle,
     discover_client_asset_files,
+    read_client_asset_signatures,
 )
 from pyrme.rendering.sprite_catalog_adapter import DatSpriteRecord, SprFrameRecord
 
@@ -95,3 +96,57 @@ def test_client_sprite_asset_bundle_pairs_discovery_with_existing_bundle(
     assert source.files.is_complete
     assert inputs.catalog.resolve(2148) is not None
     assert inputs.atlas.resolve(9001) is not None
+
+
+def test_read_client_asset_signatures_reads_little_endian_values(tmp_path) -> None:
+    (tmp_path / "Tibia.dat").write_bytes(bytes.fromhex("12345678aabbccdd"))
+    (tmp_path / "Tibia.spr").write_bytes(bytes.fromhex("90abcdef00112233"))
+    files = discover_client_asset_files(tmp_path)
+
+    signatures = read_client_asset_signatures(files)
+
+    assert signatures.dat_signature == 0x78563412
+    assert signatures.spr_signature == 0xEFCDAB90
+    assert signatures.warnings == ()
+
+
+def test_read_client_asset_signatures_reports_short_files(tmp_path) -> None:
+    (tmp_path / "Tibia.dat").write_bytes(b"\x12\x34")
+    (tmp_path / "Tibia.spr").write_bytes(b"\x90\xab\xcd")
+    files = discover_client_asset_files(tmp_path)
+
+    signatures = read_client_asset_signatures(files)
+
+    assert signatures.dat_signature is None
+    assert signatures.spr_signature is None
+    assert signatures.warnings == (
+        f"DAT signature detection failed: could not read header from {tmp_path / 'Tibia.dat'}",
+        f"SPR signature detection failed: could not read header from {tmp_path / 'Tibia.spr'}",
+    )
+
+
+def test_read_client_asset_signatures_keeps_discovery_warnings(tmp_path) -> None:
+    files = discover_client_asset_files(tmp_path)
+
+    signatures = read_client_asset_signatures(files)
+
+    assert signatures.dat_signature is None
+    assert signatures.spr_signature is None
+    assert signatures.warnings == files.warnings
+
+
+def test_read_client_asset_signatures_reports_deleted_files(tmp_path) -> None:
+    (tmp_path / "Tibia.dat").write_bytes(bytes.fromhex("12345678"))
+    (tmp_path / "Tibia.spr").write_bytes(bytes.fromhex("90abcdef"))
+    files = discover_client_asset_files(tmp_path)
+    (tmp_path / "Tibia.dat").unlink()
+    (tmp_path / "Tibia.spr").unlink()
+
+    signatures = read_client_asset_signatures(files)
+
+    assert signatures.dat_signature is None
+    assert signatures.spr_signature is None
+    assert signatures.warnings == (
+        f"DAT signature detection failed: could not open {tmp_path / 'Tibia.dat'}",
+        f"SPR signature detection failed: could not open {tmp_path / 'Tibia.spr'}",
+    )

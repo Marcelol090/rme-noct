@@ -2,8 +2,10 @@
 
 from pyrme.rendering.client_asset_discovery import (
     ClientAssetFiles,
+    ClientAssetSignatures,
     ClientSpriteAssetBundle,
     discover_client_asset_files,
+    read_client_asset_signatures,
 )
 from pyrme.rendering.diagnostic_primitives import (
     DiagnosticTilePrimitive,
@@ -45,6 +47,7 @@ from pyrme.rendering.sprite_frame import (
 __all__ = [
     "DiagnosticTilePrimitive",
     "ClientAssetFiles",
+    "ClientAssetSignatures",
     "ClientSpriteAssetBundle",
     "DatSpriteRecord",
     "RenderFramePlan",
@@ -64,6 +67,7 @@ __all__ = [
     "StaticSpriteDrawAssetProvider",
     "build_diagnostic_tile_primitives",
     "discover_client_asset_files",
+    "read_client_asset_signatures",
     "build_render_frame_plan",
     "build_sprite_draw_asset_bundle",
     "build_sprite_catalog_from_asset_records",

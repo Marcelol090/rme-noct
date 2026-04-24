@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project": "remeres-map-editor-redux",
-  "updated_at": "2026-04-07T17:49:05-03:00",
+  "updated_at": "2026-04-23T21:27:20-03:00",
   "tasks": [
     {
       "id": "GSD-RUNTIME-NODE22",
@@ -701,6 +701,77 @@
       "recorded_at": "2026-04-23T20:35:52-03:00",
       "updated_at": "2026-04-23T20:35:52-03:00",
       "completed_at": "2026-04-23T20:35:52-03:00"
+    },
+    {
+      "id": "CANVAS-150-CLIENT-ASSET-SIGNATURES",
+      "title": "Read client DAT and SPR signatures",
+      "category": "core-capability",
+      "status": "verified",
+      "milestone": "M014",
+      "slice": "S01",
+      "summary": "Renderer asset discovery now reads DAT/SPR signatures from discovered client files using legacy-style open/header warnings, without parsing records, decoding pixels, owning textures, or painting sprites.",
+      "done_criteria": [
+        "ClientAssetSignatures exists",
+        "read_client_asset_signatures preserves discovery warnings when asset discovery is incomplete",
+        "Discovered DAT and SPR files are opened only to read the 4-byte signature header",
+        "DAT and SPR signatures are interpreted as little-endian unsigned values",
+        "Open failures and short headers report legacy-style warnings",
+        "No DAT item parsing, SPR frame parsing, pixel decoding, texture upload, sprite painting, screenshots, lighting, or wgpu work is added"
+      ],
+      "scope": [
+        "pyrme/rendering/client_asset_discovery.py",
+        "pyrme/rendering/__init__.py",
+        "tests/python/test_client_asset_discovery.py",
+        ".gsd/milestones/M014/M014-CONTEXT.md",
+        ".gsd/milestones/M014/M014-ROADMAP.md",
+        ".gsd/milestones/M014/M014-SUMMARY.md",
+        ".gsd/milestones/M014/slices/S01/S01-PLAN.md",
+        ".gsd/milestones/M014/slices/S01/tasks/T04-SUMMARY.md",
+        ".gsd/DECISIONS.md",
+        ".gsd/PROJECT.md",
+        ".gsd/REQUIREMENTS.md",
+        ".gsd/STATE.md",
+        ".gsd/task-registry.json"
+      ],
+      "files_modified": [
+        "pyrme/rendering/client_asset_discovery.py",
+        "pyrme/rendering/__init__.py",
+        "tests/python/test_client_asset_discovery.py",
+        ".gsd/milestones/M014/M014-CONTEXT.md",
+        ".gsd/milestones/M014/M014-ROADMAP.md",
+        ".gsd/milestones/M014/M014-SUMMARY.md",
+        ".gsd/milestones/M014/slices/S01/S01-PLAN.md",
+        ".gsd/milestones/M014/slices/S01/tasks/T04-SUMMARY.md",
+        ".gsd/DECISIONS.md",
+        ".gsd/PROJECT.md",
+        ".gsd/REQUIREMENTS.md",
+        ".gsd/STATE.md",
+        ".gsd/task-registry.json"
+      ],
+      "tests_run": [
+        "python3 -m pytest tests/python/test_client_asset_discovery.py -q --tb=short",
+        "python3 -m pytest tests/python/test_client_asset_discovery.py tests/python/test_canvas_sprite_draw_diagnostics.py tests/python/test_sprite_asset_provider.py tests/python/test_canvas_seam_m4.py tests/python/test_renderer_frame_plan_integration.py tests/python/test_sprite_draw_commands.py tests/python/test_sprite_catalog_adapter.py tests/python/test_sprite_frame.py tests/python/test_render_frame_plan.py tests/python/test_diagnostic_tile_primitives.py -q --tb=short",
+        "python3 -m ruff check pyrme/rendering/client_asset_discovery.py pyrme/rendering/__init__.py tests/python/test_client_asset_discovery.py",
+        "python3 -m json.tool .gsd/task-registry.json",
+        "git diff --check"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "Focused client asset discovery/signature tests passed: 9 tests.",
+          "Adjacent canvas/render/sprite planning regression slice passed: 71 tests.",
+          "Ruff passed for touched rendering and test files.",
+          "Task registry JSON validation passed.",
+          "git diff --check passed."
+        ]
+      },
+      "notes": [
+        "Signature reads are limited to one 4-byte DAT header and one 4-byte SPR header.",
+        "DAT item parsing, SPR frame parsing, atlas texture ownership, pixel painting, screenshots, lighting, and wgpu remain future work."
+      ],
+      "recorded_at": "2026-04-23T21:27:20-03:00",
+      "updated_at": "2026-04-23T21:27:20-03:00",
+      "completed_at": "2026-04-23T21:27:20-03:00"
     }
   ]
 }

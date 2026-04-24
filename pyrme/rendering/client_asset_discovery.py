@@ -42,6 +42,13 @@ class ClientAssetFiles:
 
 
 @dataclass(frozen=True, slots=True)
+class ClientAssetSignatures:
+    dat_signature: int | None
+    spr_signature: int | None
+    warnings: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class ClientSpriteAssetBundle:
     files: ClientAssetFiles
     bundle: SpriteDrawAssetBundle
@@ -100,6 +107,23 @@ def discover_client_asset_files(
     )
 
 
+def read_client_asset_signatures(files: ClientAssetFiles) -> ClientAssetSignatures:
+    if not files.is_complete:
+        return ClientAssetSignatures(
+            dat_signature=None,
+            spr_signature=None,
+            warnings=files.warnings,
+        )
+
+    dat_signature, dat_warnings = _read_signature(files.metadata_path, "DAT")
+    spr_signature, spr_warnings = _read_signature(files.sprites_path, "SPR")
+    return ClientAssetSignatures(
+        dat_signature=dat_signature,
+        spr_signature=spr_signature,
+        warnings=(*files.warnings, *dat_warnings, *spr_warnings),
+    )
+
+
 def _resolve_client_file(
     client_root: Path,
     configured_name: str,
@@ -119,3 +143,18 @@ def _resolve_client_file(
 def _sanitize_file_name(raw_name: str) -> str:
     posix_name = PurePosixPath(raw_name).name
     return PureWindowsPath(posix_name).name
+
+
+def _read_signature(path: Path | None, label: str) -> tuple[int | None, tuple[str, ...]]:
+    if path is None:
+        return None, ()
+    try:
+        with path.open("rb") as handle:
+            data = handle.read(4)
+    except OSError:
+        return None, (f"{label} signature detection failed: could not open {path}",)
+    if len(data) != 4:
+        return None, (
+            f"{label} signature detection failed: could not read header from {path}",
+        )
+    return int.from_bytes(data, byteorder="little"), ()

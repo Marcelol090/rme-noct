@@ -10,6 +10,17 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 ## Validated
 
+### R054 - Renderer asset provider must read DAT/SPR signatures before parsing records
+- Class: core-capability
+- Status: validated
+- Description: The renderer asset path must read DAT and SPR signature headers from discovered client files before parsing item records, frame tables, pixels, or texture data.
+- Why it matters: Legacy client asset detection validates file identity through signatures before deeper parsing, and this keeps the binary-reading boundary narrow enough to verify.
+- Source: execution
+- Primary owning slice: CANVAS-150-CLIENT-ASSET-SIGNATURES
+- Supporting slices: CANVAS-140-CLIENT-ASSET-DISCOVERY, CANVAS-130-SPRITE-ASSET-BUNDLE, CANVAS-120-SPRITE-ASSET-PROVIDER
+- Validation: validated
+- Notes: Verified by `tests/python/test_client_asset_discovery.py`; signature reads open discovered files only, read one 4-byte little-endian header from each DAT/SPR file, preserve discovery warnings, and report legacy-style open/header warnings without parsing records or decoding pixels.
+
 ### R053 - Renderer asset provider must discover client DAT/SPR paths before parsing
 - Class: core-capability
 - Status: validated
@@ -386,6 +397,10 @@ Use it to track what is actively in scope, what has been validated by completed 
 | R048 | core-capability | validated | CANVAS-90-SPRITE-DRAW-COMMAND-PLAN | CANVAS-60-SPRITE-CATALOG-SEAM, CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER, CANVAS-80-SPR-FRAME-METADATA | validated |
 | R049 | core-capability | validated | CANVAS-100-SPRITE-DRAW-DIAGNOSTICS | CANVAS-60-SPRITE-CATALOG-SEAM, CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER, CANVAS-80-SPR-FRAME-METADATA, CANVAS-90-SPRITE-DRAW-COMMAND-PLAN | validated |
 | R050 | core-capability | validated | CANVAS-110-LIVE-SPRITE-DRAW-PLAN | CANVAS-100-SPRITE-DRAW-DIAGNOSTICS, CANVAS-90-SPRITE-DRAW-COMMAND-PLAN, CANVAS-80-SPR-FRAME-METADATA | validated |
+| R051 | core-capability | validated | CANVAS-120-SPRITE-ASSET-PROVIDER | CANVAS-110-LIVE-SPRITE-DRAW-PLAN, CANVAS-100-SPRITE-DRAW-DIAGNOSTICS, CANVAS-90-SPRITE-DRAW-COMMAND-PLAN | validated |
+| R052 | core-capability | validated | CANVAS-130-SPRITE-ASSET-BUNDLE | CANVAS-120-SPRITE-ASSET-PROVIDER, CANVAS-110-LIVE-SPRITE-DRAW-PLAN, CANVAS-90-SPRITE-DRAW-COMMAND-PLAN | validated |
+| R053 | core-capability | validated | CANVAS-140-CLIENT-ASSET-DISCOVERY | CANVAS-130-SPRITE-ASSET-BUNDLE, CANVAS-120-SPRITE-ASSET-PROVIDER | validated |
+| R054 | core-capability | validated | CANVAS-150-CLIENT-ASSET-SIGNATURES | CANVAS-140-CLIENT-ASSET-DISCOVERY, CANVAS-130-SPRITE-ASSET-BUNDLE, CANVAS-120-SPRITE-ASSET-PROVIDER | validated |
 | R030 | anti-feature | out-of-scope | none | none | n/a |
 | R031 | constraint | out-of-scope | none | none | n/a |
 | R032 | constraint | out-of-scope | none | none | n/a |
@@ -393,6 +408,6 @@ Use it to track what is actively in scope, what has been validated by completed 
 ## Coverage Summary
 
 - Active requirements: 0
-- Mapped to slices: 25
-- Validated: 25
+- Mapped to slices: 29
+- Validated: 29
 - Unmapped active requirements: 0
