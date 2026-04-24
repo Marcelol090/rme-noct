@@ -5,6 +5,7 @@
 pub mod binary_tree;
 pub mod dat;
 pub mod otb;
+pub mod otbm;
 pub mod spr;
 
 pub use dat::{DatDatabase, DatItem};

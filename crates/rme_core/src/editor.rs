@@ -9,7 +9,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 use crate::item::Item;
-use crate::map::{MapModel, MapPosition, Tile, DEFAULT_X, DEFAULT_Y, DEFAULT_Z};
+use crate::map::{MapModel, MapPosition, DEFAULT_X, DEFAULT_Y, DEFAULT_Z};
 use crate::rendering::{RenderBudget, RenderState};
 
 /// Minimal editor state placeholder.
@@ -183,9 +183,38 @@ impl EditorShellState {
         self.map.tile_count()
     }
 
+
     /// Returns the map mutation generation counter.
     fn map_generation(&self) -> u64 {
         self.map.generation()
+    }
+
+    // --- OTBM persistence bridge ---
+
+    /// Loads an OTBM map file. Returns (width, height, tile_count) on success.
+    fn load_otbm(&mut self, path: &str) -> PyResult<(u16, u16, usize)> {
+        let data = std::fs::read(path)
+            .map_err(|e| PyValueError::new_err(format!("Failed to read file: {e}")))?;
+        let (header, model) = crate::io::otbm::load_otbm(&data)
+            .map_err(|e| PyValueError::new_err(format!("OTBM parse error: {e:?}")))?;
+        let tile_count = model.tile_count();
+        self.map = model;
+        Ok((header.width, header.height, tile_count))
+    }
+
+    /// Returns map name.
+    fn map_name(&self) -> &str {
+        self.map.name()
+    }
+
+    /// Returns map description.
+    fn map_description(&self) -> &str {
+        self.map.description()
+    }
+
+    /// Returns true if map has been modified.
+    fn map_is_dirty(&self) -> bool {
+        self.map.is_dirty()
     }
 }
 
