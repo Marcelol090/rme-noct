@@ -4,9 +4,9 @@
 **Active Slice:** none
 **Active Task:** none
 **Phase:** complete
-**Next Action:** Parse DAT item metadata from discovered client files after signature reads, still without SPR pixel decoding, atlas texture construction, or sprite painting.
-**Last Updated:** 2026-04-23T21:27:20-03:00
-**Requirements Status:** 0 active · 29 validated · 0 deferred · 3 out of scope
+**Next Action:** Parse SPR frame table metadata from discovered sprite files after DAT metadata, still without SPR pixel decoding, atlas texture construction, or sprite painting.
+**Last Updated:** 2026-04-25T12:25:48-03:00
+**Requirements Status:** 0 active · 30 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
@@ -39,6 +39,7 @@
 - `CANVAS-130-SPRITE-ASSET-BUNDLE` is complete: sprite draw assets can now be grouped as a fixture bundle of DAT-like records, SPR-like frames, and atlas regions that implements the provider seam without file IO or pixel work.
 - `CANVAS-140-CLIENT-ASSET-DISCOVERY` is complete: renderer asset discovery now resolves configured DAT/SPR files under a client root, falls back to `Tibia.dat`/`Tibia.spr`, and pairs discovery with fixture bundle providers without opening files.
 - `CANVAS-150-CLIENT-ASSET-SIGNATURES` is complete: renderer asset discovery now reads only DAT/SPR header signatures from discovered files with legacy-style open/header warnings, while record parsing, pixels, texture ownership, and sprite painting remain future work.
+- `CANVAS-160-DAT-ITEM-METADATA` is complete: renderer asset parsing now reads DAT item metadata into `DatSpriteRecord` rows with explicit DAT format flag remapping, while SPR frame parsing, pixels, texture ownership, and sprite painting remain future work.
 
 ## Blockers
 

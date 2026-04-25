@@ -10,6 +10,17 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 ## Validated
 
+### R055 - Renderer asset parser must read DAT item metadata before SPR pixels
+- Class: core-capability
+- Status: validated
+- Description: The renderer asset path must parse DAT item metadata into item-to-sprite records after signature reads and before SPR frame tables, pixels, atlas textures, or drawing.
+- Why it matters: Legacy asset loading builds the DAT catalog before loading SPR data, and renderer planning needs item ids mapped to sprite ids without claiming pixel rendering.
+- Source: execution
+- Primary owning slice: CANVAS-160-DAT-ITEM-METADATA
+- Supporting slices: CANVAS-150-CLIENT-ASSET-SIGNATURES, CANVAS-140-CLIENT-ASSET-DISCOVERY, CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER
+- Validation: validated
+- Notes: Verified by `tests/python/test_dat_item_metadata.py`; parsing reads DAT header counts, consumes item and creature entries for stream alignment, emits `DatSpriteRecord` rows for item ids, supports compact and extended sprite ids, remaps legacy DAT flags by explicit DAT format, and rejects invalid/truncated metadata without parsing SPR frames or pixels.
+
 ### R054 - Renderer asset provider must read DAT/SPR signatures before parsing records
 - Class: core-capability
 - Status: validated
@@ -401,6 +412,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 | R052 | core-capability | validated | CANVAS-130-SPRITE-ASSET-BUNDLE | CANVAS-120-SPRITE-ASSET-PROVIDER, CANVAS-110-LIVE-SPRITE-DRAW-PLAN, CANVAS-90-SPRITE-DRAW-COMMAND-PLAN | validated |
 | R053 | core-capability | validated | CANVAS-140-CLIENT-ASSET-DISCOVERY | CANVAS-130-SPRITE-ASSET-BUNDLE, CANVAS-120-SPRITE-ASSET-PROVIDER | validated |
 | R054 | core-capability | validated | CANVAS-150-CLIENT-ASSET-SIGNATURES | CANVAS-140-CLIENT-ASSET-DISCOVERY, CANVAS-130-SPRITE-ASSET-BUNDLE, CANVAS-120-SPRITE-ASSET-PROVIDER | validated |
+| R055 | core-capability | validated | CANVAS-160-DAT-ITEM-METADATA | CANVAS-150-CLIENT-ASSET-SIGNATURES, CANVAS-140-CLIENT-ASSET-DISCOVERY, CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER | validated |
 | R030 | anti-feature | out-of-scope | none | none | n/a |
 | R031 | constraint | out-of-scope | none | none | n/a |
 | R032 | constraint | out-of-scope | none | none | n/a |
@@ -408,6 +420,6 @@ Use it to track what is actively in scope, what has been validated by completed 
 ## Coverage Summary
 
 - Active requirements: 0
-- Mapped to slices: 29
-- Validated: 29
+- Mapped to slices: 30
+- Validated: 30
 - Unmapped active requirements: 0

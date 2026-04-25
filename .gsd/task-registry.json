@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project": "remeres-map-editor-redux",
-  "updated_at": "2026-04-23T21:27:20-03:00",
+  "updated_at": "2026-04-25T12:25:48-03:00",
   "tasks": [
     {
       "id": "GSD-RUNTIME-NODE22",
@@ -772,6 +772,83 @@
       "recorded_at": "2026-04-23T21:27:20-03:00",
       "updated_at": "2026-04-23T21:27:20-03:00",
       "completed_at": "2026-04-23T21:27:20-03:00"
+    },
+    {
+      "id": "CANVAS-160-DAT-ITEM-METADATA",
+      "title": "Parse DAT item metadata",
+      "category": "core-capability",
+      "status": "verified",
+      "milestone": "M019",
+      "slice": "S01",
+      "summary": "Renderer asset parsing now reads DAT header and item sprite metadata into DatSpriteRecord rows with explicit DAT format flag remapping, without parsing SPR frames, decoding pixels, owning textures, or painting sprites.",
+      "done_criteria": [
+        "DatItemMetadata exists",
+        "parse_dat_item_metadata parses DAT signature and item/creature/effect/distance counts",
+        "Item client ids from 100 through item_count produce DatSpriteRecord rows",
+        "Creature entries are consumed for stream alignment and excluded by default",
+        "Compact u16 and extended u32 sprite id widths are supported",
+        "Legacy DAT flags are remapped by explicit DAT format before payload skips",
+        "Invalid counts, zero dimensions, excessive sprite counts, unknown flags, and truncated data fail deterministically",
+        "No SPR frame parsing, pixel decoding, texture upload, sprite painting, screenshots, lighting, or wgpu work is added"
+      ],
+      "scope": [
+        "pyrme/rendering/dat_item_metadata.py",
+        "pyrme/rendering/__init__.py",
+        "tests/python/test_dat_item_metadata.py",
+        ".gsd/milestones/M019/M019-CONTEXT.md",
+        ".gsd/milestones/M019/M019-ROADMAP.md",
+        ".gsd/milestones/M019/M019-SUMMARY.md",
+        ".gsd/milestones/M019/slices/S01/S01-PLAN.md",
+        ".gsd/milestones/M019/slices/S01/tasks/T04-SUMMARY.md",
+        ".gsd/DECISIONS.md",
+        ".gsd/PROJECT.md",
+        ".gsd/REQUIREMENTS.md",
+        ".gsd/STATE.md",
+        ".gsd/task-registry.json"
+      ],
+      "files_modified": [
+        "pyrme/rendering/dat_item_metadata.py",
+        "pyrme/rendering/__init__.py",
+        "tests/python/test_dat_item_metadata.py",
+        ".gsd/milestones/M019/M019-CONTEXT.md",
+        ".gsd/milestones/M019/M019-ROADMAP.md",
+        ".gsd/milestones/M019/M019-SUMMARY.md",
+        ".gsd/milestones/M019/slices/S01/S01-PLAN.md",
+        ".gsd/milestones/M019/slices/S01/tasks/T04-SUMMARY.md",
+        ".gsd/DECISIONS.md",
+        ".gsd/PROJECT.md",
+        ".gsd/REQUIREMENTS.md",
+        ".gsd/STATE.md",
+        ".gsd/task-registry.json"
+      ],
+      "tests_run": [
+        "../../.venv/bin/python3.12 -m pytest tests/python/test_dat_item_metadata.py -q --tb=short",
+        "../../.venv/bin/python3.12 -m pytest tests/python/test_sprite_catalog_adapter.py tests/python/test_dat_item_metadata.py -q --tb=short",
+        "../../.venv/bin/python3.12 -m ruff check pyrme/rendering/dat_item_metadata.py pyrme/rendering/__init__.py tests/python/test_dat_item_metadata.py",
+        "gh auth status",
+        "timeout 45s ../../.venv/bin/python3.12 -m pyrme stack --quiet",
+        "../../.venv/bin/python3.12 -m json.tool .gsd/task-registry.json",
+        "git diff --check"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "Focused DAT metadata parser tests passed: 11 tests.",
+          "Adjacent sprite catalog adapter regression tests passed with parser tests: 16 tests.",
+          "Ruff passed for touched rendering and test files.",
+          "gh auth status passed.",
+          "pyrme stack health rerun was environment-blocked by Qt wayland platform timeout.",
+          "Task registry JSON validation passed.",
+          "git diff --check passed."
+        ]
+      },
+      "notes": [
+        "DAT format is explicit; automatic client-version detection remains future work.",
+        "Parser metadata stops at item-to-sprite records and does not parse SPR frame tables, decode pixels, own atlas textures, paint sprites, screenshots, lighting, or wgpu."
+      ],
+      "recorded_at": "2026-04-25T12:25:48-03:00",
+      "updated_at": "2026-04-25T12:25:48-03:00",
+      "completed_at": "2026-04-25T12:25:48-03:00"
     }
   ]
 }
