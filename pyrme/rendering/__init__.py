@@ -26,6 +26,14 @@ from pyrme.rendering.frame_plan import (
     RenderTileCommand,
     build_render_frame_plan,
 )
+from pyrme.rendering.spr_frame_metadata import (
+    MAX_SPR_SPRITES,
+    SPR_FRAME_SIZE,
+    SprFrameMetadata,
+    SprMetadataParseError,
+    parse_spr_frame_metadata,
+    read_spr_frame_metadata,
+)
 from pyrme.rendering.sprite_asset_provider import (
     SpriteDrawAssetBundle,
     SpriteDrawAssetInputs,
@@ -66,9 +74,13 @@ __all__ = [
     "DatItemMetadata",
     "DatMetadataParseError",
     "MAX_DAT_SPRITES",
+    "MAX_SPR_SPRITES",
     "RenderFramePlan",
     "RenderTileCommand",
+    "SPR_FRAME_SIZE",
     "SprFrameRecord",
+    "SprFrameMetadata",
+    "SprMetadataParseError",
     "SpriteAtlas",
     "SpriteAtlasRegion",
     "SpriteCatalog",
@@ -86,6 +98,8 @@ __all__ = [
     "read_client_asset_signatures",
     "parse_dat_item_metadata",
     "read_dat_item_metadata",
+    "parse_spr_frame_metadata",
+    "read_spr_frame_metadata",
     "build_render_frame_plan",
     "build_sprite_draw_asset_bundle",
     "build_sprite_catalog_from_asset_records",

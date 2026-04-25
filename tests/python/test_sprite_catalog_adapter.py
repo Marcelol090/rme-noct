@@ -73,11 +73,13 @@ def test_spr_frame_records_attach_sorted_sprite_frame_metadata() -> None:
             "frame_index": 0,
             "size": (32, 32),
             "offset": (4, -2),
+            "archive_offset": 0,
         },
         {
             "frame_index": 1,
             "size": (32, 32),
             "offset": (0, 0),
+            "archive_offset": 0,
         },
     )
 
