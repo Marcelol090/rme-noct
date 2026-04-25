@@ -26,6 +26,13 @@ from pyrme.rendering.frame_plan import (
     RenderTileCommand,
     build_render_frame_plan,
 )
+from pyrme.rendering.spr_compressed_payload import (
+    SPR_LEGACY_PAYLOAD_HEADER_SIZE,
+    SprCompressedPayload,
+    SprCompressedPayloadError,
+    parse_spr_compressed_payload,
+    read_spr_compressed_payload,
+)
 from pyrme.rendering.spr_frame_metadata import (
     MAX_SPR_SPRITES,
     SPR_FRAME_SIZE,
@@ -77,7 +84,10 @@ __all__ = [
     "MAX_SPR_SPRITES",
     "RenderFramePlan",
     "RenderTileCommand",
+    "SPR_LEGACY_PAYLOAD_HEADER_SIZE",
     "SPR_FRAME_SIZE",
+    "SprCompressedPayload",
+    "SprCompressedPayloadError",
     "SprFrameRecord",
     "SprFrameMetadata",
     "SprMetadataParseError",
@@ -98,6 +108,8 @@ __all__ = [
     "read_client_asset_signatures",
     "parse_dat_item_metadata",
     "read_dat_item_metadata",
+    "parse_spr_compressed_payload",
+    "read_spr_compressed_payload",
     "parse_spr_frame_metadata",
     "read_spr_frame_metadata",
     "build_render_frame_plan",
