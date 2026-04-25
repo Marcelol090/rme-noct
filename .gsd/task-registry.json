@@ -824,7 +824,8 @@
       "tests_run": [
         "../../.venv/bin/python3.12 -m pytest tests/python/test_dat_item_metadata.py -q --tb=short",
         "../../.venv/bin/python3.12 -m pytest tests/python/test_sprite_catalog_adapter.py tests/python/test_dat_item_metadata.py -q --tb=short",
-        "../../.venv/bin/python3.12 -m ruff check pyrme/rendering/dat_item_metadata.py pyrme/rendering/__init__.py tests/python/test_dat_item_metadata.py",
+        "../../.venv/bin/python3.12 -m mypy pyrme/rendering pyrme/ui/canvas_host.py pyrme/ui/canvas_frame.py pyrme/ui/viewport.py --ignore-missing-imports",
+        "../../.venv/bin/python3.12 -m ruff check pyrme/rendering/dat_item_metadata.py pyrme/rendering/sprite_draw_commands.py pyrme/rendering/__init__.py tests/python/test_dat_item_metadata.py",
         "gh auth status",
         "timeout 45s ../../.venv/bin/python3.12 -m pyrme stack --quiet",
         "../../.venv/bin/python3.12 -m json.tool .gsd/task-registry.json",
@@ -835,6 +836,7 @@
         "notes": [
           "Focused DAT metadata parser tests passed: 11 tests.",
           "Adjacent sprite catalog adapter regression tests passed with parser tests: 16 tests.",
+          "CI type-check target passed locally.",
           "Ruff passed for touched rendering and test files.",
           "gh auth status passed.",
           "pyrme stack health rerun was environment-blocked by Qt wayland platform timeout.",

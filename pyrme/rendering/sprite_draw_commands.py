@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping
+    from collections.abc import Iterable
 
     from pyrme.rendering.sprite_frame import SpriteCatalogEntry, SpriteFrame
     from pyrme.ui.viewport import EditorViewport
@@ -100,8 +101,12 @@ def _destination_rect(
     frame_metadata = _first_sprite_frame(entry.metadata)
     if frame_metadata is None:
         return None
-    width, height = frame_metadata["size"]
-    offset_x, offset_y = frame_metadata["offset"]
+    size = _int_pair(frame_metadata.get("size"))
+    offset = _int_pair(frame_metadata.get("offset"))
+    if size is None or offset is None:
+        return None
+    width, height = size
+    offset_x, offset_y = offset
     return (
         tile_x + int(offset_x),
         tile_y + int(offset_y),
@@ -116,6 +121,18 @@ def _first_sprite_frame(
     if metadata is None:
         return None
     frames = metadata.get("sprite_frames")
-    if not frames:
+    if not isinstance(frames, tuple) or not frames:
         return None
-    return frames[0]
+    first_frame = frames[0]
+    if not isinstance(first_frame, Mapping):
+        return None
+    return first_frame
+
+
+def _int_pair(value: object) -> tuple[int, int] | None:
+    if not isinstance(value, tuple) or len(value) != 2:
+        return None
+    first, second = value
+    if not isinstance(first, int) or not isinstance(second, int):
+        return None
+    return (first, second)

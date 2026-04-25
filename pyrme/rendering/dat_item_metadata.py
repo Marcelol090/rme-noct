@@ -210,9 +210,25 @@ def parse_dat_item_metadata(
 
 def read_dat_item_metadata(
     path: str | PathLike[str],
-    **parse_options: object,
+    *,
+    dat_format: DatFormatName | str = "86",
+    extended: bool = False,
+    include_creatures: bool = False,
+    has_frame_durations: bool = False,
+    has_frame_groups: bool = False,
+    legacy_74_pattern_z: bool | None = None,
+    max_sprite_count: int = MAX_DAT_SPRITES,
 ) -> DatItemMetadata:
-    return parse_dat_item_metadata(Path(path).read_bytes(), **parse_options)
+    return parse_dat_item_metadata(
+        Path(path).read_bytes(),
+        dat_format=dat_format,
+        extended=extended,
+        include_creatures=include_creatures,
+        has_frame_durations=has_frame_durations,
+        has_frame_groups=has_frame_groups,
+        legacy_74_pattern_z=legacy_74_pattern_z,
+        max_sprite_count=max_sprite_count,
+    )
 
 
 def _dat_format_rank(dat_format: DatFormatName | str) -> int:

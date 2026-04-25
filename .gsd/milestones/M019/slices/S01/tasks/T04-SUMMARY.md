@@ -15,7 +15,8 @@
 
 - `../../.venv/bin/python3.12 -m pytest tests/python/test_dat_item_metadata.py -q --tb=short` - 11 passed.
 - `../../.venv/bin/python3.12 -m pytest tests/python/test_sprite_catalog_adapter.py tests/python/test_dat_item_metadata.py -q --tb=short` - 16 passed.
-- `../../.venv/bin/python3.12 -m ruff check pyrme/rendering/dat_item_metadata.py pyrme/rendering/__init__.py tests/python/test_dat_item_metadata.py` - passed.
+- `../../.venv/bin/python3.12 -m mypy pyrme/rendering pyrme/ui/canvas_host.py pyrme/ui/canvas_frame.py pyrme/ui/viewport.py --ignore-missing-imports` - passed.
+- `../../.venv/bin/python3.12 -m ruff check pyrme/rendering/dat_item_metadata.py pyrme/rendering/sprite_draw_commands.py pyrme/rendering/__init__.py tests/python/test_dat_item_metadata.py` - passed.
 - `gh auth status` - passed.
 - `timeout 45s ../../.venv/bin/python3.12 -m pyrme stack --quiet` - environment-blocked by Qt wayland platform timeout during closeout rerun.
 
