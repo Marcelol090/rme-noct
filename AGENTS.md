@@ -66,8 +66,8 @@ cat .gsd/milestones/M###/slices/S##/S##-PLAN.md
 ## Architecture
 - `pyrme/` — Python shell; project contract surface
 - `pyrme/ui/` — PyQt6 UI; preserve dock/window patterns; see `pyrme/ui/AGENTS.md`
-- `rme/` (C++) — legacy reference implementation at:  
-  `/mnt/c/Users/Marcelo Henrique/Desktop/rme-noct/remeres-map-editor-redux`  
+- `rme/` (C++) — legacy reference implementation at:
+  `/mnt/c/Users/Marcelo Henrique/Desktop/rme-noct/remeres-map-editor-redux`
   **Ground truth for all behavior contracts. Match it. When in doubt, read it.**
 - Edits surgical only — never widen scope without updating plan
 
