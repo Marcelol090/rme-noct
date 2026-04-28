@@ -1,11 +1,7 @@
 # Noct Map Editor
 
 <p align="center">
-  <strong>Python + Rust Remere's Map Editor (Extended Edition 3.8)</strong>
-</p>
-
-<p align="center">
-  A rewrite of the legacy C++ Remere's Map Editor with a Rust-first core and a Python-visual shell.
+  <strong>Python + Rust Remere's Map Editor rewrite targeting Extended Edition 3.8 parity</strong>
 </p>
 
 <p align="center">
@@ -16,168 +12,165 @@
   <img src="https://img.shields.io/badge/License-GPL--2.0-red" />
 </p>
 
----
+## Project State
 
-## Overview
+Noct Map Editor is a ground-up rewrite of
+[Remere's Map Editor Redux](https://github.com/karolak6612/remeres-map-editor-redux).
+The current repo has the Python shell, Rust core seams, sprite asset discovery,
+SPR/DAT parsing slices, the startup Welcome Dialog, and Jules automation wired
+into GitHub Actions.
 
-**Noct Map Editor** is a ground-up rewrite of [Remere's Map Editor](https://github.com/karolak6612/remeres-map-editor-redux) targeting full feature parity with **RME Extended Edition 3.8**.
+Legacy behavior still wins. The nested `remeres-map-editor-redux/` tree is a
+reference implementation, not the active project root. When behavior is unclear,
+read legacy C++ first, then encode the contract in tests.
 
-Behavioral parity is defined by the legacy redux C++ source tree. New code should mirror that behavior first, then improve implementation quality only where the legacy contract is already preserved.
+## Stack
 
-The split is intentional:
-
-- **Python 3.12+ / PyQt6** for the visible editor shell: menus, dialogs, docks, preferences, and interaction wiring
-- **Rust (PyO3 + maturin)** for the performance core: parsing, map data, search, rendering, and concurrency-sensitive work
-- **wgpu** for GPU-accelerated canvas rendering
-
-## Architecture
-
-```text
-Python UI layer
-- menus, dialogs, docks, preferences, devtools
-- canvas presentation and editor interaction
-
-PyO3 bridge
-- thin boundary for moving structured data between Python and Rust
-
-Rust core (`rme_core`)
-- map model, file I/O, search, rendering, and concurrency-heavy logic
-```
+| Layer | Tech | Responsibility |
+|---|---|---|
+| UI shell | Python 3.12, PyQt6 | menus, dialogs, docks, canvas host, workflow glue |
+| Core bridge | PyO3, maturin | typed Python/Rust boundary |
+| Rust core | Rust 2021 | map model, parsing, file I/O, renderer data, performance paths |
+| Renderer path | Python contracts now, wgpu target | frame plans, sprite resources, future GPU draw path |
+| Automation | GSD, Superpowers, Jules, GitHub Actions | slice planning, worktrees, CI, repair/maintenance agents |
 
 ## Quick Start
 
-### Prerequisites
-
-- Python 3.12+
-- Rust via [rustup](https://rustup.rs/)
-- Node.js 22+ for the local GSD toolchain
-
-### Setup
+Use WSL2/Linux for development. The repo contract assumes `python3`, not
+Windows `python`.
 
 ```bash
 git clone https://github.com/Marcelol090/rme-noct.git
 cd rme-noct
 
-# Install local devtools, including the repo-local GSD wrapper
 npm install
-
-# Validate the local preflight stack
 npm run preflight
 
-# Run the full setup (Python venv + Rust build + devtools)
-bash scripts/setup-devtools.sh
-
-# Or manual setup
-python -m venv .venv
-source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+python3 -m venv .venv
+source .venv/bin/activate
 pip install maturin
 maturin develop
 pip install -e ".[dev]"
 ```
 
-### Launch
+Launch:
 
 ```bash
-python -m pyrme
+python3 -m pyrme
 ```
 
-### Development
+Core verification:
 
 ```bash
-# Build Rust core
-maturin develop
-
-# Run tests
-pytest tests/python/ -v
-cargo test --manifest-path crates/rme_core/Cargo.toml
-
-# Lint
-ruff check pyrme/
-
-# GSD local CLI entrypoints
+python3 -m pyrme stack --quiet
 npm run preflight
-npm run stack
+python3 -m pytest tests/python/ -q --tb=short
+cargo test --manifest-path crates/rme_core/Cargo.toml
+```
+
+## Development Contract
+
+Root instructions live in [AGENTS.md](AGENTS.md). Treat it as the repo-level
+contract before changing code.
+
+- Use git worktrees for feature work.
+- Keep slices narrow and test-first.
+- Read active `.gsd/STATE.md` plus the current milestone/slice docs before
+  moving GSD state.
+- Use Context7 or official docs for third-party API details.
+- Preserve legacy `rme/` behavior when docs, generated designs, or new code
+  disagree with the reference implementation.
+- Run the smallest relevant test path before marking a task done.
+
+## GSD Workflow
+
+Common commands:
+
+```bash
 npm run gsd:status
 npm run gsd:plan -- "Plan the next milestone"
-
-# GSD autonomous mode
 npm run gsd:auto
 ```
 
-`npm run gsd:*` uses the repo-local `gsd` installation from `node_modules`, so Node.js 22+ and `npm install` are required before those commands will work.
-`npm run preflight` is the human-readable alias for `npm run stack`; it validates the local Codex/GSD/Superpowers stack and treats local agent TOML files or a standalone `c7-mcp-server` binary as optional when the active Codex session already exposes agents and Context7 MCP tools.
-The wrapper also forces `GSD_HOME` to the repo-local `.gsd/` directory before launching the CLI, which keeps the sync path writable even when the user home directory is read-only.
-`npm install` also restores the local GSD wrapper contract through `postinstall`, which keeps startup reproducible across reinstalls.
-`npm run gsd:status` uses `gsd headless query`, and `npm run gsd:plan -- "..."` creates a new milestone from inline context via `gsd headless new-milestone --context-text`.
-`npm run gsd:auto` now runs `npm run preflight` first, so autonomous mode will abort if the local stack preflight fails.
+`npm run gsd:auto` runs `npm run preflight` first. If preflight fails, fix the
+baseline blocker before trusting autonomous mode.
 
-## AI Workflow
+Milestone docs live under `.gsd/milestones/`. Active sprite and editor-shell
+history currently includes:
 
-This repo uses a multi-agent operating model:
+| Area | Milestones |
+|---|---|
+| Renderer frame/canvas | `M003`, `M004`, `M005` |
+| Sprite lookup/draw pipeline | `M006` through `M014`, `M019` through `M021` |
+| UI shell and tools | item palette, brush activation, Welcome Dialog |
+| Future renderer | WGPU sprite renderer planning lives in later milestone docs |
 
-- **Codex/OpenAI** is the orchestrator and routing layer for subagents.
-- Optional Codex agent definitions may live in `~/.codex/agents/`:
-  - `planner`
-  - `worker`
-  - `docs_researcher`
-  - `reviewer`
-- Codex skills are installed from `~/.agents/skills/` and may be supplemented by repo-local `.agents/skills/`; this workspace currently relies on installed Caveman/OpenAI/system skills plus the external frontend-skill reference when UI design work needs it.
-- **Superpowers** provides workflow discipline through skills such as `writing-plans`, `subagent-driven-development`, `using-git-worktrees`, `requesting-code-review`, and `finishing-a-development-branch`; project-scope skills live in `.pi/agent/skills/`.
-- **GSD 2** provides the worktree and verification layer through `.gsd/preferences.md`, `git.isolation: worktree`, and `verification_commands`.
-- **Repository contract** lives in root `AGENTS.md` and is validated by `npm run preflight` / `python3 -m pyrme stack`.
-- **Context7** is the required documentation source for third-party tools, libraries, and agent terminology; it can be exposed either as a Codex MCP tool or as a local command.
-- **Jules** handles branch and PR automation through `.jules/agents/` and `.github/workflows/jules-*.yml`; set `JULES_API_KEY` in GitHub Secrets and use trusted `@jules /python`, `/rust`, `/bridge`, `/maintenance`, or `/ci` triggers.
+## GitHub Actions
 
-The repo-wide contract and end-to-end example live in [docs/superpowers/workflows/2026-04-06-codex-first-superpowers-gsd.md](docs/superpowers/workflows/2026-04-06-codex-first-superpowers-gsd.md).
-
-## Repository Contract
-
-- Root `AGENTS.md` defines the repo-level working rules.
-- `npm run preflight` and `python3 -m pyrme stack` validate the local Codex/GSD/Superpowers stack, including the repo contract.
-- Read `README.md`, `PLAN.md`, and the active feature docs before changing behavior.
-- Use Context7 or official docs for third-party API questions instead of guessing.
-- Keep changes surgical and verify them with the smallest relevant test slice.
-
-## Rust-First / Python-Visual Split
-
-- Keep Python focused on the visible editor shell: menus, docks, dialogs, preferences, and interaction wiring.
-- Move performance-sensitive work into Rust: parsing, map data, search, rendering, and concurrency-heavy operations.
-- Use Rust threads, channels, and worker pools for long-running work so the Qt UI remains responsive.
-- Treat Python as the presentation layer and Rust as the execution layer when adding new editor features.
-
-## Features
-
-- [ ] OTBM v0-v3 full read/write
-- [ ] GPU-accelerated canvas (wgpu)
-- [ ] All brush types (Ground, Wall, Border, Door, etc.)
-- [ ] Auto-border with configurable rules
-- [ ] Selection and clipboard
-- [ ] Undo/redo with unlimited history
-- [ ] Live editing
-- [ ] In-game preview
-- [ ] Shader system (AA, CRT, 4xBRZ)
-- [ ] AI-assisted development using GSD and Superpowers
-
-## Milestones
-
-| # | Milestone | Status |
+| Workflow | Trigger | Purpose |
 |---|---|---|
-| 1 | Project Scaffolding & Build System | In Progress |
-| 2 | Rust Core Data Structures | Planned |
-| 3 | File I/O (OTBM/OTB/DAT/SPR) | Planned |
-| 4 | Canvas Renderer (wgpu) | Planned |
-| 5 | Editor Shell & Navigation | Planned |
-| 6 | Brush Engine | Planned |
-| 7 | Selection & Clipboard | Planned |
-| 8 | Dialogs & Properties | Planned |
-| 9 | Advanced Features | Planned |
-| 10 | Polish & Release | Planned |
+| `CI` | push, pull request | Python 3.12 tests and Rust tests |
+| `Jules Invoke` | workflow dispatch, reusable workflow call | direct Jules task execution |
+| `Jules Dispatch` | trusted issue/PR comments, workflow dispatch | route `@jules /focus` requests |
+| `Jules Maintenance` | weekly schedule, workflow dispatch | scheduled maintenance prompt |
+| `Jules CI Fix` | failed/timed-out CI workflow runs, workflow dispatch | route failing CI context to Jules |
 
-## Credits
+The Jules action is pinned to `google-labs-code/jules-invoke@v1.0.0` because
+the upstream repo publishes `v1.0.0`, not `v1`.
 
-- Inspired by [Remere's Map Editor Redux](https://github.com/karolak6612/remeres-map-editor-redux) by @karolak6612
-- Original RME by Remere and the OpenTibia community
+Manual Jules examples:
+
+```bash
+gh workflow run "Jules Invoke" \
+  --repo Marcelol090/rme-noct \
+  --ref main \
+  -f focus=maintenance \
+  -f starting_branch=main \
+  -f additional_context="post-merge maintenance" \
+  -f include_last_commit=true \
+  -f include_commit_log=true
+```
+
+Trusted comments also work on issues and PRs:
+
+```text
+@jules /python investigate the failing PyQt test
+@jules /rust inspect the rme_core parsing path
+@jules /bridge review PyO3 boundary changes
+@jules /maintenance check repo hygiene
+@jules /ci fix the latest failing Actions run
+```
+
+Set `JULES_API_KEY` in GitHub Actions secrets before relying on these workflows.
+
+## Current Feature Surface
+
+- Legacy menu contracts and shell state seams
+- PyQt6 docks and dialogs, including item palette and Welcome Dialog
+- Renderer frame plan and diagnostic tile primitives
+- Sprite catalog, resolver, asset provider, draw command, DAT metadata, SPR
+  frame table, and compressed payload parsing
+- Rust core modules for map, item, editor, file I/O, and OTBM/XML sidecar work
+- GSD/Superpowers/Codex/Jules automation assets
+
+## Repository Layout
+
+```text
+pyrme/                 Python editor shell and devtools
+pyrme/ui/              PyQt6 UI, docks, dialogs, canvas host
+pyrme/rendering/       renderer contracts, frame plans, sprite seams
+crates/rme_core/       Rust core crate
+.gsd/                  GSD state, milestones, slice plans
+.github/workflows/    CI and Jules workflows
+.jules/                Jules prompt agents
+docs/superpowers/      workflow and planning docs
+```
 
 ## License
 
 GPL-2.0-or-later. See [LICENSE](LICENSE).
+
+## Credits
+
+- Original RME by Remere and the OpenTibia community
+- Redux reference by @karolak6612
