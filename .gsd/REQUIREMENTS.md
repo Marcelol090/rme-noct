@@ -10,6 +10,39 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 ## Validated
 
+### R049 - Renderer host must expose sprite draw plan diagnostics before painting
+- Class: core-capability
+- Status: validated
+- Description: The canvas host must accept sprite draw plans and report draw command and unresolved sprite diagnostics without claiming pixel rendering.
+- Why it matters: This verifies the shell seam that will later consume real sprite draw commands while preserving the honest no-pixels-yet renderer boundary.
+- Source: execution
+- Primary owning slice: CANVAS-100-SPRITE-DRAW-DIAGNOSTICS
+- Supporting slices: CANVAS-60-SPRITE-CATALOG-SEAM, CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER, CANVAS-80-SPR-FRAME-METADATA, CANVAS-90-SPRITE-DRAW-COMMAND-PLAN
+- Validation: validated
+- Notes: Verified by `tests/python/test_canvas_sprite_draw_diagnostics.py`; both placeholder and renderer-host canvas surfaces expose the sprite draw plan protocol, default to zero commands with no unresolved sprites, normalize unresolved sprite ids across repeated updates, and report command counts plus unresolved sprite ids after a plan is set.
+
+### R048 - Sprite draw planning must produce atlas-backed command data
+- Class: core-capability
+- Status: validated
+- Description: Resolved sprite-frame data must convert into deterministic draw commands with atlas source rectangles, screen destination rectangles, and missing atlas reporting before real painting begins.
+- Why it matters: This creates the final pure data seam before renderer-host sprite diagnostics or GL painting, keeping atlas lookup separate from file parsing and widget drawing.
+- Source: execution
+- Primary owning slice: CANVAS-90-SPRITE-DRAW-COMMAND-PLAN
+- Supporting slices: CANVAS-60-SPRITE-CATALOG-SEAM, CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER, CANVAS-80-SPR-FRAME-METADATA
+- Validation: validated
+- Notes: Verified by `tests/python/test_sprite_draw_commands.py`; `SpriteAtlas` maps sprite ids to source rectangles, `build_sprite_draw_plan` preserves ground-then-stack order, applies frame offsets to destination rectangles, and reports missing atlas or frame metadata sprite ids deterministically.
+
+### R047 - Sprite catalog must carry SPR-like frame metadata
+- Class: core-capability
+- Status: validated
+- Description: The renderer-facing sprite catalog must support deterministic SPR-like frame metadata by `sprite_id` before atlas placement or real drawing begins.
+- Why it matters: Real sprite rendering needs frame dimensions and offsets, but renderer planning must keep file parsing, pixel decoding, and atlas placement separate from catalog metadata.
+- Source: execution
+- Primary owning slice: CANVAS-80-SPR-FRAME-METADATA
+- Supporting slices: CANVAS-60-SPRITE-CATALOG-SEAM, CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER
+- Validation: validated
+- Notes: Verified by `tests/python/test_sprite_catalog_adapter.py`; `SprFrameRecord` attaches sorted `sprite_frames` metadata to matching `SpriteCatalogEntry` values while DAT-only records receive empty frame metadata.
+
 ### R046 - Sprite catalog must accept DAT-like adapter records
 - Class: core-capability
 - Status: validated
