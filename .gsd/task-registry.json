@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project": "remeres-map-editor-redux",
-  "updated_at": "2026-04-25T16:39:26-03:00",
+  "updated_at": "2026-04-25T17:54:57-03:00",
   "tasks": [
     {
       "id": "GSD-RUNTIME-NODE22",
@@ -935,6 +935,89 @@
       "recorded_at": "2026-04-25T16:39:26-03:00",
       "updated_at": "2026-04-25T16:39:26-03:00",
       "completed_at": "2026-04-25T16:39:26-03:00"
+    },
+    {
+      "id": "CANVAS-180-SPR-COMPRESSED-PAYLOAD",
+      "title": "Read SPR compressed payload bytes",
+      "category": "core-capability",
+      "status": "verified",
+      "milestone": "M021",
+      "slice": "S01",
+      "summary": "Renderer asset parsing now reads raw compressed SPR payload bytes from SprFrameRecord archive offsets with legacy offset-plus-three behavior, without RLE decompression, atlas textures, or sprite painting.",
+      "done_criteria": [
+        "SprCompressedPayload exists",
+        "parse_spr_compressed_payload reads from SprFrameRecord archive offsets",
+        "Payload reads seek to archive_offset plus the legacy 3-byte sprite data header",
+        "Compressed payload size is read as little-endian u16",
+        "Exact raw compressed payload bytes are returned",
+        "Sprite id 0 and archive offset 0 return explicit empty payload outcomes",
+        "Negative offsets, offsets outside data, truncated size reads, and truncated payload bytes fail deterministically",
+        "No RLE decompression, alpha interpretation, texture upload, sprite painting, screenshots, lighting, or wgpu work is added"
+      ],
+      "scope": [
+        "pyrme/rendering/spr_compressed_payload.py",
+        "pyrme/rendering/__init__.py",
+        "tests/python/test_spr_compressed_payload.py",
+        ".gsd/milestones/M021/M021-CONTEXT.md",
+        ".gsd/milestones/M021/M021-ROADMAP.md",
+        ".gsd/milestones/M021/M021-SUMMARY.md",
+        ".gsd/milestones/M021/slices/S01/S01-PLAN.md",
+        ".gsd/milestones/M021/slices/S01/tasks/T04-SUMMARY.md",
+        ".gsd/DECISIONS.md",
+        ".gsd/PROJECT.md",
+        ".gsd/REQUIREMENTS.md",
+        ".gsd/STATE.md",
+        ".gsd/task-registry.json"
+      ],
+      "files_modified": [
+        "pyrme/rendering/spr_compressed_payload.py",
+        "pyrme/rendering/__init__.py",
+        "tests/python/test_spr_compressed_payload.py",
+        ".gsd/milestones/M021/M021-CONTEXT.md",
+        ".gsd/milestones/M021/M021-ROADMAP.md",
+        ".gsd/milestones/M021/M021-SUMMARY.md",
+        ".gsd/milestones/M021/slices/S01/S01-PLAN.md",
+        ".gsd/milestones/M021/slices/S01/tasks/T04-SUMMARY.md",
+        ".gsd/DECISIONS.md",
+        ".gsd/PROJECT.md",
+        ".gsd/REQUIREMENTS.md",
+        ".gsd/STATE.md",
+        ".gsd/task-registry.json"
+      ],
+      "tests_run": [
+        "RED WSL: ../../.venv/bin/python3.12 -m pytest tests/python/test_spr_compressed_payload.py -q --tb=short -> ModuleNotFoundError for pyrme.rendering.spr_compressed_payload",
+        "WSL: ../../.venv/bin/python3.12 -m pytest tests/python/test_spr_compressed_payload.py -q --tb=short",
+        "WSL: ../../.venv/bin/python3.12 -m pytest tests/python/test_spr_compressed_payload.py tests/python/test_spr_frame_metadata.py tests/python/test_sprite_catalog_adapter.py -q --tb=short",
+        "WSL: ../../.venv/bin/python3.12 -m mypy pyrme/rendering --ignore-missing-imports",
+        "WSL: ../../.venv/bin/python3.12 -m ruff check pyrme/rendering/spr_compressed_payload.py pyrme/rendering/__init__.py tests/python/test_spr_compressed_payload.py",
+        "WSL: ../../.venv/bin/python3.12 -m json.tool .gsd/task-registry.json",
+        "Windows git: git diff --check",
+        "gh auth status",
+        "timeout 45s ../../.venv/bin/python3.12 -m pyrme stack --quiet",
+        "timeout 90s npm run preflight"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "RED test failed as expected before implementation with ModuleNotFoundError for pyrme.rendering.spr_compressed_payload.",
+          "Focused SPR compressed payload tests passed: 9 tests.",
+          "Adjacent SPR frame metadata and sprite catalog regression tests passed with payload tests: 21 tests.",
+          "Rendering mypy passed.",
+          "Ruff passed for touched rendering and test files.",
+          "Task registry JSON validation passed.",
+          "git diff --check passed.",
+          "gh auth status passed.",
+          "npm run preflight is environment-blocked in WSL because npm tries to spawn C:\\Windows\\System32\\cmd.exe.",
+          "pyrme stack --quiet is environment-blocked by Qt platform setup; wayland plugin cannot load."
+        ]
+      },
+      "notes": [
+        "Reader metadata stops at raw compressed payload bytes and does not decode RLE pixels, interpret alpha, own atlas textures, paint sprites, screenshots, lighting, or wgpu.",
+        "Next safe sprite-path slice is RLE decompression into fixed 32x32 RGBA buffers."
+      ],
+      "recorded_at": "2026-04-25T17:54:57-03:00",
+      "updated_at": "2026-04-25T17:54:57-03:00",
+      "completed_at": "2026-04-25T17:54:57-03:00"
     }
   ]
 }
