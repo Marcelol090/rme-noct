@@ -59,6 +59,177 @@ impl MapPosition {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Waypoint {
+    name: String,
+    position: MapPosition,
+}
+
+impl Waypoint {
+    pub fn new(name: impl Into<String>, position: MapPosition) -> Self {
+        Self {
+            name: name.into(),
+            position,
+        }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub const fn position(&self) -> MapPosition {
+        self.position
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Creature {
+    name: String,
+    offset_x: i32,
+    offset_y: i32,
+    spawntime: u32,
+    is_npc: bool,
+    direction: u8,
+}
+
+impl Creature {
+    pub fn new(
+        name: impl Into<String>,
+        offset_x: i32,
+        offset_y: i32,
+        spawntime: u32,
+        is_npc: bool,
+        direction: u8,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            offset_x,
+            offset_y,
+            spawntime,
+            is_npc,
+            direction,
+        }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub const fn offset_x(&self) -> i32 {
+        self.offset_x
+    }
+
+    pub const fn offset_y(&self) -> i32 {
+        self.offset_y
+    }
+
+    pub const fn spawntime(&self) -> u32 {
+        self.spawntime
+    }
+
+    pub const fn is_npc(&self) -> bool {
+        self.is_npc
+    }
+
+    pub const fn direction(&self) -> u8 {
+        self.direction
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Spawn {
+    center: MapPosition,
+    radius: u32,
+    creatures: Vec<Creature>,
+}
+
+impl Spawn {
+    pub fn new(center: MapPosition, radius: i32) -> Self {
+        Self {
+            center,
+            radius: radius.max(0) as u32,
+            creatures: Vec::new(),
+        }
+    }
+
+    pub const fn center(&self) -> MapPosition {
+        self.center
+    }
+
+    pub const fn radius(&self) -> u32 {
+        self.radius
+    }
+
+    pub fn creatures(&self) -> &[Creature] {
+        &self.creatures
+    }
+
+    pub fn add_creature(&mut self, creature: Creature) {
+        self.creatures.push(creature);
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct House {
+    id: u32,
+    name: String,
+    entry: MapPosition,
+    rent: u32,
+    townid: u32,
+    guildhall: bool,
+    size: u32,
+}
+
+impl House {
+    pub fn new(
+        id: u32,
+        name: impl Into<String>,
+        entry: MapPosition,
+        rent: u32,
+        townid: u32,
+        guildhall: bool,
+        size: u32,
+    ) -> Self {
+        Self {
+            id,
+            name: name.into(),
+            entry,
+            rent,
+            townid,
+            guildhall,
+            size,
+        }
+    }
+
+    pub const fn id(&self) -> u32 {
+        self.id
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub const fn entry(&self) -> MapPosition {
+        self.entry
+    }
+
+    pub const fn rent(&self) -> u32 {
+        self.rent
+    }
+
+    pub const fn townid(&self) -> u32 {
+        self.townid
+    }
+
+    pub const fn guildhall(&self) -> bool {
+        self.guildhall
+    }
+
+    pub const fn size(&self) -> u32 {
+        self.size
+    }
+}
+
 /// Tile representation matching legacy C++ tile.h contract.
 ///
 /// Owns a ground item slot, ordered item stack, house association,
@@ -180,6 +351,9 @@ pub struct MapModel {
     spawnfile: String,
     housefile: String,
     waypointfile: String,
+    waypoints: Vec<Waypoint>,
+    spawns: Vec<Spawn>,
+    houses: Vec<House>,
     is_dirty: bool,
 }
 
@@ -201,6 +375,9 @@ impl MapModel {
             spawnfile: String::new(),
             housefile: String::new(),
             waypointfile: String::new(),
+            waypoints: Vec::new(),
+            spawns: Vec::new(),
+            houses: Vec::new(),
             is_dirty: false,
         }
     }
@@ -341,6 +518,48 @@ impl MapModel {
 
     pub fn set_waypointfile(&mut self, path: impl Into<String>) {
         self.waypointfile = path.into();
+    }
+
+    pub fn waypoints(&self) -> &[Waypoint] {
+        &self.waypoints
+    }
+
+    pub fn spawns(&self) -> &[Spawn] {
+        &self.spawns
+    }
+
+    pub fn houses(&self) -> &[House] {
+        &self.houses
+    }
+
+    pub fn add_waypoint(&mut self, waypoint: Waypoint) {
+        self.waypoints.push(waypoint);
+        self.is_dirty = true;
+    }
+
+    pub fn add_spawn(&mut self, spawn: Spawn) -> usize {
+        self.spawns.push(spawn);
+        self.is_dirty = true;
+        self.spawns.len() - 1
+    }
+
+    pub fn add_spawn_creature(
+        &mut self,
+        spawn_index: usize,
+        creature: Creature,
+    ) -> Result<(), String> {
+        let spawn = self
+            .spawns
+            .get_mut(spawn_index)
+            .ok_or_else(|| format!("Unknown spawn index: {spawn_index}"))?;
+        spawn.add_creature(creature);
+        self.is_dirty = true;
+        Ok(())
+    }
+
+    pub fn add_house(&mut self, house: House) {
+        self.houses.push(house);
+        self.is_dirty = true;
     }
 
     pub const fn is_dirty(&self) -> bool {
@@ -600,5 +819,29 @@ mod tests {
         model.set_tile(Tile::new(MapPosition::new(1, 1, 0)));
         assert!(!model.is_dirty()); // tile ops don't set metadata dirty
         assert_eq!(model.generation(), 1); // generation tracks tile ops
+    }
+
+    #[test]
+    fn map_model_stores_xml_sidecar_domains() {
+        let mut model = MapModel::new();
+        model.add_waypoint(Waypoint::new("Depot", MapPosition::new(10, 20, 7)));
+        let spawn_index = model.add_spawn(Spawn::new(MapPosition::new(11, 21, 7), 5));
+        model
+            .add_spawn_creature(spawn_index, Creature::new("Rat", 1, -1, 60, false, 2))
+            .unwrap();
+        model.add_house(House::new(
+            12,
+            "House",
+            MapPosition::new(12, 22, 7),
+            500,
+            3,
+            true,
+            14,
+        ));
+
+        assert_eq!(model.waypoints()[0].name(), "Depot");
+        assert_eq!(model.spawns()[0].creatures()[0].name(), "Rat");
+        assert_eq!(model.houses()[0].id(), 12);
+        assert!(model.is_dirty());
     }
 }

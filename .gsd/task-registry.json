@@ -1,7 +1,7 @@
 {
   "version": 1,
   "project": "remeres-map-editor-redux",
-  "updated_at": "2026-04-22T12:36:26-03:00",
+  "updated_at": "2026-04-24T01:01:54-03:00",
   "tasks": [
     {
       "id": "GSD-RUNTIME-NODE22",
@@ -1395,6 +1395,75 @@
       "recorded_at": "2026-04-22T12:36:26-03:00",
       "updated_at": "2026-04-22T12:36:26-03:00",
       "completed_at": "2026-04-22T12:36:26-03:00"
+    },
+    {
+      "id": "M018-OTBM-XML-SIDECARS",
+      "title": "Write OTBM XML sidecars",
+      "category": "core-capability",
+      "status": "verified",
+      "milestone": "M018-otbm-xml-serialization",
+      "slice": "S01",
+      "summary": "Python save_otbm now writes legacy waypoint, spawn, and house XML sidecars beside the binary .otbm output through rme_core.",
+      "done_criteria": [
+        "MapModel stores Waypoint, Creature, Spawn, and House records",
+        "rme_core::io::xml formats legacy waypoint, spawn, and house XML",
+        "EditorShellState.save_otbm writes sidecar XML files beside the .otbm",
+        "Native Python bridge tests verify exact sidecar contents"
+      ],
+      "scope": [
+        "crates/rme_core/src/map.rs",
+        "crates/rme_core/src/io/xml.rs",
+        "crates/rme_core/src/io/mod.rs",
+        "crates/rme_core/src/editor.rs",
+        "tests/python/test_rme_core_editor_shell.py",
+        ".gsd/milestones/M018-otbm-xml-serialization",
+        ".gsd/PROJECT.md",
+        ".gsd/REQUIREMENTS.md",
+        ".gsd/DECISIONS.md",
+        ".gsd/STATE.md"
+      ],
+      "files_modified": [
+        "crates/rme_core/src/map.rs",
+        "crates/rme_core/src/io/xml.rs",
+        "crates/rme_core/src/io/mod.rs",
+        "crates/rme_core/src/editor.rs",
+        "tests/python/test_rme_core_editor_shell.py",
+        ".gsd/milestones/M018-otbm-xml-serialization/M018-CONTEXT.md",
+        ".gsd/milestones/M018-otbm-xml-serialization/M018-SUMMARY.md",
+        ".gsd/milestones/M018-otbm-xml-serialization/slices/S01/S01-PLAN.md",
+        ".gsd/milestones/M018-otbm-xml-serialization/slices/S01/S01-SUMMARY.md",
+        ".gsd/milestones/M018-otbm-xml-serialization/slices/S01/tasks/T01-SUMMARY.md",
+        ".gsd/PROJECT.md",
+        ".gsd/REQUIREMENTS.md",
+        ".gsd/DECISIONS.md",
+        ".gsd/STATE.md",
+        ".gsd/task-registry.json"
+      ],
+      "tests_run": [
+        "RUSTFLAGS='-C link-arg=/usr/lib/x86_64-linux-gnu/libpython3.10.so.1.0' cargo test -p rme_core",
+        "PYO3_PYTHON='./.venv/bin/python3.12' cargo build -p rme_core",
+        "./.venv/bin/python3.12 -m pytest tests/python/test_rme_core_editor_shell.py -q --tb=short",
+        "./.venv/bin/python3.12 -m pytest tests/python/ -q --tb=short",
+        "npm run preflight"
+      ],
+      "verification": {
+        "status": "passed",
+        "notes": [
+          "Rust core tests passed with 66 tests.",
+          "Native PyO3 module rebuilt for Python 3.12.",
+          "Python editor-shell bridge tests passed with 3 tests.",
+          "Full local Python suite passed with 270 tests.",
+          "npm run preflight passed.",
+          "Sidecar XML matches legacy tag and attribute names from map_xml_io.cpp."
+        ]
+      },
+      "notes": [
+        "XML readback remains future scope.",
+        "No new third-party XML library was introduced; builders use Rust strings and std::fs::write."
+      ],
+      "recorded_at": "2026-04-24T01:01:54-03:00",
+      "updated_at": "2026-04-24T01:01:54-03:00",
+      "completed_at": "2026-04-24T01:01:54-03:00"
     }
   ]
 }

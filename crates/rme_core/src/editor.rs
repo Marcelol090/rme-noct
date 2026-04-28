@@ -9,7 +9,9 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 use crate::item::Item;
-use crate::map::{MapModel, MapPosition, DEFAULT_X, DEFAULT_Y, DEFAULT_Z};
+use crate::map::{
+    Creature, House, MapModel, MapPosition, Spawn, Waypoint, DEFAULT_X, DEFAULT_Y, DEFAULT_Z,
+};
 use crate::rendering::{RenderBudget, RenderState};
 
 /// Minimal editor state placeholder.
@@ -161,14 +163,18 @@ impl EditorShellState {
     /// Sets ground item on tile at position. Creates tile if needed.
     fn set_tile_ground(&mut self, x: i32, y: i32, z: i32, item_id: u16) -> bool {
         let pos = MapPosition::new(x, y, z);
-        self.map.get_or_create_tile(pos).set_ground(Some(Item::new(item_id)));
+        self.map
+            .get_or_create_tile(pos)
+            .set_ground(Some(Item::new(item_id)));
         true
     }
 
     /// Adds an item to the tile stack at position. Creates tile if needed.
     fn add_tile_item(&mut self, x: i32, y: i32, z: i32, item_id: u16) -> bool {
         let pos = MapPosition::new(x, y, z);
-        self.map.get_or_create_tile(pos).add_item(Item::new(item_id));
+        self.map
+            .get_or_create_tile(pos)
+            .add_item(Item::new(item_id));
         true
     }
 
@@ -183,10 +189,67 @@ impl EditorShellState {
         self.map.tile_count()
     }
 
-
     /// Returns the map mutation generation counter.
     fn map_generation(&self) -> u64 {
         self.map.generation()
+    }
+
+    // --- XML sidecar bridge ---
+
+    fn add_waypoint(&mut self, name: &str, x: i32, y: i32, z: i32) -> bool {
+        self.map
+            .add_waypoint(Waypoint::new(name, MapPosition::new(x, y, z)));
+        true
+    }
+
+    fn add_spawn(&mut self, centerx: i32, centery: i32, centerz: i32, radius: i32) -> usize {
+        self.map.add_spawn(Spawn::new(
+            MapPosition::new(centerx, centery, centerz),
+            radius,
+        ))
+    }
+
+    fn add_spawn_creature(
+        &mut self,
+        spawn_index: usize,
+        name: &str,
+        x: i32,
+        y: i32,
+        spawntime: u32,
+        is_npc: bool,
+        direction: u8,
+    ) -> PyResult<bool> {
+        self.map
+            .add_spawn_creature(
+                spawn_index,
+                Creature::new(name, x, y, spawntime, is_npc, direction),
+            )
+            .map(|()| true)
+            .map_err(PyValueError::new_err)
+    }
+
+    fn add_house(
+        &mut self,
+        houseid: u32,
+        name: &str,
+        entryx: i32,
+        entryy: i32,
+        entryz: i32,
+        rent: u32,
+        townid: u32,
+        guildhall: bool,
+        size: u32,
+    ) -> bool {
+        self.map.add_house(House::new(
+            houseid,
+            name,
+            MapPosition::new(entryx, entryy, entryz),
+            rent,
+            townid,
+            guildhall,
+            size,
+        ));
+        true
     }
 
     // --- OTBM persistence bridge ---
@@ -206,6 +269,8 @@ impl EditorShellState {
     fn save_otbm(&mut self, path: &str) -> PyResult<()> {
         crate::io::otbm::save_otbm(&self.map, path)
             .map_err(|e| PyValueError::new_err(format!("OTBM save error: {e:?}")))?;
+        crate::io::xml::save_sidecar_xml(&self.map, path)
+            .map_err(|e| PyValueError::new_err(format!("XML save error: {e}")))?;
         self.map.mark_clean();
         Ok(())
     }
@@ -281,5 +346,16 @@ mod tests {
         assert_eq!(shell.map_generation(), 0);
         shell.set_tile_ground(1, 1, 0, 100);
         assert!(shell.map_generation() > 0);
+    }
+
+    #[test]
+    fn editor_bridge_stores_xml_sidecar_domains() {
+        let mut shell = EditorShellState::default();
+        assert!(shell.add_waypoint("Temple", 100, 200, 7));
+        let spawn_index = shell.add_spawn(101, 201, 7, 5);
+        assert!(shell
+            .add_spawn_creature(spawn_index, "Rat", 1, -1, 60, false, 2)
+            .unwrap());
+        assert!(shell.add_house(12, "Depot", 102, 202, 7, 500, 3, true, 14));
     }
 }

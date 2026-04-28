@@ -4,12 +4,14 @@
 **Active Slice:** none
 **Active Task:** none
 **Phase:** complete
-**Next Action:** Extract and review only the remaining scoped `pyrme/ui/main_window.py` hunks for M008, and leave the unrelated `package.json` `gsd:auto` delta out of the slice unless it is promoted into a separate preparatory scope.
-**Last Updated:** 2026-04-22T12:36:26-03:00
-**Requirements Status:** 0 active · 22 validated · 0 deferred · 3 out of scope
+**Next Action:** Plan the next persistence slice: XML readback/load integration for waypoints, spawns, and houses, or UI/domain workflows that populate these sidecar collections.
+**Last Updated:** 2026-04-24T01:01:54-03:00
+**Requirements Status:** 0 active · 23 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
+- `M018-otbm-xml-serialization` is complete: Python `save_otbm` now writes `.otbm` plus waypoint, spawn, and house XML sidecars through `rme_core`.
+- OTBM XML sidecars intentionally use legacy RME tag and attribute names from `source/io/map_xml_io.cpp`; readback remains future scope.
 - `remeres-map-editor-redux/data/menubar.xml` is the source of truth for legacy menu order, labels, and shortcuts.
 - `LEGACY-00-CONTRACT` is treated as completed foundation work: top-level menu tree, action metadata, and contract tests exist in the current shell.
 - `M5-SHELL-NAVIGATION` remains reusable shell-state infrastructure, but it is not counted as full legacy parity.
