@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import os
 import subprocess
 import time
@@ -14,6 +15,19 @@ if TYPE_CHECKING:
 ROOT = Path(__file__).resolve().parents[2]
 GSD_LOADER = ROOT / "node_modules" / "gsd-pi" / "dist" / "loader.js"
 GSD_PATCHER = ROOT / "scripts" / "patch-gsd-pi.mjs"
+GSD_CLI = ROOT / "node_modules" / "gsd-pi" / "dist" / "cli.js"
+GSD_HEADLESS = ROOT / "node_modules" / "gsd-pi" / "dist" / "headless.js"
+GSD_RPC_CLIENT = (
+    ROOT
+    / "node_modules"
+    / "gsd-pi"
+    / "packages"
+    / "pi-coding-agent"
+    / "dist"
+    / "modes"
+    / "rpc"
+    / "rpc-client.js"
+)
 
 
 def _wait_for(predicate: Callable[[], bool], timeout: float = 30.0, interval: float = 0.25) -> bool:
@@ -29,6 +43,47 @@ def _read_log(path: Path) -> str:
     if not path.exists():
         return ""
     return path.read_text(encoding="utf-8", errors="replace")
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def test_patcher_replaces_static_pi_coding_agent_barrels_with_lazy_loaders() -> None:
+    subprocess.run(["node", str(GSD_PATCHER)], cwd=ROOT, check=True)
+
+    cli_content = GSD_CLI.read_text(encoding="utf-8")
+    headless_content = GSD_HEADLESS.read_text(encoding="utf-8")
+
+    assert "from '@gsd/pi-coding-agent'" not in cli_content
+    assert "from '@gsd/pi-coding-agent'" not in headless_content
+    assert (
+        "// Lazy-load the print/RPC API without importing the full pi-coding-agent barrel."
+        in cli_content
+    )
+    assert "async function loadPiAgentPrintApi()" in cli_content
+    print_mode_branch = cli_content.index("if (isPrintMode) {")
+    top_level_cli_bootstrap = cli_content[:print_mode_branch]
+    assert "await loadPiAgentApi()" not in top_level_cli_bootstrap
+    assert "loadPiAgentApi()" not in cli_content
+    assert (
+        "// Lazy-load only the RPC/session modules we need instead of the pi-coding-agent barrel."
+        in headless_content
+    )
+    assert "async function loadPiAgentRpcClient()" in headless_content
+    assert "async function loadPiAgentSessionManager()" in headless_content
+
+
+def test_patcher_is_idempotent_for_gsd_entrypoints_and_rpc_client() -> None:
+    subprocess.run(["node", str(GSD_PATCHER)], cwd=ROOT, check=True)
+    patched_files = [GSD_CLI, GSD_HEADLESS, GSD_RPC_CLIENT]
+    hashes_after_first_run = {path: _sha256(path) for path in patched_files}
+
+    subprocess.run(["node", str(GSD_PATCHER)], cwd=ROOT, check=True)
+
+    assert {path: _sha256(path) for path in patched_files} == hashes_after_first_run
+    rpc_client_content = GSD_RPC_CLIENT.read_text(encoding="utf-8")
+    assert rpc_client_content.count("[rpc-client] spawn: node") == 1
 
 
 def test_headless_new_milestone_materializes_canonical_skeleton_before_prompt(
