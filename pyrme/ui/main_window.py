@@ -42,6 +42,7 @@ from pyrme.ui.dialogs import (
     GotoPositionDialog,
     MapPropertiesDialog,
 )
+from pyrme.ui.dialogs.welcome_dialog import WelcomeDialog
 from pyrme.ui.docks import BrushPaletteDock, MinimapDock, PropertiesDock, WaypointsDock
 from pyrme.ui.editor_context import EditorContext, EditorViewRecord, ShellStateSnapshot
 from pyrme.ui.legacy_menu_contract import (
@@ -52,6 +53,7 @@ from pyrme.ui.legacy_menu_contract import (
     LEGACY_VIEW_FLAG_DEFAULTS,
     PHASE1_ACTIONS,
 )
+from pyrme.ui.models.startup_models import StartupLoadRequest
 from pyrme.ui.styles import qss_color
 from pyrme.ui.theme import THEME, TYPOGRAPHY
 
@@ -154,6 +156,7 @@ class MainWindow(QMainWindow):
         self._active_brush_name = "Select"
         self._active_brush_id: str | None = None
         self._active_item_id: int | None = None
+        self._welcome_dialog: WelcomeDialog | None = None
         self._setup_window()
         self._setup_menu_bar()
         self._setup_toolbars()
@@ -175,6 +178,39 @@ class MainWindow(QMainWindow):
         self.setStyleSheet(
             f"QMainWindow {{ background-color: {qss_color(THEME.void_black)}; }}"
         )
+
+    def show_startup_dashboard(self) -> None:
+        """Display the welcome dialog dashboard."""
+        if self._welcome_dialog is None:
+            self._welcome_dialog = WelcomeDialog(parent=self)
+            self._welcome_dialog.new_map_requested.connect(self._on_welcome_new_map)
+            self._welcome_dialog.browse_map_requested.connect(
+                self._on_welcome_browse_map
+            )
+            self._welcome_dialog.load_requested.connect(self._on_welcome_load_map)
+            self._welcome_dialog.rejected.connect(self._on_welcome_rejected)
+        self._welcome_dialog.show()
+
+    def _on_welcome_new_map(self) -> None:
+        if self._welcome_dialog is not None:
+            self._welcome_dialog.accept()
+        self.file_new_action.trigger()
+
+    def _on_welcome_browse_map(self) -> None:
+        if self._welcome_dialog is not None:
+            self._welcome_dialog.accept()
+        self.file_open_action.trigger()
+
+    def _on_welcome_load_map(self, request: StartupLoadRequest) -> None:
+        if self._welcome_dialog is not None:
+            self._welcome_dialog.accept()
+        self._open_map_file(request.map_path)
+
+    def _on_welcome_rejected(self) -> None:
+        pass
+
+    def _open_map_file(self, path: str) -> None:
+        self._show_unavailable(f"Open map: {path}")
 
     def _setup_menu_bar(self) -> None:
         """Create the main menu bar."""
