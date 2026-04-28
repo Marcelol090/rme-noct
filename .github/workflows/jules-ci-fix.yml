@@ -1,0 +1,91 @@
+name: Jules CI Fix
+
+on:
+  workflow_run:
+    workflows:
+      - 'CI'
+    types:
+      - 'completed'
+  workflow_dispatch:
+    inputs:
+      additional_context:
+        description: 'Extra context for the CI repair run'
+        type: string
+        required: false
+        default: ''
+      starting_branch:
+        description: 'Optional branch override'
+        type: string
+        required: false
+        default: ''
+
+concurrency:
+  group: '${{ github.workflow }}-${{ github.event_name }}-${{ github.event.workflow_run.id || github.run_id }}'
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: 'bash'
+
+jobs:
+  prepare:
+    if: |-
+      ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && contains(fromJSON('["failure","timed_out"]'), github.event.workflow_run.conclusion)) }}
+    runs-on: 'ubuntu-latest'
+    permissions:
+      actions: 'read'
+      contents: 'read'
+    outputs:
+      additional_context: '${{ steps.context.outputs.additional_context }}'
+      starting_branch: '${{ steps.context.outputs.starting_branch }}'
+    steps:
+      - name: Resolve CI context
+        id: context
+        uses: 'actions/github-script@v7'
+        with:
+          script: |-
+            const isManual = context.eventName === 'workflow_dispatch';
+            const defaultBranch = context.payload.repository.default_branch;
+            const inputs = context.payload.inputs || {};
+
+            if (isManual) {
+              const additional = (inputs.additional_context || '').trim();
+              core.setOutput('starting_branch', (inputs.starting_branch || defaultBranch).trim());
+              core.setOutput('additional_context', [
+                'focus=ci',
+                additional,
+              ].filter(Boolean).join('\n').trim());
+              return;
+            }
+
+            const run = context.payload.workflow_run;
+            const logs = await github.rest.actions.downloadWorkflowRunLogs({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: run.id,
+            });
+
+            const lines = [
+              'focus=ci',
+              `workflow_name=${run.name}`,
+              `workflow_url=${run.html_url}`,
+              `logs_url=${logs.url}`,
+              `branch=${run.head_branch}`,
+              `commit=${run.head_sha}`,
+              `conclusion=${run.conclusion}`,
+            ];
+
+            core.setOutput('starting_branch', run.head_branch || defaultBranch);
+            core.setOutput('additional_context', lines.join('\n'));
+
+  invoke:
+    needs:
+      - 'prepare'
+    uses: './.github/workflows/jules-invoke.yml'
+    secrets: 'inherit'
+    with:
+      additional_context: '${{ needs.prepare.outputs.additional_context }}'
+      focus: 'ci'
+      include_commit_log: false
+      include_last_commit: true
+      starting_branch: '${{ needs.prepare.outputs.starting_branch }}'

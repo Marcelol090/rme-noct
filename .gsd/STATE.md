@@ -4,12 +4,14 @@
 **Active Slice:** none
 **Active Task:** none
 **Phase:** complete
-**Next Action:** Extract and review only the remaining scoped `pyrme/ui/main_window.py` hunks for M008, and leave the unrelated `package.json` `gsd:auto` delta out of the slice unless it is promoted into a separate preparatory scope.
-**Last Updated:** 2026-04-22T12:36:26-03:00
-**Requirements Status:** 0 active · 22 validated · 0 deferred · 3 out of scope
+**Next Action:** Plan the next persistence slice: XML readback/load integration for waypoints, spawns, and houses, or UI/domain workflows that populate these sidecar collections.
+**Last Updated:** 2026-04-24T01:01:54-03:00
+**Requirements Status:** 0 active · 23 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
+- `M018-otbm-xml-serialization` is complete: Python `save_otbm` now writes `.otbm` plus waypoint, spawn, and house XML sidecars through `rme_core`.
+- OTBM XML sidecars intentionally use legacy RME tag and attribute names from `source/io/map_xml_io.cpp`; readback remains future scope.
 - `remeres-map-editor-redux/data/menubar.xml` is the source of truth for legacy menu order, labels, and shortcuts.
 - `LEGACY-00-CONTRACT` is treated as completed foundation work: top-level menu tree, action metadata, and contract tests exist in the current shell.
 - `M5-SHELL-NAVIGATION` remains reusable shell-state infrastructure, but it is not counted as full legacy parity.
@@ -66,7 +68,9 @@
 - `BRUSH-20-SHELL-COMMAND-WIRING/T04` is complete: activation backend, new-view, and canvas seam regressions remain green alongside the new shell wiring tests.
 - `BRUSH-20-SHELL-COMMAND-WIRING/T05` is complete: M008 closeout recorded real verification, corrected the stale UI smoke command, and kept next action limited to scoped review/staging.
 - `BRUSH-20-SHELL-COMMAND-WIRING` is complete: S01 verified shell wiring behavior with 53 targeted Python tests passing, preflight passing in WSL, and an honest offscreen startup smoke that kept the known `QOpenGLWidget` limitation explicit.
-
+- `M015-core-map-model` is complete: basic sparse map storage and metadata logic was ported to `rme_core` and exposed via PyO3, with 50 targeted Rust tests passing and 268 Python tests passing.
+- `M016-otbm-persistence` (Read phase) is complete: binary tree parsing of OTBM nodes, metadata attributes, tile areas, and items successfully ported to `rme_core`, with 59 targeted Rust tests and 268 Python tests passing.
+- `M017-otbm-persistence` (Write phase) is complete: binary tree generation of OTBM nodes, metadata attributes, tile areas, and items successfully ported to `rme_core`, integrating Python bridge test coverage for `save_otbm`.
 ## Blockers
 
 - `GSD auto` still stalls with the installed local `qwen2.5-coder:3b` model: it completes with 0 tool calls while planning `M001-1pt4oy/S12`. Manual materialization was used for S12-S15 after local verification.

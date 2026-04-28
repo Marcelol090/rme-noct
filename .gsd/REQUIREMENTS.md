@@ -10,6 +10,17 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 ## Validated
 
+### R048 - OTBM save must emit legacy XML sidecars
+- Class: core-capability
+- Status: validated
+- Description: Python `EditorShellState.save_otbm()` must write waypoint, spawn, and house XML sidecars beside the binary `.otbm` output using legacy RME tag and attribute names.
+- Why it matters: OpenTibia map persistence is incomplete without these sidecar files; servers and legacy RME workflows rely on them alongside the binary map.
+- Source: execution
+- Primary owning slice: M018-otbm-xml-serialization/S01
+- Supporting slices: M015-core-map-model, M017-otbm-persistence
+- Validation: validated
+- Notes: Verified by `tests/python/test_rme_core_editor_shell.py` plus `cargo test -p rme_core`; XML readback remains future scope.
+
 ### R047 - Brush shell commands must drive the canonical activation backend
 - Class: primary-user-loop
 - Status: validated
@@ -317,6 +328,7 @@ Use it to track what is actively in scope, what has been validated by completed 
 | R045 | core-capability | validated | CANVAS-50-DIAGNOSTIC-TILE-PRIMITIVES | CANVAS-40-RENDER-FRAME-PLAN, CANVAS-30-MAP-VIEW-MATH | validated |
 | R046 | core-capability | validated | CANVAS-60-SPRITE-RESOLVER-CONTRACT | CANVAS-61-FRAME-SPRITE-RESOURCES, CANVAS-62-SPRITE-RESOLVER-DIAGNOSTICS | validated |
 | R047 | primary-user-loop | validated | BRUSH-20-SHELL-COMMAND-WIRING | BRUSH-10-ACTIVATION-BACKEND-CONTRACT, ITEM-10-MODEL-VIEW-PALETTE | validated |
+| R048 | core-capability | validated | M018-otbm-xml-serialization/S01 | M015-core-map-model, M017-otbm-persistence | validated |
 | R030 | anti-feature | out-of-scope | none | none | n/a |
 | R031 | constraint | out-of-scope | none | none | n/a |
 | R032 | constraint | out-of-scope | none | none | n/a |
@@ -324,6 +336,6 @@ Use it to track what is actively in scope, what has been validated by completed 
 ## Coverage Summary
 
 - Active requirements: 0
-- Mapped to slices: 22
-- Validated: 22
+- Mapped to slices: 23
+- Validated: 23
 - Unmapped active requirements: 0
