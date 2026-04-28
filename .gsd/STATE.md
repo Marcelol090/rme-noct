@@ -4,9 +4,9 @@
 **Active Slice:** none
 **Active Task:** none
 **Phase:** complete
-**Next Action:** Parse SPR frame table metadata from discovered sprite files after DAT metadata, still without SPR pixel decoding, atlas texture construction, or sprite painting.
-**Last Updated:** 2026-04-25T12:25:48-03:00
-**Requirements Status:** 0 active · 30 validated · 0 deferred · 3 out of scope
+**Next Action:** Decode compressed SPR RLE payloads into fixed 32x32 RGBA buffers after raw payload reads, still without atlas texture construction or sprite painting.
+**Last Updated:** 2026-04-25T17:54:57-03:00
+**Requirements Status:** 0 active · 32 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
@@ -40,6 +40,8 @@
 - `CANVAS-140-CLIENT-ASSET-DISCOVERY` is complete: renderer asset discovery now resolves configured DAT/SPR files under a client root, falls back to `Tibia.dat`/`Tibia.spr`, and pairs discovery with fixture bundle providers without opening files.
 - `CANVAS-150-CLIENT-ASSET-SIGNATURES` is complete: renderer asset discovery now reads only DAT/SPR header signatures from discovered files with legacy-style open/header warnings, while record parsing, pixels, texture ownership, and sprite painting remain future work.
 - `CANVAS-160-DAT-ITEM-METADATA` is complete: renderer asset parsing now reads DAT item metadata into `DatSpriteRecord` rows with explicit DAT format flag remapping, while SPR frame parsing, pixels, texture ownership, and sprite painting remain future work.
+- `CANVAS-170-SPR-FRAME-TABLE` is complete: renderer asset parsing now reads SPR signature, sprite count, and archive offset table into `SprFrameRecord` rows with retained archive offsets, while compressed pixels, texture ownership, and sprite painting remain future work.
+- `CANVAS-180-SPR-COMPRESSED-PAYLOAD` is complete: renderer asset parsing now reads raw compressed SPR payload bytes from archive offsets, while RLE decompression, texture ownership, and sprite painting remain future work.
 
 ## Blockers
 

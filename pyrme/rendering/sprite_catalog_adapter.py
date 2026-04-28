@@ -29,6 +29,7 @@ class SprFrameRecord:
     height: int
     offset_x: int = 0
     offset_y: int = 0
+    archive_offset: int = 0
 
 
 def build_sprite_catalog_from_dat_records(
@@ -84,5 +85,6 @@ def _frame_metadata(frame: SprFrameRecord) -> Mapping[str, Any]:
             "frame_index": frame.frame_index,
             "size": (frame.width, frame.height),
             "offset": (frame.offset_x, frame.offset_y),
+            "archive_offset": frame.archive_offset,
         }
     )

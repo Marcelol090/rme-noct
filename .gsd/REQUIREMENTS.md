@@ -10,6 +10,28 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 ## Validated
 
+### R057 - Renderer asset parser must read SPR compressed payloads before decoding pixels
+- Class: core-capability
+- Status: validated
+- Description: The renderer asset path must read raw compressed SPR payload bytes from archive offsets after frame-table metadata and before RLE decompression, atlas textures, or drawing.
+- Why it matters: Legacy sprite loading separates `SpriteArchive::readCompressed()` from `GameSprite::Decompress()`, so Python needs a tested raw-payload seam before interpreting pixels.
+- Source: execution
+- Primary owning slice: CANVAS-180-SPR-COMPRESSED-PAYLOAD
+- Supporting slices: CANVAS-170-SPR-FRAME-TABLE, CANVAS-160-DAT-ITEM-METADATA, CANVAS-150-CLIENT-ASSET-SIGNATURES
+- Validation: validated
+- Notes: Verified by `tests/python/test_spr_compressed_payload.py`; parsing seeks to `archive_offset + 3`, reads little-endian `u16` compressed sizes, returns exact raw payload bytes, reports explicit empty payloads for sprite id `0` or offset `0`, and rejects negative offsets, offsets outside data, truncated sizes, and truncated payload bytes without decoding RLE pixels.
+
+### R056 - Renderer asset parser must read SPR frame tables before pixels
+- Class: core-capability
+- Status: validated
+- Description: The renderer asset path must parse SPR signature, sprite count, and archive offset tables into frame metadata after DAT item metadata and before compressed pixel reads.
+- Why it matters: Legacy sprite loading builds an offset table first and only reads compressed sprite payloads later, so Python needs the same safe metadata seam before decoding pixels or claiming rendering.
+- Source: execution
+- Primary owning slice: CANVAS-170-SPR-FRAME-TABLE
+- Supporting slices: CANVAS-160-DAT-ITEM-METADATA, CANVAS-150-CLIENT-ASSET-SIGNATURES, CANVAS-80-SPR-FRAME-METADATA
+- Validation: validated
+- Notes: Verified by `tests/python/test_spr_frame_metadata.py`; parsing reads SPR signature, compact or extended sprite counts, one `u32` archive offset per sprite id, emits `SprFrameRecord` rows for nonzero offsets, preserves `archive_offset` in catalog metadata, and rejects excessive counts or truncated offset tables without decoding compressed pixels.
+
 ### R055 - Renderer asset parser must read DAT item metadata before SPR pixels
 - Class: core-capability
 - Status: validated
@@ -413,6 +435,8 @@ Use it to track what is actively in scope, what has been validated by completed 
 | R053 | core-capability | validated | CANVAS-140-CLIENT-ASSET-DISCOVERY | CANVAS-130-SPRITE-ASSET-BUNDLE, CANVAS-120-SPRITE-ASSET-PROVIDER | validated |
 | R054 | core-capability | validated | CANVAS-150-CLIENT-ASSET-SIGNATURES | CANVAS-140-CLIENT-ASSET-DISCOVERY, CANVAS-130-SPRITE-ASSET-BUNDLE, CANVAS-120-SPRITE-ASSET-PROVIDER | validated |
 | R055 | core-capability | validated | CANVAS-160-DAT-ITEM-METADATA | CANVAS-150-CLIENT-ASSET-SIGNATURES, CANVAS-140-CLIENT-ASSET-DISCOVERY, CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER | validated |
+| R056 | core-capability | validated | CANVAS-170-SPR-FRAME-TABLE | CANVAS-160-DAT-ITEM-METADATA, CANVAS-150-CLIENT-ASSET-SIGNATURES, CANVAS-80-SPR-FRAME-METADATA | validated |
+| R057 | core-capability | validated | CANVAS-180-SPR-COMPRESSED-PAYLOAD | CANVAS-170-SPR-FRAME-TABLE, CANVAS-160-DAT-ITEM-METADATA, CANVAS-150-CLIENT-ASSET-SIGNATURES | validated |
 | R030 | anti-feature | out-of-scope | none | none | n/a |
 | R031 | constraint | out-of-scope | none | none | n/a |
 | R032 | constraint | out-of-scope | none | none | n/a |
@@ -420,6 +444,6 @@ Use it to track what is actively in scope, what has been validated by completed 
 ## Coverage Summary
 
 - Active requirements: 0
-- Mapped to slices: 30
-- Validated: 30
+- Mapped to slices: 32
+- Validated: 32
 - Unmapped active requirements: 0

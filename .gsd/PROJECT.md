@@ -10,7 +10,7 @@ Legacy parity should advance in small, verifiable slices with XML-backed tests, 
 
 ## Current State
 
-Milestone `M001-1pt4oy` remains closed on disk: all legacy parity slices `LEGACY-00-CONTRACT` through `LEGACY-140-FINAL-AUDIT` are completed and summarized, and the Python shell is verified against `remeres-map-editor-redux/data/menubar.xml` for every in-scope top-level legacy menu family. Milestone `M002-canvas-renderer` is closed: the production default canvas is a real `QOpenGLWidget` host, each editor view owns an independent viewport model, and default canvas input uses legacy-style screen/map translation over that viewport model. Milestone `M003-render` is closed with the first draw-planning seam: map tiles are converted into a stable frame plan. Milestone `M004-render-primitives` is closed with diagnostic tile primitives. Milestones `M005` through `M014` close the sprite planning ladder from catalog seam through client asset signature reads. Milestone `M019` adds DAT item metadata parsing, while SPR frame parsing and real sprite painting remain future work.
+Milestone `M001-1pt4oy` remains closed on disk: all legacy parity slices `LEGACY-00-CONTRACT` through `LEGACY-140-FINAL-AUDIT` are completed and summarized, and the Python shell is verified against `remeres-map-editor-redux/data/menubar.xml` for every in-scope top-level legacy menu family. Milestone `M002-canvas-renderer` is closed: the production default canvas is a real `QOpenGLWidget` host, each editor view owns an independent viewport model, and default canvas input uses legacy-style screen/map translation over that viewport model. Milestone `M003-render` is closed with the first draw-planning seam: map tiles are converted into a stable frame plan. Milestone `M004-render-primitives` is closed with diagnostic tile primitives. Milestones `M005` through `M014` close the sprite planning ladder from catalog seam through client asset signature reads. Milestone `M019` adds DAT item metadata parsing. Milestone `M020` adds SPR frame table parsing. Milestone `M021` adds raw compressed SPR payload reads, while decompression and real sprite painting remain future work.
 
 ## Architecture / Key Patterns
 
@@ -41,3 +41,5 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract and slice owners
 | M013 | Client asset discovery | Complete - `S01 / CANVAS-140-CLIENT-ASSET-DISCOVERY` verified and summarized |
 | M014 | Client asset signatures | Complete - `S01 / CANVAS-150-CLIENT-ASSET-SIGNATURES` verified and summarized |
 | M019 | DAT item metadata | Complete - `S01 / CANVAS-160-DAT-ITEM-METADATA` verified and summarized |
+| M020 | SPR frame table metadata | Complete - `S01 / CANVAS-170-SPR-FRAME-TABLE` verified and summarized |
+| M021 | SPR compressed payload reads | Complete - `S01 / CANVAS-180-SPR-COMPRESSED-PAYLOAD` verified and summarized |
