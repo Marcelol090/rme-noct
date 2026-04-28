@@ -4,9 +4,9 @@
 **Active Slice:** none
 **Active Task:** none
 **Phase:** complete
-**Next Action:** Extract and review only the remaining scoped `pyrme/ui/main_window.py` hunks for M008, and leave the unrelated `package.json` `gsd:auto` delta out of the slice unless it is promoted into a separate preparatory scope.
-**Last Updated:** 2026-04-22T12:36:26-03:00
-**Requirements Status:** 0 active · 22 validated · 0 deferred · 3 out of scope
+**Next Action:** Decode compressed SPR RLE payloads into fixed 32x32 RGBA buffers after raw payload reads, still without atlas texture construction or sprite painting.
+**Last Updated:** 2026-04-25T17:54:57-03:00
+**Requirements Status:** 0 active · 32 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
@@ -28,52 +28,22 @@
 - `CANVAS-40-RENDER-FRAME-PLAN` is complete: the renderer path now builds a stable `CanvasFrame` from `MapModel` and the active `EditorViewport`, reports visible tiles, map generation, and visible rect, and still avoids pretending sprites are drawn.
 - `CANVAS-50-DIAGNOSTIC-TILE-PRIMITIVES` is complete: frame-plan tile commands now project into screen-space diagnostic rectangles and the renderer host reports primitive count without claiming sprite parity.
 - Workflow health remediation is complete: `npm run preflight` now reflects the integrated Codex session, optional local agent TOML files, optional standalone Context7 CLI, and Windows `.venv` Python runtime.
-- Workflow health remediation now also holds in WSL: npm Python scripts launch through `scripts/run-python.mjs`, and the repo no longer forces Windows `cmd.exe` as the npm script shell.
-- `M005-sprite-resolver` was completed in manual GSD mode: Ollama/GSD auto were not required, and the milestone added an honest item-id to sprite-resource resolver before any draw pass.
-- `CANVAS-60-SPRITE-RESOLVER-CONTRACT/T01` is complete: immutable sprite lookup result statuses and payload fields are covered by `tests/python/test_sprite_resolver.py`.
-- `CANVAS-60-SPRITE-RESOLVER-CONTRACT/T02` is complete: `SpriteResourceResolver` maps known item ids to primary sprite ids and reports unknown items explicitly.
-- `CANVAS-60-SPRITE-RESOLVER-CONTRACT/T03` is complete: sprite payload lookup resolves pixel bytes when available and keeps missing-sprite status explicit when absent.
-- `CANVAS-60-SPRITE-RESOLVER-CONTRACT/T04` is complete: repeated item lookups are cached and cache invalidation is tied to explicit source replacement.
-- `CANVAS-60-SPRITE-RESOLVER-CONTRACT` is complete: S01 verified the sprite resolver contract with 249 local Python tests passing and S02 is now open for frame-plan resource integration.
-- `CANVAS-61-FRAME-SPRITE-RESOURCES/T01` is complete: immutable frame sprite resource records carry tile position, item id, stack layer, and resolver result without changing renderer drawing.
-- `CANVAS-61-FRAME-SPRITE-RESOURCES/T02` is complete: pure frame sprite resource collection resolves ordered ground items through `SpriteResourceResolver`.
-- `CANVAS-61-FRAME-SPRITE-RESOURCES/T03` is complete: frame sprite resource collection appends stack item resources after each tile ground item while preserving item order.
-- `CANVAS-61-FRAME-SPRITE-RESOURCES/T04` is complete: missing item and missing sprite resolver outcomes stay in frame sprite resource output.
-- `CANVAS-61-FRAME-SPRITE-RESOURCES` is complete: S02 verified pure frame-plan sprite resource records with 254 local Python tests passing and S03 is now open for renderer diagnostics.
-- `CANVAS-62-SPRITE-RESOLVER-DIAGNOSTICS/T01` is complete: pure immutable diagnostics count total, resolved, missing-item, and missing-sprite resource outcomes.
-- `CANVAS-62-SPRITE-RESOLVER-DIAGNOSTICS/T02` is complete: sprite resource diagnostics expose stable summary text for empty, resolved, and missing states.
-- `CANVAS-62-SPRITE-RESOLVER-DIAGNOSTICS/T03` is complete: renderer host diagnostic text now includes initialized sprite resource diagnostics without changing drawing behavior.
-- `CANVAS-62-SPRITE-RESOLVER-DIAGNOSTICS/T04` is complete: renderer host sync now builds frame sprite diagnostics through an explicit resolver seam and reports honest missing-item defaults.
-- `CANVAS-62-SPRITE-RESOLVER-DIAGNOSTICS` is complete: S03 verified sprite resource diagnostics with 260 local Python tests passing.
-- `M005-sprite-resolver` is complete: item-id sprite resolution, frame resource records, and renderer diagnostic counts are tested while renderer drawing remains diagnostic-only.
-- `M006-item-palette` was completed in manual GSD mode: the brush palette `Item` tab is search-first, model-backed, cached, and tested without claiming sprite rendering or full brush backend activation.
-- `ITEM-10-MODEL-VIEW-PALETTE/T01` is complete: immutable item/category/query data contracts and cached catalog/result/category models are covered by item palette model tests.
-- `ITEM-10-MODEL-VIEW-PALETTE/T02` is complete: `ItemPaletteWidget` loads item entries, filters through public search API, narrows by category, emits selected items, and shows honest empty state.
-- `ITEM-10-MODEL-VIEW-PALETTE/T03` is complete: `BrushPaletteDock` mounts the real Item palette, delegates search, re-emits item selection, and preserves other tab navigation.
-- `ITEM-10-MODEL-VIEW-PALETTE/T04` is complete: 50k-item load/search/category/cache performance assumptions and adjacent brush palette behavior are verified.
-- `ITEM-10-MODEL-VIEW-PALETTE/T05` is complete: caveman-review gap on empty-state alignment was fixed with RED/GREEN test evidence.
-- `ITEM-10-MODEL-VIEW-PALETTE` is complete: S01 verified item palette model/view behavior with 49 targeted Python tests passing, 261 full Python tests passing, preflight passing, and ruff clean.
-- `M007-brush-activation-backend` was completed in manual GSD mode: backend mode, active brush id, active item id, and tool application behavior are covered without mixing pending UI-shell changes.
-- `BRUSH-10-ACTIVATION-BACKEND-CONTRACT/T01` is complete: session activation fields delegate to `EditorModel`.
-- `BRUSH-10-ACTIVATION-BACKEND-CONTRACT/T02` is complete: backend activation commands and invalid mode normalization are covered.
-- `BRUSH-10-ACTIVATION-BACKEND-CONTRACT/T03` is complete: selection, drawing, erasing, preserved stack, and unsupported/no-active-item no-op paths are tested.
-- `BRUSH-10-ACTIVATION-BACKEND-CONTRACT/T04` is complete: M007 closeout recorded verification and kept UI-shell dirty work unstaged.
-- `BRUSH-10-ACTIVATION-BACKEND-CONTRACT` is complete: S01 verified backend activation behavior with 9 targeted Python tests passing, 261 full Python tests passing, preflight passing, and ruff clean.
-- `M008-brush-shell-wiring` was completed in manual GSD mode: local jump dialogs, palette switching, brush mode toolbar state, and WSL preflight now align the UI shell with the canonical backend contract without widening into renderer work.
-- `BRUSH-20-SHELL-COMMAND-WIRING/T01` is complete: WSL preflight now launches through a repo-local Python helper and platform-default npm script shell instead of hardcoded Windows `py -3` / `cmd.exe`.
-- `BRUSH-20-SHELL-COMMAND-WIRING/T02` is complete: `FindBrushDialog` exposes palette and item-backed brush search results through a public dialog export seam.
-- `BRUSH-20-SHELL-COMMAND-WIRING/T03` is complete: `Jump to Brush`, `Jump to Item`, palette switching, brush mode toolbar state, and adjacent editor shell actions now drive canonical backend/session state through focused `MainWindow` tests.
-- `BRUSH-20-SHELL-COMMAND-WIRING/T04` is complete: activation backend, new-view, and canvas seam regressions remain green alongside the new shell wiring tests.
-- `BRUSH-20-SHELL-COMMAND-WIRING/T05` is complete: M008 closeout recorded real verification, corrected the stale UI smoke command, and kept next action limited to scoped review/staging.
-- `BRUSH-20-SHELL-COMMAND-WIRING` is complete: S01 verified shell wiring behavior with 53 targeted Python tests passing, preflight passing in WSL, and an honest offscreen startup smoke that kept the known `QOpenGLWidget` limitation explicit.
-- `M015-core-map-model` is complete: basic sparse map storage and metadata logic was ported to `rme_core` and exposed via PyO3, with 50 targeted Rust tests passing and 268 Python tests passing.
-- `M016-otbm-persistence` (Read phase) is complete: binary tree parsing of OTBM nodes, metadata attributes, tile areas, and items successfully ported to `rme_core`, with 59 targeted Rust tests and 268 Python tests passing.
-- `M017-otbm-persistence` (Write phase) is complete: binary tree generation of OTBM nodes, metadata attributes, tile areas, and items successfully ported to `rme_core`, integrating Python bridge test coverage for `save_otbm`.
+- `M005/S01` starts as a planning slice for a sprite catalog seam; metadata stays `None` by default, `build_sprite_frame` must not read metadata in this milestone, and `DatDatabase` remains adapter-level only.
+- `CANVAS-60-SPRITE-CATALOG-SEAM` is complete: `SpriteCatalog`, `SpriteCatalogEntry`, and `build_sprite_frame` now resolve frame-plan item ids and report deterministic unresolved ids without reading metadata or importing DAT/SPR adapter types.
+- `CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER` is complete: DAT-like item sprite records now build `SpriteCatalog` entries with adapter-owned metadata while frame planning remains free of DAT adapter imports.
+- `CANVAS-80-SPR-FRAME-METADATA` is complete: SPR-like frame records now attach sorted frame metadata to matching `SpriteCatalog` entries without parsing files, decoding pixels, or planning atlas placement.
+- `CANVAS-90-SPRITE-DRAW-COMMAND-PLAN` is complete: resolved sprite-frame data now converts into deterministic atlas-backed draw commands with source/destination rectangles and missing draw-input reporting, without painting pixels.
+- `CANVAS-100-SPRITE-DRAW-DIAGNOSTICS` is complete: the canvas host now accepts sprite draw plans and reports command counts plus unresolved sprite ids in diagnostics, without painting sprites.
+- `CANVAS-110-LIVE-SPRITE-DRAW-PLAN` is complete: canvas hosts now derive sprite draw plan diagnostics from live `CanvasFrame` data using injected fixture `SpriteCatalog` and `SpriteAtlas` inputs, while explicit draw-plan injection remains an override.
+- `CANVAS-120-SPRITE-ASSET-PROVIDER` is complete: canvas hosts now consume live sprite draw assets through a provider seam that supplies catalog and atlas inputs together, while direct fixture inputs and explicit draw-plan overrides remain supported.
+- `CANVAS-130-SPRITE-ASSET-BUNDLE` is complete: sprite draw assets can now be grouped as a fixture bundle of DAT-like records, SPR-like frames, and atlas regions that implements the provider seam without file IO or pixel work.
+- `CANVAS-140-CLIENT-ASSET-DISCOVERY` is complete: renderer asset discovery now resolves configured DAT/SPR files under a client root, falls back to `Tibia.dat`/`Tibia.spr`, and pairs discovery with fixture bundle providers without opening files.
+- `CANVAS-150-CLIENT-ASSET-SIGNATURES` is complete: renderer asset discovery now reads only DAT/SPR header signatures from discovered files with legacy-style open/header warnings, while record parsing, pixels, texture ownership, and sprite painting remain future work.
+- `CANVAS-160-DAT-ITEM-METADATA` is complete: renderer asset parsing now reads DAT item metadata into `DatSpriteRecord` rows with explicit DAT format flag remapping, while SPR frame parsing, pixels, texture ownership, and sprite painting remain future work.
+- `CANVAS-170-SPR-FRAME-TABLE` is complete: renderer asset parsing now reads SPR signature, sprite count, and archive offset table into `SprFrameRecord` rows with retained archive offsets, while compressed pixels, texture ownership, and sprite painting remain future work.
+- `CANVAS-180-SPR-COMPRESSED-PAYLOAD` is complete: renderer asset parsing now reads raw compressed SPR payload bytes from archive offsets, while RLE decompression, texture ownership, and sprite painting remain future work.
+
 ## Blockers
 
 - `GSD auto` still stalls with the installed local `qwen2.5-coder:3b` model: it completes with 0 tool calls while planning `M001-1pt4oy/S12`. Manual materialization was used for S12-S15 after local verification.
 - `QOpenGLWidget` under `QT_QPA_PLATFORM=offscreen` still reports invalid contexts locally, so slice verification relies on protocol behavior and honest diagnostics rather than requiring a live GL context in CI.
-- Local network/socket health is restored: `git fetch origin` works and Ollama `/v1/models` responds. Branch remains `ahead 5, behind 6` with a dirty worktree after the M007 local commit, so do not rebase or publish until scoped changes are staged and committed cleanly.
-- Current dirty worktree mixes older legacy-shell/tooling changes. Do not stage `pyrme/ui/main_window.py` file-wide without reviewing mixed hunks.
-- `npm run gsd:status --silent` timed out in this WSL session without returning output, so M008 closeout used direct artifact updates instead of GSD status output.
-- GSD status works in degraded filesystem mode on Windows; native addon/registry warnings remain non-blocking for manual GSD updates.

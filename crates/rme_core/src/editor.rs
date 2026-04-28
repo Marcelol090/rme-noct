@@ -8,8 +8,7 @@ use std::collections::BTreeMap;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
-use crate::item::Item;
-use crate::map::{MapModel, MapPosition, DEFAULT_X, DEFAULT_Y, DEFAULT_Z};
+use crate::map::{MapModel, DEFAULT_X, DEFAULT_Y, DEFAULT_Z};
 use crate::rendering::{RenderBudget, RenderState};
 
 /// Minimal editor state placeholder.
@@ -144,86 +143,6 @@ impl EditorShellState {
             )
             .as_tuple()
     }
-
-    // --- Tile storage bridge ---
-
-    /// Returns tile data as a Python dict-friendly tuple, or None.
-    /// Format: (ground_id_or_none, [item_ids], house_id, mapflags)
-    fn get_tile_data(&self, x: i32, y: i32, z: i32) -> Option<(Option<u16>, Vec<u16>, u32, u32)> {
-        let pos = MapPosition::new(x, y, z);
-        self.map.get_tile(&pos).map(|t| {
-            let ground_id = t.ground().map(|g| g.id());
-            let item_ids: Vec<u16> = t.items().iter().map(|i| i.id()).collect();
-            (ground_id, item_ids, t.house_id(), t.mapflags())
-        })
-    }
-
-    /// Sets ground item on tile at position. Creates tile if needed.
-    fn set_tile_ground(&mut self, x: i32, y: i32, z: i32, item_id: u16) -> bool {
-        let pos = MapPosition::new(x, y, z);
-        self.map.get_or_create_tile(pos).set_ground(Some(Item::new(item_id)));
-        true
-    }
-
-    /// Adds an item to the tile stack at position. Creates tile if needed.
-    fn add_tile_item(&mut self, x: i32, y: i32, z: i32, item_id: u16) -> bool {
-        let pos = MapPosition::new(x, y, z);
-        self.map.get_or_create_tile(pos).add_item(Item::new(item_id));
-        true
-    }
-
-    /// Removes tile at position. Returns true if tile existed.
-    fn remove_tile(&mut self, x: i32, y: i32, z: i32) -> bool {
-        let pos = MapPosition::new(x, y, z);
-        self.map.remove_tile(&pos).is_some()
-    }
-
-    /// Returns number of stored tiles.
-    fn tile_count(&self) -> usize {
-        self.map.tile_count()
-    }
-
-
-    /// Returns the map mutation generation counter.
-    fn map_generation(&self) -> u64 {
-        self.map.generation()
-    }
-
-    // --- OTBM persistence bridge ---
-
-    /// Loads an OTBM map file. Returns (width, height, tile_count) on success.
-    fn load_otbm(&mut self, path: &str) -> PyResult<(u16, u16, usize)> {
-        let data = std::fs::read(path)
-            .map_err(|e| PyValueError::new_err(format!("Failed to read file: {e}")))?;
-        let (header, model) = crate::io::otbm::load_otbm(&data)
-            .map_err(|e| PyValueError::new_err(format!("OTBM parse error: {e:?}")))?;
-        let tile_count = model.tile_count();
-        self.map = model;
-        Ok((header.width, header.height, tile_count))
-    }
-
-    /// Saves the current map to an OTBM file.
-    fn save_otbm(&mut self, path: &str) -> PyResult<()> {
-        crate::io::otbm::save_otbm(&self.map, path)
-            .map_err(|e| PyValueError::new_err(format!("OTBM save error: {e:?}")))?;
-        self.map.mark_clean();
-        Ok(())
-    }
-
-    /// Returns map name.
-    fn map_name(&self) -> &str {
-        self.map.name()
-    }
-
-    /// Returns map description.
-    fn map_description(&self) -> &str {
-        self.map.description()
-    }
-
-    /// Returns true if map has been modified.
-    fn map_is_dirty(&self) -> bool {
-        self.map.is_dirty()
-    }
 }
 
 #[cfg(test)]
@@ -245,41 +164,5 @@ mod tests {
         assert!(shell.set_show_flag("show_spawns", true).unwrap());
         assert!(shell.show_flag("show_spawns").unwrap());
         assert!(shell.render_summary().contains("worker_threads="));
-    }
-
-    #[test]
-    fn editor_bridge_set_and_get_tile() {
-        let mut shell = EditorShellState::default();
-        assert!(shell.set_tile_ground(100, 200, 7, 4526));
-        let data = shell.get_tile_data(100, 200, 7).unwrap();
-        assert_eq!(data.0, Some(4526)); // ground_id
-        assert!(data.1.is_empty()); // no stack items
-        assert_eq!(shell.tile_count(), 1);
-    }
-
-    #[test]
-    fn editor_bridge_add_tile_item() {
-        let mut shell = EditorShellState::default();
-        assert!(shell.add_tile_item(100, 200, 7, 2148));
-        assert!(shell.add_tile_item(100, 200, 7, 2160));
-        let data = shell.get_tile_data(100, 200, 7).unwrap();
-        assert_eq!(data.1, vec![2148, 2160]);
-    }
-
-    #[test]
-    fn editor_bridge_remove_tile() {
-        let mut shell = EditorShellState::default();
-        shell.set_tile_ground(100, 200, 7, 4526);
-        assert!(shell.remove_tile(100, 200, 7));
-        assert!(!shell.remove_tile(100, 200, 7)); // already gone
-        assert_eq!(shell.tile_count(), 0);
-    }
-
-    #[test]
-    fn editor_bridge_generation_tracks_mutations() {
-        let mut shell = EditorShellState::default();
-        assert_eq!(shell.map_generation(), 0);
-        shell.set_tile_ground(1, 1, 0, 100);
-        assert!(shell.map_generation() > 0);
     }
 }
