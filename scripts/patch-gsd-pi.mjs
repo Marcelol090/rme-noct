@@ -149,7 +149,17 @@ function ensureGsdInternalWorkspacePackages() {
   for (const [packageName, criticalFile] of Object.entries(packageChecks)) {
     const source = join(gsdRoot, 'packages', packageName);
     const target = join(internalScopeRoot, packageName);
-    if (!existsSync(join(source, 'package.json')) || existsSync(join(target, criticalFile))) {
+    const sourceSdk = join(source, 'dist', 'core', 'sdk.js');
+    const targetSdk = join(target, 'dist', 'core', 'sdk.js');
+    const shouldRefreshPatchedCodingAgent =
+      packageName === 'pi-coding-agent' &&
+      existsSync(sourceSdk) &&
+      existsSync(targetSdk) &&
+      readFileSync(sourceSdk, 'utf8') !== readFileSync(targetSdk, 'utf8');
+    if (
+      !existsSync(join(source, 'package.json')) ||
+      (existsSync(join(target, criticalFile)) && !shouldRefreshPatchedCodingAgent)
+    ) {
       continue;
     }
     try {
@@ -600,24 +610,32 @@ patchFile('dist/headless-ui.js', (text) => {
 });
 
 patchFile('dist/headless-context.js', (text) => {
+  const pathImport = "import { join, resolve } from 'node:path';\n";
+  function removeDuplicatePathImport(content) {
+    const first = content.indexOf(pathImport);
+    if (first === -1) {
+      return content;
+    }
+    const second = content.indexOf(pathImport, first + pathImport.length);
+    if (second === -1) {
+      return content;
+    }
+    return content.slice(0, second) + content.slice(second + pathImport.length);
+  }
+
   if (text.includes('prepareHeadlessMilestoneSkeleton')) {
-    const duplicatePathImport =
-      "\nimport { join, resolve } from 'node:path';\n// ---------------------------------------------------------------------------\n";
-    return text.replace(duplicatePathImport, '\n// ---------------------------------------------------------------------------\n');
+    return removeDuplicatePathImport(text);
   }
 
   const importLine = "import { readFileSync, mkdirSync } from 'node:fs';\n";
-  const pathImportLine = "import { join, resolve } from 'node:path';\n";
-  const importBlock = `${importLine}${pathImportLine}`;
-  if (!text.includes(importLine)) {
+  const sourceText = text.replace(pathImport, '');
+  if (!sourceText.includes(importLine)) {
     throw new Error('Unable to patch dist/headless-context.js: fs import not found');
   }
 
-  const replacementImports =
-    "import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';\nimport { join, resolve } from 'node:path';\nimport { findMilestoneIds, nextMilestoneId } from './resources/extensions/gsd/milestone-ids.js';\nimport { loadEffectiveGSDPreferences } from './resources/extensions/gsd/preferences.js';\nconst HEADLESS_MILESTONE_SEED_FILE = join('runtime', 'headless-milestone-id.txt');\nfunction seedPath(basePath) {\n    return join(basePath, '.gsd', HEADLESS_MILESTONE_SEED_FILE);\n}\nfunction gsdRootDir(basePath) {\n    return join(basePath, '.gsd');\n}\nfunction writeIfMissing(path, content) {\n    if (!existsSync(path) || readFileSync(path, 'utf-8').trim() === '') {\n        writeFileSync(path, content, 'utf-8');\n    }\n}\nfunction buildProjectSkeleton(milestoneId) {\n    return `# Project\\n\\n## What This Is\\n\\nHeadless milestone bootstrap seeded the canonical planning files before the model responded.\\n\\n## Core Value\\n\\nThe first milestone exists on disk before the model fills in the content.\\n\\n## Current State\\n\\nCanonical skeleton seeded; project details and milestone content are pending model fill.\\n\\n## Architecture / Key Patterns\\n\\nHeadless bootstrap writes the canonical files first, then the milestone discussion flow fills them in.\\n\\n## Capability Contract\\n\\nSee \\`.gsd/REQUIREMENTS.md\\` for the explicit capability contract.\\n\\n## Milestone Sequence\\n\\n| ID | Title | Status |\\n|---|---|---|\\n| ${milestoneId} | Seeded milestone | 📋 Next |\\n`;\n}\nfunction buildRequirementsSkeleton() {\n    return `# Requirements\\n\\nThis file is the explicit capability and coverage contract for the project.\\n\\nUse it to track what is actively in scope, what has been validated by completed work, what is intentionally deferred, and what is explicitly out of scope.\\n\\n## Active\\n\\n## Validated\\n\\n## Deferred\\n\\n## Out of Scope\\n\\n## Traceability\\n\\n| ID | Class | Status | Primary owner | Supporting | Proof |\\n|---|---|---|---|---|---|\\n\\n## Coverage Summary\\n\\n- Active requirements: 0\\n- Mapped to slices: 0\\n- Validated: 0\\n- Unmapped active requirements: 0\\n`;\n}\nfunction buildDecisionsSkeleton() {\n    return `# Decisions Register\\n\\n<!-- Append-only. Never edit or remove existing rows. -->\\n\\n| # | When | Scope | Decision | Choice | Rationale | Revisable? | Made By |\\n|---|------|-------|----------|--------|-----------|------------|---------|\\n`;\n}\nfunction buildQueueSkeleton() {\n    return `# Queue\\n\\nAppend-only log of queued milestones.\\n\\n- None yet.\\n`;\n}\nfunction buildMilestoneContextSkeleton(milestoneId) {\n    return `# ${milestoneId}: Seeded milestone\\n\\n## Scope\\n\\nThis milestone was pre-materialized by headless new-milestone before the model responded.\\n\\n## Goals\\n\\n- Provide a concrete milestone record on disk so state derivation can discover it.\\n- Let the model refine this context into the full planning artifact.\\n\\n## Assumptions\\n\\n- Roadmap and slices will be filled in after the initial prompt.\\n- No dependencies are declared yet.\\n`;\n}\nfunction buildStateSkeleton(milestoneId) {\n    const timestamp = new Date().toISOString();\n    return `# GSD State\\n\\n**Active Milestone:** ${milestoneId}: Seeded milestone\\n**Active Slice:** None\\n**Phase:** pre-planning\\n**Next Action:** Plan milestone ${milestoneId}.\\n**Last Updated:** ${timestamp}\\n**Requirements Status:** 0 active · 0 validated · 0 deferred · 0 out of scope\\n\\n## Recent Decisions\\n\\n- None recorded\\n\\n## Blockers\\n\\n- None\\n`;\n}\n";
-  let next = text.replace(
-    text.includes(importBlock) ? importBlock : importLine,
-    replacementImports,
+  let next = sourceText.replace(
+    importLine,
+    "import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';\nimport { join, resolve } from 'node:path';\nimport { findMilestoneIds, nextMilestoneId } from './resources/extensions/gsd/milestone-ids.js';\nimport { loadEffectiveGSDPreferences } from './resources/extensions/gsd/preferences.js';\nconst HEADLESS_MILESTONE_SEED_FILE = join('runtime', 'headless-milestone-id.txt');\nfunction seedPath(basePath) {\n    return join(basePath, '.gsd', HEADLESS_MILESTONE_SEED_FILE);\n}\nfunction gsdRootDir(basePath) {\n    return join(basePath, '.gsd');\n}\nfunction writeIfMissing(path, content) {\n    if (!existsSync(path) || readFileSync(path, 'utf-8').trim() === '') {\n        writeFileSync(path, content, 'utf-8');\n    }\n}\nfunction buildProjectSkeleton(milestoneId) {\n    return `# Project\\n\\n## What This Is\\n\\nHeadless milestone bootstrap seeded the canonical planning files before the model responded.\\n\\n## Core Value\\n\\nThe first milestone exists on disk before the model fills in the content.\\n\\n## Current State\\n\\nCanonical skeleton seeded; project details and milestone content are pending model fill.\\n\\n## Architecture / Key Patterns\\n\\nHeadless bootstrap writes the canonical files first, then the milestone discussion flow fills them in.\\n\\n## Capability Contract\\n\\nSee \\`.gsd/REQUIREMENTS.md\\` for the explicit capability contract.\\n\\n## Milestone Sequence\\n\\n| ID | Title | Status |\\n|---|---|---|\\n| ${milestoneId} | Seeded milestone | 📋 Next |\\n`;\n}\nfunction buildRequirementsSkeleton() {\n    return `# Requirements\\n\\nThis file is the explicit capability and coverage contract for the project.\\n\\nUse it to track what is actively in scope, what has been validated by completed work, what is intentionally deferred, and what is explicitly out of scope.\\n\\n## Active\\n\\n## Validated\\n\\n## Deferred\\n\\n## Out of Scope\\n\\n## Traceability\\n\\n| ID | Class | Status | Primary owner | Supporting | Proof |\\n|---|---|---|---|---|---|\\n\\n## Coverage Summary\\n\\n- Active requirements: 0\\n- Mapped to slices: 0\\n- Validated: 0\\n- Unmapped active requirements: 0\\n`;\n}\nfunction buildDecisionsSkeleton() {\n    return `# Decisions Register\\n\\n<!-- Append-only. Never edit or remove existing rows. -->\\n\\n| # | When | Scope | Decision | Choice | Rationale | Revisable? | Made By |\\n|---|------|-------|----------|--------|-----------|------------|---------|\\n`;\n}\nfunction buildQueueSkeleton() {\n    return `# Queue\\n\\nAppend-only log of queued milestones.\\n\\n- None yet.\\n`;\n}\nfunction buildMilestoneContextSkeleton(milestoneId) {\n    return `# ${milestoneId}: Seeded milestone\\n\\n## Scope\\n\\nThis milestone was pre-materialized by headless new-milestone before the model responded.\\n\\n## Goals\\n\\n- Provide a concrete milestone record on disk so state derivation can discover it.\\n- Let the model refine this context into the full planning artifact.\\n\\n## Assumptions\\n\\n- Roadmap and slices will be filled in after the initial prompt.\\n- No dependencies are declared yet.\\n`;\n}\nfunction buildStateSkeleton(milestoneId) {\n    const timestamp = new Date().toISOString();\n    return `# GSD State\\n\\n**Active Milestone:** ${milestoneId}: Seeded milestone\\n**Active Slice:** None\\n**Phase:** pre-planning\\n**Next Action:** Plan milestone ${milestoneId}.\\n**Last Updated:** ${timestamp}\\n**Requirements Status:** 0 active · 0 validated · 0 deferred · 0 out of scope\\n\\n## Recent Decisions\\n\\n- None recorded\\n\\n## Blockers\\n\\n- None\\n`;\n}\n",
   );
 
   const projectBootstrapBlock =
@@ -1297,6 +1315,11 @@ patchFile('packages/pi-coding-agent/dist/modes/rpc/rpc-mode.js', (text) => {
 patchFile('packages/pi-coding-agent/dist/core/sdk.js', (text) => {
   const marker =
     '// Keep sdk.js focused on session bootstrap so RPC startup does not pull the tool catalog.';
+  const toolExportPattern =
+    /export \{\s*\/\/ Pre-built tools \(use process\.cwd\(\)\)[\s\S]*?createHashlineCodingTools, createHashlineEditTool, createHashlineReadTool, \};\n/;
+  if (text.includes(marker) && toolExportPattern.test(text)) {
+    return text.replace(toolExportPattern, '');
+  }
   if (
     text.includes(marker) ||
     (text.includes('loadAgentModule') &&
@@ -1341,6 +1364,8 @@ patchFile('packages/pi-coding-agent/dist/core/sdk.js', (text) => {
   const exportBlock = `export {\n// Pre-built tools (use process.cwd())\nreadTool, bashTool, editTool, writeTool, grepTool, findTool, lsTool, codingTools, readOnlyTools, allTools as allBuiltInTools, \n// Tool factories (for custom cwd)\ncreateCodingTools, createReadOnlyTools, createReadTool, createBashTool, createEditTool, createWriteTool, createGrepTool, createFindTool, createLsTool, \n// Hashline edit mode\nhashlineCodingTools, hashlineEditTool, hashlineReadTool, createHashlineCodingTools, createHashlineEditTool, createHashlineReadTool, };\n`;
   if (next.includes(exportBlock)) {
     next = next.replace(exportBlock, "");
+  } else if (toolExportPattern.test(next)) {
+    next = next.replace(toolExportPattern, '');
   }
 
   const initialActiveToolNames = '    const initialActiveToolNames = options.tools\n        ? options.tools.map((t) => t.name).filter((n) => n in allTools)\n        : defaultActiveToolNames;\n';
@@ -1499,8 +1524,31 @@ patchFile('dist/cli.js', (text) => {
     '// Load the shared auth/model/settings API before the common startup block uses it.';
   const headlessStageMarker =
     '// Emit startup markers for headless new-milestone before the headless orchestrator loads.';
-  const apiLoaderBlock = `let piAgentApiPromise = null;\nasync function loadPiAgentApi() {\n    if (!piAgentApiPromise) {\n        piAgentApiPromise = import('@gsd/pi-coding-agent');\n    }\n    return piAgentApiPromise;\n}\n`;
+  const legacyApiLoaderBlock = `let piAgentApiPromise = null;\nasync function loadPiAgentApi() {\n    if (!piAgentApiPromise) {\n        piAgentApiPromise = import('@gsd/pi-coding-agent');\n    }\n    return piAgentApiPromise;\n}\n`;
+  const legacyTopLevelApiLoad =
+    'const { AuthStorage, runPackageCommand, SessionManager, createAgentSession, InteractiveMode } = await loadPiAgentApi();\n';
+  const staticBarrelImport =
+    "import { AuthStorage, DefaultResourceLoader, ModelRegistry, runPackageCommand, SettingsManager, SessionManager, createAgentSession, InteractiveMode, runPrintMode, runRpcMode, } from '@gsd/pi-coding-agent';\n";
+  const sharedApiImports = [
+    "import { AuthStorage } from '../packages/pi-coding-agent/dist/core/auth-storage.js';",
+    "import { runPackageCommand } from '../packages/pi-coding-agent/dist/core/package-commands.js';",
+    "import { SessionManager } from '../packages/pi-coding-agent/dist/core/session-manager.js';",
+    "import { createAgentSession } from '../packages/pi-coding-agent/dist/core/sdk.js';",
+    "import { InteractiveMode } from '../packages/pi-coding-agent/dist/modes/interactive/interactive-mode.js';",
+  ].join('\n') + '\n';
   let next = text;
+
+  if (next.includes(staticBarrelImport)) {
+    next = next.replace(staticBarrelImport, sharedApiImports);
+  }
+  if (next.includes(legacyApiLoaderBlock) && next.includes(legacyTopLevelApiLoad)) {
+    next = next.replace(legacyApiLoaderBlock, '');
+    next = next.replace(legacyTopLevelApiLoad, '');
+    if (!next.includes(sharedApiImports)) {
+      next = `${sharedApiImports}${next}`;
+    }
+  }
+  next = next.replace(`${legacyApiLoaderBlock}${printApiMarker}`, printApiMarker);
 
   const original = 'const resourceLoader = buildResourceLoader(agentDir);';
   const patched = 'const resourceLoader = await buildResourceLoader(agentDir);';
@@ -1510,20 +1558,18 @@ patchFile('dist/cli.js', (text) => {
     throw new Error('Unable to patch dist/cli.js: buildResourceLoader call not found');
   }
 
-  if (!next.includes(apiLoaderBlock) && !next.includes('async function loadPiAgentApi()')) {
-    const loaderAnchor = 'const isPrintMode = cliFlags.print || cliFlags.mode !== undefined;\n';
-    if (!next.includes(loaderAnchor)) {
-      throw new Error('Unable to patch dist/cli.js: cli mode anchor not found');
-    }
-    next = next.replace(loaderAnchor, `${loaderAnchor}${apiLoaderBlock}`);
-  }
-
   if (!next.includes(printApiMarker)) {
-    const printApiBlock = `${apiLoaderBlock}${printApiMarker}\nlet piAgentPrintApiPromise = null;\nasync function loadPiAgentPrintApi() {\n    if (!piAgentPrintApiPromise) {\n        const timedImport = async (label, specifier) => {\n            debugRpcBootstrapStage(\`loading print/api module \${label}...\`);\n            const startedAt = Date.now();\n            try {\n                const module = await import(specifier);\n                debugRpcBootstrapStage(\`loaded print/api module \${label} in \${Date.now() - startedAt}ms.\`);\n                return module;\n            }\n            catch (error) {\n                debugRpcBootstrapStage(\`failed print/api module \${label} after \${Date.now() - startedAt}ms.\`);\n                throw error;\n            }\n        };\n        piAgentPrintApiPromise = Promise.all([\n            timedImport('auth-storage', '../packages/pi-coding-agent/dist/core/auth-storage.js'),\n            timedImport('resource-loader', '../packages/pi-coding-agent/dist/core/resource-loader.js'),\n            timedImport('model-registry', '../packages/pi-coding-agent/dist/core/model-registry.js'),\n            timedImport('settings-manager', '../packages/pi-coding-agent/dist/core/settings-manager.js'),\n            timedImport('session-manager', '../packages/pi-coding-agent/dist/core/session-manager.js'),\n            timedImport('sdk', '../packages/pi-coding-agent/dist/core/sdk.js'),\n            timedImport('print-mode', '../packages/pi-coding-agent/dist/modes/print-mode.js'),\n            timedImport('rpc-mode', '../packages/pi-coding-agent/dist/modes/rpc/rpc-mode.js'),\n        ]).then(([\n            authModule,\n            resourceLoaderModule,\n            modelRegistryModule,\n            settingsModule,\n            sessionModule,\n            sdkModule,\n            printModeModule,\n            rpcModeModule,\n        ]) => ({\n            AuthStorage: authModule.AuthStorage,\n            DefaultResourceLoader: resourceLoaderModule.DefaultResourceLoader,\n            ModelRegistry: modelRegistryModule.ModelRegistry,\n            SettingsManager: settingsModule.SettingsManager,\n            SessionManager: sessionModule.SessionManager,\n            createAgentSession: sdkModule.createAgentSession,\n            runPrintMode: printModeModule.runPrintMode,\n            runRpcMode: rpcModeModule.runRpcMode,\n        }));\n    }\n    return piAgentPrintApiPromise;\n}\n`;
-    if (!next.includes(apiLoaderBlock)) {
-      throw new Error('Unable to patch dist/cli.js: pi-agent loader block not found');
+    const printApiBlock = `${printApiMarker}\nlet piAgentPrintApiPromise = null;\nasync function loadPiAgentPrintApi() {\n    if (!piAgentPrintApiPromise) {\n        const timedImport = async (label, specifier) => {\n            debugRpcBootstrapStage(\`loading print/api module \${label}...\`);\n            const startedAt = Date.now();\n            try {\n                const module = await import(specifier);\n                debugRpcBootstrapStage(\`loaded print/api module \${label} in \${Date.now() - startedAt}ms.\`);\n                return module;\n            }\n            catch (error) {\n                debugRpcBootstrapStage(\`failed print/api module \${label} after \${Date.now() - startedAt}ms.\`);\n                throw error;\n            }\n        };\n        piAgentPrintApiPromise = Promise.all([\n            timedImport('auth-storage', '../packages/pi-coding-agent/dist/core/auth-storage.js'),\n            timedImport('resource-loader', '../packages/pi-coding-agent/dist/core/resource-loader.js'),\n            timedImport('model-registry', '../packages/pi-coding-agent/dist/core/model-registry.js'),\n            timedImport('settings-manager', '../packages/pi-coding-agent/dist/core/settings-manager.js'),\n            timedImport('session-manager', '../packages/pi-coding-agent/dist/core/session-manager.js'),\n            timedImport('sdk', '../packages/pi-coding-agent/dist/core/sdk.js'),\n            timedImport('print-mode', '../packages/pi-coding-agent/dist/modes/print-mode.js'),\n            timedImport('rpc-mode', '../packages/pi-coding-agent/dist/modes/rpc/rpc-mode.js'),\n        ]).then(([\n            authModule,\n            resourceLoaderModule,\n            modelRegistryModule,\n            settingsModule,\n            sessionModule,\n            sdkModule,\n            printModeModule,\n            rpcModeModule,\n        ]) => ({\n            AuthStorage: authModule.AuthStorage,\n            DefaultResourceLoader: resourceLoaderModule.DefaultResourceLoader,\n            ModelRegistry: modelRegistryModule.ModelRegistry,\n            SettingsManager: settingsModule.SettingsManager,\n            SessionManager: sessionModule.SessionManager,\n            createAgentSession: sdkModule.createAgentSession,\n            runPrintMode: printModeModule.runPrintMode,\n            runRpcMode: rpcModeModule.runRpcMode,\n        }));\n    }\n    return piAgentPrintApiPromise;\n}\n`;
+    if (!next.includes(sharedApiImports)) {
+      throw new Error('Unable to patch dist/cli.js: pi-agent shared import block not found');
     }
-    next = next.replace(apiLoaderBlock, printApiBlock);
+    next = next.replace(sharedApiImports, `${sharedApiImports}${printApiBlock}`);
+
+    const printModeBranch = 'if (isPrintMode) {\n';
+    const printApiCall = '    const { AuthStorage, DefaultResourceLoader, ModelRegistry, SettingsManager, SessionManager, createAgentSession, runPrintMode, runRpcMode, } = await loadPiAgentPrintApi();\n';
+    if (next.includes(printModeBranch) && !next.includes(printApiCall)) {
+      next = next.replace(printModeBranch, `${printModeBranch}${printApiCall}`);
+    }
   }
 
   next = next.replaceAll(
@@ -1540,33 +1586,27 @@ patchFile('dist/cli.js', (text) => {
     if (!next.includes(printModeBranch)) {
       throw new Error('Unable to patch dist/cli.js: print-mode branch not found');
     }
-    const printModeDebugBlock = `${printModeBranch}    const debugPrintRpcStage = (message) => {\n        if (cliFlags.mode === 'rpc') {\n            process.stderr.write(\`[gsd] rpc-child: \${message}\\n\`);\n        }\n    };\n    debugPrintRpcStage('loading print/api bundle...');\n`;
-    next = next.replace(printModeBranch, printModeDebugBlock);
+    next = next.replace(
+      printModeBranch,
+      `${printModeBranch}    const debugPrintRpcStage = (message) => {\n        if (cliFlags.mode === 'rpc') {\n            process.stderr.write(\`[gsd] rpc-child: \${message}\\n\`);\n        }\n    };\n    debugPrintRpcStage('loading print/api bundle...');\n`,
+    );
 
     const printApiCall = '    const { AuthStorage, DefaultResourceLoader, ModelRegistry, SettingsManager, SessionManager, createAgentSession, runPrintMode, runRpcMode, } = await loadPiAgentPrintApi();\n';
-    const printApiCallWithStages =
-      "    const { AuthStorage, DefaultResourceLoader, ModelRegistry, SettingsManager, SessionManager, createAgentSession, runPrintMode, runRpcMode, } = await loadPiAgentPrintApi();\n    debugPrintRpcStage('print/api bundle loaded.');\n    debugPrintRpcStage('bootstrapping RTK...');\n";
-    if (next.includes(printApiCall)) {
-      next = next.replace(printApiCall, printApiCallWithStages);
-    } else {
-      const freshPrintModeBootstrap = `${printModeDebugBlock}    await ensureRtkBootstrap();\n`;
-      if (!next.includes(freshPrintModeBootstrap)) {
-        throw new Error('Unable to patch dist/cli.js: print api call not found');
-      }
-      next = next.replace(
-        freshPrintModeBootstrap,
-        `${printModeDebugBlock}${printApiCallWithStages}    await ensureRtkBootstrap();\n`,
-      );
+    if (!next.includes(printApiCall)) {
+      throw new Error('Unable to patch dist/cli.js: print api call not found');
     }
+    next = next.replace(
+      printApiCall,
+      "    const { AuthStorage, DefaultResourceLoader, ModelRegistry, SettingsManager, SessionManager, createAgentSession, runPrintMode, runRpcMode, } = await loadPiAgentPrintApi();\n    debugPrintRpcStage('print/api bundle loaded.');\n    debugPrintRpcStage('bootstrapping RTK...');\n",
+    );
 
-    const bootstrapCall =
-      "    debugPrintRpcStage('bootstrapping RTK...');\n    await ensureRtkBootstrap();\n";
+    const bootstrapCall = '    await ensureRtkBootstrap();\n';
     if (!next.includes(bootstrapCall)) {
       throw new Error('Unable to patch dist/cli.js: ensureRtkBootstrap call not found');
     }
     next = next.replace(
       bootstrapCall,
-      "    debugPrintRpcStage('bootstrapping RTK...');\n    await ensureRtkBootstrap();\n    debugPrintRpcStage('RTK bootstrap complete.');\n",
+      "    await ensureRtkBootstrap();\n    debugPrintRpcStage('RTK bootstrap complete.');\n",
     );
 
     const exitManagedResourcesCall = '    exitIfManagedResourcesAreNewer(agentDir);\n    initResources(agentDir);\n';
@@ -1677,7 +1717,10 @@ patchFile('dist/cli.js', (text) => {
   }
 
   const envKeysLine = 'loadStoredEnvKeys(authStorage);';
-  if (next.includes(envKeysLine)) {
+  if (
+    next.includes(envKeysLine) &&
+    !next.includes("debugRpcBootstrapStage('loading stored env keys...');\nloadStoredEnvKeys(authStorage);")
+  ) {
     next = next.replace(
       envKeysLine,
       "debugRpcBootstrapStage('loading stored env keys...');\nloadStoredEnvKeys(authStorage);\ndebugRpcBootstrapStage('stored env keys loaded.');",
@@ -1685,7 +1728,10 @@ patchFile('dist/cli.js', (text) => {
   }
 
   const migrateLine = 'migratePiCredentials(authStorage);';
-  if (next.includes(migrateLine)) {
+  if (
+    next.includes(migrateLine) &&
+    !next.includes("debugRpcBootstrapStage('migrating credentials...');\nmigratePiCredentials(authStorage);")
+  ) {
     next = next.replace(
       migrateLine,
       "debugRpcBootstrapStage('migrating credentials...');\nmigratePiCredentials(authStorage);\ndebugRpcBootstrapStage('credentials migrated.');",
@@ -1718,6 +1764,8 @@ patchFile('dist/cli.js', (text) => {
   for (const line of [
     "debugRpcBootstrapStage('migrating credentials...');\n",
     "debugRpcBootstrapStage('credentials migrated.');\n",
+    "debugRpcBootstrapStage('loading stored env keys...');\n",
+    "debugRpcBootstrapStage('stored env keys loaded.');\n",
     "debugRpcBootstrapStage('resolving models path...');\n",
     "debugRpcBootstrapStage('models path resolved.');\n",
     "debugRpcBootstrapStage('applying security overrides...');\n",
@@ -1808,14 +1856,15 @@ patchFile('dist/headless.js', (text) => {
 
   if (!next.includes(marker)) {
     const originalBlock = `let piAgentApiPromise = null;\nasync function loadPiAgentApi() {\n    if (!piAgentApiPromise) {\n        piAgentApiPromise = import('@gsd/pi-coding-agent');\n    }\n    return piAgentApiPromise;\n}\n`;
-    const barrelImport = "import { RpcClient, SessionManager } from '@gsd/pi-coding-agent';\n";
+    const staticBarrelImport =
+      "import { RpcClient, SessionManager } from '@gsd/pi-coding-agent';\n";
     const patchedBlock = `${marker}\nlet piAgentRpcClientPromise = null;\nlet piAgentSessionManagerPromise = null;\nasync function loadPiAgentRpcClient() {\n    if (!piAgentRpcClientPromise) {\n        piAgentRpcClientPromise = import('../packages/pi-coding-agent/dist/modes/rpc/rpc-client.js');\n    }\n    return piAgentRpcClientPromise;\n}\nasync function loadPiAgentSessionManager() {\n    if (!piAgentSessionManagerPromise) {\n        piAgentSessionManagerPromise = import('../packages/pi-coding-agent/dist/core/session-manager.js');\n    }\n    return piAgentSessionManagerPromise;\n}\n`;
-    if (next.includes(originalBlock)) {
-      next = next.replace(originalBlock, patchedBlock);
-    } else if (next.includes(barrelImport)) {
-      next = next.replace(barrelImport, patchedBlock);
-    } else {
+    if (next.includes(staticBarrelImport)) {
+      next = next.replace(staticBarrelImport, patchedBlock);
+    } else if (!next.includes(originalBlock)) {
       throw new Error('Unable to patch dist/headless.js: pi-agent barrel loader block not found');
+    } else {
+      next = next.replace(originalBlock, patchedBlock);
     }
   }
 
@@ -1834,15 +1883,13 @@ patchFile('dist/headless.js', (text) => {
   const rpcLoader = '    const { RpcClient } = await loadPiAgentApi();';
   if (next.includes(rpcLoader)) {
     next = next.replace(rpcLoader, '    const { RpcClient } = await loadPiAgentRpcClient();');
-  } else if (!next.includes('    const { RpcClient } = await loadPiAgentRpcClient();')) {
-    const rpcClientConstruction = '    const client = new RpcClient(clientOptions);\n';
-    if (!next.includes(rpcClientConstruction)) {
-      throw new Error('Unable to patch dist/headless.js: RpcClient loader not found');
-    }
+  } else if (next.includes('    const client = new RpcClient(clientOptions);')) {
     next = next.replace(
-      rpcClientConstruction,
-      `    const { RpcClient } = await loadPiAgentRpcClient();\n${rpcClientConstruction}`,
+      '    const client = new RpcClient(clientOptions);',
+      '    const { RpcClient } = await loadPiAgentRpcClient();\n    const client = new RpcClient(clientOptions);',
     );
+  } else if (!next.includes('    const { RpcClient } = await loadPiAgentRpcClient();')) {
+    throw new Error('Unable to patch dist/headless.js: RpcClient loader not found');
   }
 
   const sessionLoader = '        const { SessionManager } = await loadPiAgentApi();';
@@ -1851,34 +1898,28 @@ patchFile('dist/headless.js', (text) => {
       sessionLoader,
       '        const { SessionManager } = await loadPiAgentSessionManager();',
     );
-  } else if (!next.includes('        const { SessionManager } = await loadPiAgentSessionManager();')) {
-    const sessionList = '        const sessions = await SessionManager.list(process.cwd(), projectSessionsDir);\n';
-    if (!next.includes(sessionList)) {
-      throw new Error('Unable to patch dist/headless.js: SessionManager loader not found');
-    }
+  } else if (next.includes('        const sessions = await SessionManager.list(process.cwd(), projectSessionsDir);')) {
     next = next.replace(
-      sessionList,
-      `        const { SessionManager } = await loadPiAgentSessionManager();\n${sessionList}`,
+      '        const sessions = await SessionManager.list(process.cwd(), projectSessionsDir);',
+      '        const { SessionManager } = await loadPiAgentSessionManager();\n        const sessions = await SessionManager.list(process.cwd(), projectSessionsDir);',
     );
+  } else if (!next.includes('        const { SessionManager } = await loadPiAgentSessionManager();')) {
+    throw new Error('Unable to patch dist/headless.js: SessionManager loader not found');
   }
 
   if (!next.includes(newMilestoneInitTimeoutMarker)) {
     if (next.includes(initTimeoutMarker)) {
       next = next.replace(initTimeoutMarker, newMilestoneInitTimeoutMarker);
-    } else if (!next.includes('    // Completion promise\n')) {
-      throw new Error('Unable to patch dist/headless.js: RPC init timeout marker not found');
+    } else {
+      const completionMarker = '    // Completion promise\n';
+      if (!next.includes(completionMarker)) {
+        throw new Error('Unable to patch dist/headless.js: RPC init timeout marker not found');
+      }
+      next = next.replace(
+        completionMarker,
+        `    ${newMilestoneInitTimeoutMarker}\n${completionMarker}`,
+      );
     }
-  }
-
-  if (!next.includes(newMilestoneInitTimeoutMarker)) {
-    const completionMarker = '    // Completion promise\n';
-    if (!next.includes(completionMarker)) {
-      throw new Error('Unable to patch dist/headless.js: completion marker not found');
-    }
-    next = next.replace(
-      completionMarker,
-      `    ${newMilestoneInitTimeoutMarker}\n${completionMarker}`,
-    );
   }
 
   if (next.includes("        if (isNewMilestone && !options.json) {\n            process.stderr.write(`[headless] ${message}\\n`);\n        }\n")) {
@@ -2127,18 +2168,18 @@ patchFile('dist/headless.js', (text) => {
   if (next.includes(zeroToolAnchor) && !next.includes(zeroToolMarker)) {
     next = next.replace(
       zeroToolAnchor,
-      "        // Long-running commands: agent_end after tool execution — possible completion.\n" +
-        "        // Normally terminal notification or idle timer resolves completion. If a\n" +
-        "        // multi-turn command ends with zero tool calls, the idle timer never arms\n" +
-        "        // and older builds hang forever after printing \"Session ended\".\n" +
-        "        if (eventObj.type === 'agent_end' && isMultiTurnCommand && !completed && toolCallCount === 0) {\n" +
-        "            process.stderr.write('[headless] Warning: multi-turn session ended with 0 tool calls and no terminal notification; treating as stalled\\n');\n" +
-        "            completed = true;\n" +
-        "            exitCode = EXIT_ERROR;\n" +
-        "            resolveCompletion();\n" +
-        "            return;\n" +
-        "        }\n" +
-        "        // The idle timer + terminal notification handle the remaining cases.\n",
+      "        // Long-running commands: agent_end after tool execution — possible completion.\\n" +
+        "        // Normally terminal notification or idle timer resolves completion. If a\\n" +
+        "        // multi-turn command ends with zero tool calls, the idle timer never arms\\n" +
+        "        // and older builds hang forever after printing \"Session ended\".\\n" +
+        "        if (eventObj.type === 'agent_end' && isMultiTurnCommand && !completed && toolCallCount === 0) {\\n" +
+        "            process.stderr.write('[headless] Warning: multi-turn session ended with 0 tool calls and no terminal notification; treating as stalled\\\\n');\\n" +
+        "            completed = true;\\n" +
+        "            exitCode = EXIT_ERROR;\\n" +
+        "            resolveCompletion();\\n" +
+        "            return;\\n" +
+        "        }\\n" +
+        "        // The idle timer + terminal notification handle the remaining cases.\\n",
     );
   } else if (!next.includes(zeroToolMarker)) {
     throw new Error('Unable to patch dist/headless.js: zero-tool-call completion anchor not found');
@@ -2677,9 +2718,14 @@ patchFile('packages/pi-coding-agent/dist/modes/rpc/rpc-client.js', (text) => {
     '            process.stderr.write(`[rpc-client] spawn: node ${[cliPath, ...args].join(" ")} cwd=${this.options.cwd ?? process.cwd()}\\n`);\n' +
     '        }\n' +
     '        this.process = spawn("node", [cliPath, ...args], {\n';
+  const spawnDebugBlock =
+    '        if (process.env.GSD_DEBUG === "1") {\n' +
+    '            process.stderr.write(`[rpc-client] spawn: node ${[cliPath, ...args].join(" ")} cwd=${this.options.cwd ?? process.cwd()}\\n`);\n' +
+    '        }\n';
+  next = next.replaceAll(spawnDebugBlock, '');
   if (next.includes(spawnDebugOriginal)) {
     next = next.replace(spawnDebugOriginal, spawnDebugPatched);
-  } else if (!next.includes('[rpc-client] spawn: node')) {
+  } else {
     throw new Error('Unable to patch rpc-client.js: spawn debug anchor not found');
   }
 
@@ -2692,9 +2738,14 @@ patchFile('packages/pi-coding-agent/dist/modes/rpc/rpc-client.js', (text) => {
     '            process.stderr.write(`[rpc-client] child pid: ${this.process.pid ?? "unknown"}\\n`);\n' +
     '        }\n' +
     '        // Collect stderr for debugging\n';
+  const pidDebugBlock =
+    '        if (process.env.GSD_DEBUG === "1") {\n' +
+    '            process.stderr.write(`[rpc-client] child pid: ${this.process.pid ?? "unknown"}\\n`);\n' +
+    '        }\n';
+  next = next.replaceAll(pidDebugBlock, '');
   if (next.includes(pidDebugOriginal)) {
     next = next.replace(pidDebugOriginal, pidDebugPatched);
-  } else if (!next.includes('[rpc-client] child pid:')) {
+  } else {
     throw new Error('Unable to patch rpc-client.js: pid debug anchor not found');
   }
 
