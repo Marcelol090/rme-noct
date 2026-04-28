@@ -28,8 +28,12 @@ from pyrme.rendering import (
     SpriteDrawAssetInputs,
     SpriteDrawAssetProvider,
     SpriteDrawPlan,
+    SpriteResourceDiagnostics,
+    SpriteResourceResolver,
+    build_frame_sprite_resources,
     build_sprite_draw_plan,
     build_sprite_frame,
+    build_sprite_resource_diagnostics,
 )
 from pyrme.ui.canvas_frame import CanvasFrame, build_canvas_frame
 from pyrme.ui.styles import qss_color
@@ -220,6 +224,13 @@ class _CanvasShellStateMixin:
         self._sprite_draw_plan = SpriteDrawPlan((), ())
         self._sprite_draw_inputs: SpriteDrawAssetInputs | None = None
         self._sprite_draw_asset_provider: SpriteDrawAssetProvider | None = None
+        self._sprite_resource_resolver = SpriteResourceResolver(items={})
+        self._sprite_resource_diagnostics = SpriteResourceDiagnostics(
+            total=0,
+            resolved=0,
+            missing_item=0,
+            missing_sprite=0,
+        )
         self._core_mode = "native" if self._shell_core.is_native() else "python-fallback"
         self._editor_mode = "drawing"
         self._active_brush_name = "Select"
@@ -404,6 +415,11 @@ class _CanvasShellStateMixin:
         self._sprite_draw_inputs = None
         self._state_changed()
 
+    def set_sprite_resource_resolver(self, resolver: SpriteResourceResolver) -> None:
+        self._sprite_resource_resolver = resolver
+        self._sync_sprite_resource_diagnostics()
+        self._state_changed()
+
     def sprite_draw_command_count(self) -> int:
         return len(self._sprite_draw_plan.commands)
 
@@ -451,6 +467,7 @@ class _CanvasShellStateMixin:
             f"Map Generation: {self._canvas_frame.map_generation}\n"
             f"Visible Rect: {_format_visible_rect(self._canvas_frame.visible_rect)}\n"
             f"Tile Primitives: {self.frame_primitive_count()}\n"
+            f"{self._sprite_resource_diagnostics.summary()}\n"
             f"Sprite Draw Commands: {self.sprite_draw_command_count()}\n"
             f"Unresolved Sprites: {_format_unresolved_sprite_ids(self.unresolved_sprite_ids())}"
         )
@@ -478,11 +495,26 @@ class _CanvasShellStateMixin:
                 )
                 for tile in self._canvas_frame.tiles
             )
+            self._sync_sprite_resource_diagnostics()
             self._sync_live_sprite_draw_plan()
         except Exception as exc:
             self._canvas_frame = build_canvas_frame(None, self._viewport)
             self._frame_summary = f"frame plan unavailable: {exc}"
             self._frame_primitives = ()
+            self._sprite_resource_diagnostics = SpriteResourceDiagnostics(
+                total=0,
+                resolved=0,
+                missing_item=0,
+                missing_sprite=0,
+            )
+
+    def _sync_sprite_resource_diagnostics(self) -> None:
+        frame_plan = _render_frame_plan_from_canvas_frame(self._canvas_frame)
+        resources = build_frame_sprite_resources(
+            frame_plan,
+            self._sprite_resource_resolver,
+        )
+        self._sprite_resource_diagnostics = build_sprite_resource_diagnostics(resources)
 
     def _sync_live_sprite_draw_plan(self) -> None:
         try:

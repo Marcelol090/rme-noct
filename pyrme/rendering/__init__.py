@@ -26,6 +26,10 @@ from pyrme.rendering.frame_plan import (
     RenderTileCommand,
     build_render_frame_plan,
 )
+from pyrme.rendering.frame_sprite_resources import (
+    FrameSpriteResource,
+    build_frame_sprite_resources,
+)
 from pyrme.rendering.spr_compressed_payload import (
     SPR_LEGACY_PAYLOAD_HEADER_SIZE,
     SprCompressedPayload,
@@ -68,6 +72,16 @@ from pyrme.rendering.sprite_frame import (
     SpriteTileCommand,
     build_sprite_frame,
 )
+from pyrme.rendering.sprite_resolver import (
+    SpriteItemMetadata,
+    SpriteLookupStatus,
+    SpriteResourceResolver,
+    SpriteResourceResult,
+)
+from pyrme.rendering.sprite_resource_diagnostics import (
+    SpriteResourceDiagnostics,
+    build_sprite_resource_diagnostics,
+)
 
 __all__ = [
     "DiagnosticTilePrimitive",
@@ -80,6 +94,7 @@ __all__ = [
     "DatFormatName",
     "DatItemMetadata",
     "DatMetadataParseError",
+    "FrameSpriteResource",
     "MAX_DAT_SPRITES",
     "MAX_SPR_SPRITES",
     "RenderFramePlan",
@@ -101,9 +116,15 @@ __all__ = [
     "SpriteDrawCommand",
     "SpriteDrawPlan",
     "SpriteFrame",
+    "SpriteItemMetadata",
+    "SpriteLookupStatus",
+    "SpriteResourceDiagnostics",
+    "SpriteResourceResolver",
+    "SpriteResourceResult",
     "SpriteTileCommand",
     "StaticSpriteDrawAssetProvider",
     "build_diagnostic_tile_primitives",
+    "build_frame_sprite_resources",
     "discover_client_asset_files",
     "read_client_asset_signatures",
     "parse_dat_item_metadata",
@@ -118,4 +139,5 @@ __all__ = [
     "build_sprite_catalog_from_dat_records",
     "build_sprite_draw_plan",
     "build_sprite_frame",
+    "build_sprite_resource_diagnostics",
 ]
