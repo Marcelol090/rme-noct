@@ -1,47 +1,147 @@
-"""Brush Palette Doc implementation."""
+"""Brush palette dock implementation."""
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QSize
+from PyQt6.QtCore import (
+    QAbstractListModel,
+    QModelIndex,
+    QSize,
+    QSortFilterProxyModel,
+    Qt,
+    pyqtSignal,
+)
 from PyQt6.QtWidgets import (
-    QListWidget,
-    QListWidgetItem,
+    QLineEdit,
+    QListView,
     QTabWidget,
     QVBoxLayout,
     QWidget,
 )
 
 from pyrme.ui.components.glass import GlassDockWidget
+from pyrme.ui.docks.item_palette import ItemPaletteWidget
+from pyrme.ui.models.item_palette_types import ItemEntry
+from pyrme.ui.styles import qss_color
 from pyrme.ui.theme import THEME, TYPOGRAPHY
+
+_ROOT_INDEX = QModelIndex()
+
+
+class VirtualBrushModel(QAbstractListModel):
+    """Tiny virtual list model for non-item palette tabs."""
+
+    def __init__(self, parent=None) -> None:  # noqa: ANN001
+        super().__init__(parent)
+        self._names: list[str] = []
+
+    def index(  # noqa: D102
+        self,
+        row: int,
+        column: int = 0,
+        parent: QModelIndex = _ROOT_INDEX,
+    ) -> QModelIndex:
+        return super().index(row, column, parent)
+
+    def load_names(self, names: list[str]) -> None:
+        self.beginResetModel()
+        self._names = list(names)
+        self.endResetModel()
+
+    def rowCount(self, parent: QModelIndex = _ROOT_INDEX) -> int:  # noqa: N802
+        if parent.isValid():
+            return 0
+        return len(self._names)
+
+    def data(self, index: QModelIndex, role: int = int(Qt.ItemDataRole.DisplayRole)):  # noqa: ANN201
+        if (
+            role == int(Qt.ItemDataRole.DisplayRole)
+            and index.isValid()
+            and 0 <= index.row() < len(self._names)
+        ):
+            return self._names[index.row()]
+        return None
 
 
 class BrushPaletteDock(GlassDockWidget):
-    """The brush palette replacing legacy RME's PaletteWindow.
+    """Legacy-style brush palette dock with a real model/view Item tab."""
 
-    Provides tabs for Terrain, Doodads, Items, Creatures, etc.
-    Styled with the Noct Map Editor aesthetic.
-    """
+    item_selected = pyqtSignal(ItemEntry)
+
+    _PALETTE_NAMES = ("Terrain", "Doodads", "Item", "Creature", "RAW")
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__("BRUSH PALETTE", parent)
         self.setObjectName("brush_palette_dock")
+        self._views: dict[str, QListView] = {}
+        self._models: dict[str, VirtualBrushModel] = {}
+        self._proxies: dict[str, QSortFilterProxyModel] = {}
+        self._item_palette: ItemPaletteWidget | None = None
         self._setup_ui()
+
+    @property
+    def item_palette(self) -> ItemPaletteWidget | None:
+        return self._item_palette
+
+    def palette_names(self) -> tuple[str, ...]:
+        return self._PALETTE_NAMES
+
+    def current_palette(self) -> str:
+        return self.tabs.tabText(self.tabs.currentIndex())
+
+    def select_palette(self, name: str) -> bool:
+        for index in range(self.tabs.count()):
+            if self.tabs.tabText(index) == name:
+                self.tabs.setCurrentIndex(index)
+                self._apply_search_to_current_palette(self._search_bar.text())
+                return True
+        return False
+
+    def focus_item_palette(self, search_text: str = "") -> bool:
+        if not self.select_palette("Item"):
+            return False
+        self._search_bar.setText(search_text)
+        return True
+
+    def clear_search(self) -> None:
+        self._search_bar.clear()
 
     def _setup_ui(self) -> None:
         layout = QVBoxLayout()
-        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(8)
+
+        self._search_bar = QLineEdit()
+        self._search_bar.setPlaceholderText("Search brushes")
+        self._search_bar.setFont(TYPOGRAPHY.ui_label())
+        self._search_bar.setStyleSheet(f"""
+            QLineEdit {{
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid {qss_color(THEME.ghost_border)};
+                border-radius: 4px;
+                color: {qss_color(THEME.ash_lavender)};
+                padding: 8px;
+            }}
+            QLineEdit:focus {{
+                border-color: {qss_color(THEME.amethyst_core)};
+            }}
+            QLineEdit:disabled {{
+                color: {qss_color(THEME.muted_slate)};
+            }}
+        """)
+        self._search_bar.textChanged.connect(self._apply_search_to_current_palette)
+        layout.addWidget(self._search_bar)
 
         self.tabs = QTabWidget()
-        # QTabWidget styling for Noct Glassmorphism
+        self.tabs.currentChanged.connect(self._on_palette_changed)
         self.tabs.setStyleSheet(f"""
             QTabWidget::pane {{
-                border: 1px solid {THEME.ghost_border.name()};
+                border: 1px solid {qss_color(THEME.ghost_border)};
                 background: transparent;
                 border-radius: 4px;
             }}
             QTabBar::tab {{
                 background: transparent;
-                color: {THEME.ash_lavender.name()};
+                color: {qss_color(THEME.ash_lavender)};
                 font-family: 'Inter', sans-serif;
                 font-size: 11px;
                 padding: 6px 12px;
@@ -50,51 +150,82 @@ class BrushPaletteDock(GlassDockWidget):
             }}
             QTabBar::tab:selected {{
                 color: #FFFFFF;
-                border-bottom: 2px solid {THEME.amethyst_core.name()};
+                border-bottom: 2px solid {qss_color(THEME.amethyst_core)};
             }}
             QTabBar::tab:hover {{
                 background: rgba(255, 255, 255, 0.05);
             }}
         """)
 
-        # Add basic tabs like legacy PaletteWindow
-        self.tabs.addTab(self._create_brush_list(), "Terrain")
-        self.tabs.addTab(self._create_brush_list(), "Doodads")
-        self.tabs.addTab(self._create_brush_list(), "Item")
-        self.tabs.addTab(self._create_brush_list(), "Creature")
+        for name in self._PALETTE_NAMES:
+            if name == "Item":
+                self._item_palette = ItemPaletteWidget(self)
+                self._item_palette.item_selected.connect(self.item_selected)
+                self.tabs.addTab(self._item_palette, name)
+            else:
+                self.tabs.addTab(self._create_brush_view(name), name)
 
         layout.addWidget(self.tabs)
         self.set_inner_layout(layout)
+        self._sync_search_placeholder()
+        self._apply_search_to_current_palette(self._search_bar.text())
 
-    def _create_brush_list(self) -> QListWidget:
-        """Create a styled QListWidget for brushes."""
-        list_widget = QListWidget()
-        list_widget.setFrameShape(QListWidget.Shape.NoFrame)
-        list_widget.setStyleSheet(f"""
-            QListWidget {{
+    def _create_brush_view(self, name: str) -> QListView:
+        model = VirtualBrushModel(self)
+        model.load_names([f"{name} Brush {i}" for i in range(1, 21)])
+        proxy = QSortFilterProxyModel(self)
+        proxy.setSourceModel(model)
+        proxy.setFilterCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+
+        view = QListView()
+        view.setFrameShape(QListView.Shape.NoFrame)
+        view.setModel(proxy)
+        view.setUniformItemSizes(True)
+        view.setIconSize(QSize(32, 32))
+        view.setStyleSheet(f"""
+            QListView {{
                 background: transparent;
                 outline: none;
-                color: {THEME.ash_lavender.name()};
+                color: {qss_color(THEME.ash_lavender)};
             }}
-            QListWidget::item {{
-                padding: 4px;
-                border-bottom: 1px solid {THEME.ghost_border.name()};
+            QListView::item {{
+                padding: 8px;
+                border-bottom: 1px solid {qss_color(THEME.ghost_border)};
             }}
-            QListWidget::item:selected {{
-                background-color: {THEME.amethyst_core.name()};
+            QListView::item:selected {{
+                background-color: {qss_color(THEME.amethyst_core)};
                 color: #ffffff;
                 border-radius: 2px;
             }}
-            QListWidget::item:hover {{
+            QListView::item:hover {{
                 background-color: rgba(255, 255, 255, 0.05);
             }}
+            QListView::item:disabled {{
+                color: {qss_color(THEME.muted_slate)};
+            }}
         """)
-        list_widget.setFont(TYPOGRAPHY.ui_label())
-        list_widget.setIconSize(QSize(32, 32))
+        view.setFont(TYPOGRAPHY.ui_label())
 
-        # Mock items for now
-        for i in range(1, 21):
-            item = QListWidgetItem(f"Brush Item {i}")
-            list_widget.addItem(item)
+        self._models[name] = model
+        self._proxies[name] = proxy
+        self._views[name] = view
+        return view
 
-        return list_widget
+    def _apply_search_to_current_palette(self, text: str) -> None:
+        current = self.current_palette()
+        if current == "Item" and self._item_palette is not None:
+            self._item_palette.set_search_text(text)
+            return
+        proxy = self._proxies.get(current)
+        if proxy is not None:
+            proxy.setFilterFixedString(text)
+
+    def _sync_search_placeholder(self) -> None:
+        if self.current_palette() == "Item":
+            self._search_bar.setPlaceholderText("Search items")
+        else:
+            self._search_bar.setPlaceholderText("Search brushes")
+
+    def _on_palette_changed(self, _index: int) -> None:
+        self._sync_search_placeholder()
+        self._apply_search_to_current_palette(self._search_bar.text())

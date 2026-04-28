@@ -12,10 +12,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: "crates/rme_core"
+      - name: Configure PyO3 test Python
+        run: |
+          echo "PYO3_PYTHON=$(command -v python3)" >> "$GITHUB_ENV"
+          python3 - <<'PY' >> "$GITHUB_ENV"
+          import os
+          import sysconfig
+
+          libdir = sysconfig.get_config_var("LIBDIR")
+          current = os.environ.get("LD_LIBRARY_PATH")
+          value = libdir if not current else f"{libdir}:{current}"
+          print(f"LD_LIBRARY_PATH={value}")
+          PY
       - name: Run Rust tests
         run: cargo test --manifest-path crates/rme_core/Cargo.toml --verbose
       - name: Run clippy

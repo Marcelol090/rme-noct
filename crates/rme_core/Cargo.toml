@@ -12,17 +12,24 @@ name = "rme_core"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-pyo3 = { version = "0.23", features = ["extension-module"] }
+pyo3 = { version = "0.23" }
 fnv = "1.0"
 rayon = "1.10"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+memmap2 = "0.9.10"
 
 # wgpu will be added in Milestone 4 (Canvas Renderer)
 # wgpu = "23.0"
 
 [dev-dependencies]
+criterion = "0.8.2"
 pyo3 = { version = "0.23", features = ["auto-initialize"] }
+tempfile = "3.8"
 
 [features]
 default = []
+
+[[bench]]
+name = "io_bench"
+harness = false

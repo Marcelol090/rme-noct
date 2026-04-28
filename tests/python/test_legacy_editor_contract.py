@@ -1,34 +1,23 @@
-"""XML-backed contract tests for the legacy Editor menu parity.
-
-Verifies that the Editor action metadata in legacy_menu_contract.py
-matches the structure defined in remeres-map-editor-redux/data/menubar.xml.
-"""
+"""XML-backed contract tests for the legacy Editor menu parity."""
 
 from __future__ import annotations
 
 import xml.etree.ElementTree as ET
-from pathlib import Path
 
 import pytest
 
 from pyrme.ui.legacy_menu_contract import (
     LEGACY_EDITOR_ITEMS,
     LEGACY_EDITOR_ZOOM_ITEMS,
+    LEGACY_MENUBAR_XML,
     PHASE1_ACTIONS,
-)
-
-MENUBAR_XML = (
-    Path(__file__).resolve().parents[2]
-    / "remeres-map-editor-redux"
-    / "data"
-    / "menubar.xml"
 )
 
 
 @pytest.fixture(scope="module")
 def editor_xml_element() -> ET.Element:
     """Parse the Editor menu from menubar.xml."""
-    tree = ET.parse(MENUBAR_XML)
+    tree = ET.parse(LEGACY_MENUBAR_XML)
     root = tree.getroot()
     for menu in root.findall("menu"):
         if menu.get("name") == "Editor":
