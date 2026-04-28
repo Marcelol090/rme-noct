@@ -4,9 +4,9 @@
 **Active Slice:** none
 **Active Task:** none
 **Phase:** complete
-**Next Action:** Choose the next renderer slice: DAT/SPR adapter into `SpriteCatalog` or atlas/sprite draw command planning.
-**Last Updated:** 2026-04-20T16:17:41-03:00
-**Requirements Status:** 0 active · 21 validated · 0 deferred · 3 out of scope
+**Next Action:** Connect sprite draw plan generation to live canvas frame data with fixture catalog and atlas inputs, still without real pixel painting.
+**Last Updated:** 2026-04-20T17:25:58-03:00
+**Requirements Status:** 0 active · 25 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
@@ -30,6 +30,10 @@
 - Workflow health remediation is complete: `npm run preflight` now reflects the integrated Codex session, optional local agent TOML files, optional standalone Context7 CLI, and Windows `.venv` Python runtime.
 - `M005/S01` starts as a planning slice for a sprite catalog seam; metadata stays `None` by default, `build_sprite_frame` must not read metadata in this milestone, and `DatDatabase` remains adapter-level only.
 - `CANVAS-60-SPRITE-CATALOG-SEAM` is complete: `SpriteCatalog`, `SpriteCatalogEntry`, and `build_sprite_frame` now resolve frame-plan item ids and report deterministic unresolved ids without reading metadata or importing DAT/SPR adapter types.
+- `CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER` is complete: DAT-like item sprite records now build `SpriteCatalog` entries with adapter-owned metadata while frame planning remains free of DAT adapter imports.
+- `CANVAS-80-SPR-FRAME-METADATA` is complete: SPR-like frame records now attach sorted frame metadata to matching `SpriteCatalog` entries without parsing files, decoding pixels, or planning atlas placement.
+- `CANVAS-90-SPRITE-DRAW-COMMAND-PLAN` is complete: resolved sprite-frame data now converts into deterministic atlas-backed draw commands with source/destination rectangles and missing draw-input reporting, without painting pixels.
+- `CANVAS-100-SPRITE-DRAW-DIAGNOSTICS` is complete: the canvas host now accepts sprite draw plans and reports command counts plus unresolved sprite ids in diagnostics, without painting sprites.
 
 ## Blockers
 
