@@ -1,4 +1,4 @@
-"""Item palette model tests: query, cache, category, empty state."""
+"""Item palette model tests – query, cache, category, empty state."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ def _make_entries(n: int = 100) -> list[ItemEntry]:
     ]
 
 
-# Catalog tests
+# ── Catalog tests ─────────────────────────────────────────────
 class TestItemCatalog:
     def test_load_and_size(self) -> None:
         cat = ItemCatalog()
@@ -102,7 +102,7 @@ class TestItemCatalog:
         assert elapsed_ms < 100, f"Query took {elapsed_ms:.1f}ms (limit 100ms)"
 
 
-# Result model tests
+# ── Result model tests ────────────────────────────────────────
 class TestItemResultModel:
     def test_show_all(self, qapp) -> None:  # noqa: ANN001, ARG002
         cat = ItemCatalog()
@@ -128,7 +128,7 @@ class TestItemResultModel:
         assert entry.item_id == 0
 
 
-# Category model tests
+# ── Category model tests ──────────────────────────────────────
 class TestItemCategoryModel:
     def test_all_label_first(self, qapp) -> None:  # noqa: ANN001, ARG002
         cat = ItemCatalog()

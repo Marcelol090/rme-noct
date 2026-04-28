@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from PyQt6.QtCore import QSettings
 from PyQt6.QtWidgets import QDialog
 
+from pyrme.ui.dialogs import FindItemQuery
 from pyrme.ui.legacy_menu_contract import PHASE1_ACTIONS
 from pyrme.ui.main_window import MainWindow
 
@@ -32,9 +33,9 @@ def _status_message(window: MainWindow) -> str:
 
 def test_main_window_exposes_legacy_navigation_shortcuts_and_status_tips(
     qtbot,
-    tmp_path: Path,
+    settings_workspace: Path,
 ) -> None:
-    window = MainWindow(settings=_build_settings(tmp_path, "commands.ini"))
+    window = MainWindow(settings=_build_settings(settings_workspace, "commands.ini"))
     qtbot.addWidget(window)
 
     assert _shortcut(window.find_item_action) == PHASE1_ACTIONS["find_item"].shortcut
@@ -71,7 +72,7 @@ def test_main_window_exposes_legacy_navigation_shortcuts_and_status_tips(
 
 def test_main_window_previous_position_swaps_single_history_slot(
     qtbot,
-    tmp_path: Path,
+    settings_workspace: Path,
 ) -> None:
     class _GotoDialog:
         def __init__(self, parent=None) -> None:
@@ -84,7 +85,7 @@ def test_main_window_previous_position_swaps_single_history_slot(
             return (32123, 32234, 6)
 
     window = MainWindow(
-        settings=_build_settings(tmp_path, "previous.ini"),
+        settings=_build_settings(settings_workspace, "previous.ini"),
         goto_dialog_factory=_GotoDialog,
     )
     qtbot.addWidget(window)
@@ -104,28 +105,45 @@ def test_main_window_previous_position_swaps_single_history_slot(
 
 def test_main_window_stub_navigation_commands_report_status(
     qtbot,
-    tmp_path: Path,
+    settings_workspace: Path,
 ) -> None:
-    window = MainWindow(settings=_build_settings(tmp_path, "status.ini"))
+    class _CancelDialog:
+        def __init__(self, parent=None) -> None:
+            self.parent = parent
+
+        def exec(self) -> int:
+            return int(QDialog.DialogCode.Rejected)
+
+        def selected_result(self):
+            return None
+
+        def last_search_map_query(self):
+            return None
+
+    window = MainWindow(
+        settings=_build_settings(settings_workspace, "status.ini"),
+        jump_to_brush_dialog_factory=_CancelDialog,
+        jump_to_item_dialog_factory=_CancelDialog,
+    )
     qtbot.addWidget(window)
 
     window.goto_previous_position_action.trigger()
     assert _status_message(window) == "No previous position stored."
 
     window.jump_to_brush_action.trigger()
-    assert window.brush_palette_dock is not None
-    assert _status_message(window) == "Brush palette focused."
+    assert window._active_brush_id is None
+    assert window._active_item_id is None
 
     window.jump_to_item_action.trigger()
-    assert window.brush_palette_dock.current_palette() == "Item"
-    assert _status_message(window) == "Item palette focused."
+    assert window._active_brush_id is None
+    assert window._active_item_id is None
 
 
 def test_main_window_item_palette_selection_updates_active_brush(
     qtbot,
-    tmp_path: Path,
+    settings_workspace: Path,
 ) -> None:
-    window = MainWindow(settings=_build_settings(tmp_path, "item-selection.ini"))
+    window = MainWindow(settings=_build_settings(settings_workspace, "item-selection.ini"))
     qtbot.addWidget(window)
 
     assert window.brush_palette_dock is not None
@@ -140,11 +158,170 @@ def test_main_window_item_palette_selection_updates_active_brush(
     assert _status_message(window) == "Selected item Stone (#1)."
 
 
-def test_main_window_jump_to_brush_focuses_selected_item(
+def test_main_window_find_item_selection_updates_session_state(
     qtbot,
-    tmp_path: Path,
+    settings_workspace: Path,
 ) -> None:
-    window = MainWindow(settings=_build_settings(tmp_path, "jump-item.ini"))
+    class _FindItemDialog:
+        def __init__(self, parent=None) -> None:
+            self.parent = parent
+
+        def exec(self) -> int:
+            return int(QDialog.DialogCode.Accepted)
+
+        def selected_result(self):
+            class _Result:
+                name = "Gold Coin"
+                server_id = 2148
+
+            return _Result()
+
+    window = MainWindow(
+        settings=_build_settings(settings_workspace, "find-item-selection.ini"),
+        find_item_dialog_factory=_FindItemDialog,
+    )
+    qtbot.addWidget(window)
+
+    window._show_find_item()
+
+    assert window._active_brush_name == "Gold Coin"
+    assert window._editor_context.session.active_item_id == 2148
+    assert window._editor_context.session.active_brush_id == "item:2148"
+    assert _status_message(window) == "Selected item Gold Coin (#2148)."
+
+
+def test_main_window_jump_to_item_action_updates_session_state(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    class _JumpToItemDialog:
+        def __init__(self, parent=None) -> None:
+            self.parent = parent
+
+        def exec(self) -> int:
+            return int(QDialog.DialogCode.Accepted)
+
+        def selected_result(self):
+            class _Result:
+                name = "Gold Coin"
+                server_id = 2148
+
+            return _Result()
+
+    window = MainWindow(
+        settings=_build_settings(settings_workspace, "jump-to-item-selection.ini"),
+        jump_to_item_dialog_factory=_JumpToItemDialog,
+    )
+    qtbot.addWidget(window)
+
+    window.jump_to_item_action.trigger()
+
+    assert window._active_brush_name == "Gold Coin"
+    assert window._editor_context.session.active_item_id == 2148
+    assert window._editor_context.session.active_brush_id == "item:2148"
+    assert _status_message(window) == "Selected item Gold Coin (#2148)."
+
+
+def test_main_window_jump_to_item_reports_search_map_gap(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    class _JumpToItemDialog:
+        def __init__(self, parent=None) -> None:
+            self.parent = parent
+
+        def exec(self) -> int:
+            return int(QDialog.DialogCode.Rejected)
+
+        def selected_result(self):
+            return None
+
+        def last_search_map_query(self):
+            return FindItemQuery(search_text="coin")
+
+    window = MainWindow(
+        settings=_build_settings(settings_workspace, "jump-to-item-search-map.ini"),
+        jump_to_item_dialog_factory=_JumpToItemDialog,
+    )
+    qtbot.addWidget(window)
+
+    window.jump_to_item_action.trigger()
+
+    assert _status_message(window) == "Search on map for 'coin' is not available yet."
+
+
+def test_main_window_jump_to_brush_action_selects_palette_result(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    class _JumpToBrushDialog:
+        def __init__(self, parent=None) -> None:
+            self.parent = parent
+
+        def exec(self) -> int:
+            return int(QDialog.DialogCode.Accepted)
+
+        def selected_result(self):
+            class _Result:
+                kind = "palette"
+                name = "RAW"
+                palette_name = "RAW"
+
+            return _Result()
+
+    window = MainWindow(
+        settings=_build_settings(settings_workspace, "jump-to-brush-palette.ini"),
+        jump_to_brush_dialog_factory=_JumpToBrushDialog,
+    )
+    qtbot.addWidget(window)
+
+    window.jump_to_brush_action.trigger()
+
+    assert window.brush_palette_dock is not None
+    assert window.brush_palette_dock.current_palette() == "RAW"
+    assert window._editor_context.session.active_brush_id == "palette:raw"
+    assert window._editor_context.session.active_item_id is None
+    assert _status_message(window) == "Palette switched to RAW."
+
+
+def test_main_window_jump_to_brush_action_selects_item_result(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    class _JumpToBrushDialog:
+        def __init__(self, parent=None) -> None:
+            self.parent = parent
+
+        def exec(self) -> int:
+            return int(QDialog.DialogCode.Accepted)
+
+        def selected_result(self):
+            class _Result:
+                kind = "item"
+                name = "Stone"
+                item_id = 1
+
+            return _Result()
+
+    window = MainWindow(
+        settings=_build_settings(settings_workspace, "jump-to-brush-item.ini"),
+        jump_to_brush_dialog_factory=_JumpToBrushDialog,
+    )
+    qtbot.addWidget(window)
+
+    window.jump_to_brush_action.trigger()
+
+    assert window._active_brush_name == "Stone"
+    assert window._editor_context.session.active_item_id == 1
+    assert window._editor_context.session.active_brush_id == "item:1"
+    assert _status_message(window) == "Selected item Stone (#1)."
+
+
+def test_main_window_item_palette_switch_clears_stale_item_selection(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    window = MainWindow(settings=_build_settings(settings_workspace, "item-palette-clear.ini"))
     qtbot.addWidget(window)
 
     assert window.brush_palette_dock is not None
@@ -152,9 +329,95 @@ def test_main_window_jump_to_brush_focuses_selected_item(
     assert palette is not None
     palette._on_result_clicked(palette._result_model.index(0))
 
-    window.brush_palette_dock.select_palette("RAW")
-    window.jump_to_brush_action.trigger()
+    assert window._editor_context.session.active_item_id == 1
+
+    window.brush_palette_dock.hide()
+    assert window.brush_palette_dock.isHidden() is True
+    window._show_palette("Item")
+
+    assert window._active_brush_name == "Item"
+    assert window._editor_context.session.active_brush_id == "palette:item"
+    assert window._editor_context.session.active_item_id is None
+    assert window.brush_palette_dock.isHidden() is False
+    assert _status_message(window) == "Palette switched to Item."
+
+
+def test_main_window_item_palette_switch_clears_stale_item_search(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    window = MainWindow(
+        settings=_build_settings(settings_workspace, "item-palette-search-clear.ini")
+    )
+    qtbot.addWidget(window)
+
+    assert window.brush_palette_dock is not None
+    palette = window.brush_palette_dock.item_palette
+    assert palette is not None
+
+    window.brush_palette_dock.focus_item_palette("Stone")
+    assert window.brush_palette_dock._search_bar.text() == "Stone"
+
+    window._show_palette("Item")
 
     assert window.brush_palette_dock.current_palette() == "Item"
+    assert window.brush_palette_dock._search_bar.text() == ""
+    assert palette._result_model.rowCount() > 1
+
+
+def test_main_window_palette_switch_clears_shared_search_state(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    window = MainWindow(settings=_build_settings(settings_workspace, "palette-search-clear.ini"))
+    qtbot.addWidget(window)
+
+    assert window.brush_palette_dock is not None
+    window.brush_palette_dock.focus_item_palette("Stone")
     assert window.brush_palette_dock._search_bar.text() == "Stone"
-    assert _status_message(window) == "Item palette focused for Stone."
+    window.brush_palette_dock.hide()
+    assert window.brush_palette_dock.isHidden() is True
+
+    window._show_palette("RAW")
+
+    assert window.brush_palette_dock.current_palette() == "RAW"
+    assert window.brush_palette_dock.isHidden() is False
+    assert window.brush_palette_dock._search_bar.text() == ""
+    assert _status_message(window) == "Palette switched to RAW."
+
+
+def test_main_window_brush_mode_toolbar_updates_session_and_tool_options(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    window = MainWindow(settings=_build_settings(settings_workspace, "brush-mode.ini"))
+    qtbot.addWidget(window)
+
+    assert window.tool_options_dock is not None
+    assert window._editor_context.session.mode == "drawing"
+    assert window.brush_mode_actions["drawing"].isChecked()
+    assert window.tool_options_dock._mode_label.text() == "Draw"
+
+    window.brush_mode_actions["selection"].trigger()
+
+    assert window._editor_context.session.mode == "selection"
+    assert window.brush_mode_actions["selection"].isChecked()
+    assert not window.brush_mode_actions["drawing"].isChecked()
+    assert window.tool_options_dock._mode_label.text() == "Select"
+    assert _status_message(window) == "Editor mode: Select."
+
+
+def test_main_window_unknown_brush_mode_falls_back_to_drawing(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    window = MainWindow(settings=_build_settings(settings_workspace, "brush-mode-fallback.ini"))
+    qtbot.addWidget(window)
+
+    window._editor_context.session.mode = "unknown"
+    window._sync_canvas_shell_state()
+
+    assert window._editor_context.session.mode == "drawing"
+    assert window.tool_options_dock is not None
+    assert window.brush_mode_actions["drawing"].isChecked()
+    assert window.tool_options_dock._mode_label.text() == "Draw"

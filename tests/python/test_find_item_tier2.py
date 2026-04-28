@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PyQt6.QtWidgets import QListView
+from PyQt6.QtWidgets import QDialog, QLabel, QListView
 
 from pyrme.ui.dialogs.find_item import (
     FindItemDialog,
@@ -112,3 +112,19 @@ def test_find_item_dialog_returns_selected_result_on_accept(qtbot) -> None:
         "item",
         {"pickupable", "stackable"},
     )
+
+
+def test_find_item_dialog_allows_custom_window_title_and_search_map_snapshot(qtbot) -> None:
+    dialog = FindItemDialog(catalog=_catalog(), window_title="Jump to Item")
+    qtbot.addWidget(dialog)
+    dialog.show()
+
+    dialog.search_field.setText("dragon")
+    dialog.btn_search_map.click()
+
+    assert dialog.windowTitle() == "Jump to Item"
+    assert "Jump to Item" in [label.text() for label in dialog.findChildren(QLabel)]
+    assert dialog.result() == int(QDialog.DialogCode.Rejected)
+    assert dialog.isVisible() is False
+    assert dialog.last_search_map_query() is not None
+    assert dialog.last_search_map_query().search_text == "dragon"

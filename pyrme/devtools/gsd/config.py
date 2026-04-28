@@ -3,19 +3,13 @@
 This module provides the configuration interface for GSD-2
 (Get Stuff Done) coding agent integration within the editor.
 
-Official Preferences Schema (from Context7 docs):
-  Located at: .gsd/preferences.md (YAML frontmatter)
-  Required fields: version, models, verification_commands
-  Optional fields: budget_ceiling, auto_supervisor, git, skill_rules,
-                   notifications, post_unit_hooks
+Official preferences live in ``.gsd/preferences.md`` and use the documented
+GSD directory layout:
+- Project-scope skills: ``.agents/skills/``
+- User-scope skills: ``~/.agents/skills/``
 
-In this repo, GSD is not the primary skill system. Codex owns runtime skill
-discovery via the standard Codex locations:
-- User-scope (global):    ~/.agents/skills/
-- Project-scope (local):  .agents/skills/
-
-GSD should point at those skills through preferences and routing policy rather
-than inventing a parallel skill tree.
+The helper keeps the repo-local contract explicit so the editor, the tests,
+and the docs all point at the same GSD surface.
 """
 
 from __future__ import annotations
@@ -79,22 +73,25 @@ class GSDConfig:
 
     @property
     def repo_skills_dir(self) -> Path:
-        """Project-scope Codex skills directory."""
+        """Project-scope GSD skills directory."""
         return self.project_root / ".agents" / "skills"
 
     @property
     def user_skills_dir(self) -> Path:
-        """User-scope Codex skills directory."""
-        return Path.home() / ".agents" / "skills"
+        """User-scope GSD skills directory."""
+        try:
+            return Path.home() / ".agents" / "skills"
+        except (OSError, RuntimeError):
+            return Path.cwd() / ".agents" / "skills"
 
     @property
     def pi_skills_dir(self) -> Path:
-        """Compatibility alias for older callers expecting a project skill path."""
+        """Compatibility alias for callers expecting the project skill path."""
         return self.repo_skills_dir
 
     @property
     def global_skills_dir(self) -> Path:
-        """Compatibility alias for older callers expecting a global skill path."""
+        """Compatibility alias for callers expecting the global skill path."""
         return self.user_skills_dir
 
     @property
@@ -108,7 +105,7 @@ class GSDConfig:
         self.repo_skills_dir.mkdir(parents=True, exist_ok=True)
 
     def list_project_skills(self) -> list[str]:
-        """List all project-scope skills in .agents/skills/."""
+        """List all project-scope skills in the repo skill directory."""
         if not self.repo_skills_dir.exists():
             return []
         return [
@@ -118,7 +115,7 @@ class GSDConfig:
         ]
 
     def list_global_skills(self) -> list[str]:
-        """List all global skills in ~/.agents/skills/."""
+        """List all global skills in ~/.gsd/agent/skills/."""
         if not self.user_skills_dir.exists():
             return []
         return [

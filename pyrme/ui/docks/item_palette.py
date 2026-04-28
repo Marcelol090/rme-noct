@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QItemSelectionModel, QModelIndex, pyqtSignal
+from PyQt6.QtCore import QItemSelectionModel, QModelIndex, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -85,12 +85,11 @@ class ItemPaletteWidget(QWidget):
         self._result_view.setModel(self._result_model)
         self._result_view.setUniformItemSizes(True)
         self._result_view.clicked.connect(self._on_result_clicked)
-        self._result_view.doubleClicked.connect(self._on_result_clicked)
         self._result_view.setStyleSheet(self._view_qss())
         result_area.addWidget(self._result_view)
 
         self._empty_label = QLabel("No matching items.")
-        self._empty_label.setAlignment(self._empty_label.alignment())
+        self._empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._empty_label.setFont(TYPOGRAPHY.ui_label())
         self._empty_label.setStyleSheet(f"color: {qss_color(THEME.muted_slate)};")
         self._empty_label.setVisible(False)

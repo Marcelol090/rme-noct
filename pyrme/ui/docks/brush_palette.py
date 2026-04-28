@@ -132,9 +132,7 @@ class BrushPaletteDock(GlassDockWidget):
         layout.addWidget(self._search_bar)
 
         self.tabs = QTabWidget()
-        self.tabs.currentChanged.connect(
-            lambda _index: self._apply_search_to_current_palette(self._search_bar.text())
-        )
+        self.tabs.currentChanged.connect(self._on_palette_changed)
         self.tabs.setStyleSheet(f"""
             QTabWidget::pane {{
                 border: 1px solid {qss_color(THEME.ghost_border)};
@@ -169,6 +167,8 @@ class BrushPaletteDock(GlassDockWidget):
 
         layout.addWidget(self.tabs)
         self.set_inner_layout(layout)
+        self._sync_search_placeholder()
+        self._apply_search_to_current_palette(self._search_bar.text())
 
     def _create_brush_view(self, name: str) -> QListView:
         model = VirtualBrushModel(self)
@@ -219,3 +219,13 @@ class BrushPaletteDock(GlassDockWidget):
         proxy = self._proxies.get(current)
         if proxy is not None:
             proxy.setFilterFixedString(text)
+
+    def _sync_search_placeholder(self) -> None:
+        if self.current_palette() == "Item":
+            self._search_bar.setPlaceholderText("Search items")
+        else:
+            self._search_bar.setPlaceholderText("Search brushes")
+
+    def _on_palette_changed(self, _index: int) -> None:
+        self._sync_search_placeholder()
+        self._apply_search_to_current_palette(self._search_bar.text())

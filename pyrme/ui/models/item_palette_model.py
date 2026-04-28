@@ -65,6 +65,7 @@ class ItemCatalog:
         if cached is not None:
             return cached
 
+        rows: Iterable[int]
         if key.category:
             rows = self._category_rows.get(key.category, [])
         else:

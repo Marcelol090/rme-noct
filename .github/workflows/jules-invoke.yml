@@ -1,0 +1,130 @@
+name: Jules Invoke
+
+on:
+  workflow_call:
+    inputs:
+      focus:
+        type: string
+        required: false
+        default: 'auto'
+      starting_branch:
+        type: string
+        required: false
+        default: ''
+      additional_context:
+        type: string
+        required: false
+        default: ''
+      include_last_commit:
+        type: boolean
+        required: false
+        default: false
+      include_commit_log:
+        type: boolean
+        required: false
+        default: false
+  workflow_dispatch:
+    inputs:
+      focus:
+        description: 'auto, python, rust, bridge, review, test, utility, maintenance, ci'
+        type: choice
+        options:
+          - 'auto'
+          - 'python'
+          - 'rust'
+          - 'bridge'
+          - 'review'
+          - 'test'
+          - 'utility'
+          - 'maintenance'
+          - 'ci'
+        required: false
+        default: 'auto'
+      starting_branch:
+        description: 'Branch Jules should start from'
+        type: string
+        required: false
+        default: ''
+      additional_context:
+        description: 'Additional context for Jules'
+        type: string
+        required: false
+        default: ''
+      include_last_commit:
+        description: 'Include the last commit in the task context'
+        type: boolean
+        required: false
+        default: false
+      include_commit_log:
+        description: 'Include the commit log in the task context'
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: '${{ github.workflow }}-${{ github.event_name }}-${{ github.run_id }}'
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: 'bash'
+
+jobs:
+  invoke:
+    runs-on: 'ubuntu-latest'
+    timeout-minutes: 25
+    permissions:
+      contents: 'read'
+    steps:
+      - name: Checkout repository
+        uses: 'actions/checkout@v4'
+
+      - name: Render Jules prompt
+        id: render
+        env:
+          ADDITIONAL_CONTEXT: '${{ inputs.additional_context }}'
+          EVENT_NAME: '${{ github.event_name }}'
+          FOCUS: '${{ inputs.focus }}'
+          INCLUDE_COMMIT_LOG: '${{ inputs.include_commit_log }}'
+          INCLUDE_LAST_COMMIT: '${{ inputs.include_last_commit }}'
+          ISSUE_OR_PR_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+          REPOSITORY: '${{ github.repository }}'
+          STARTING_BRANCH: '${{ inputs.starting_branch }}'
+        run: |-
+          set -euo pipefail
+
+          prompt_file='.jules/agents/jules.md'
+          case "${FOCUS}" in
+            python) prompt_file='.jules/newagents/python.md' ;;
+            rust) prompt_file='.jules/newagents/rust.md' ;;
+            bridge) prompt_file='.jules/newagents/bridge.md' ;;
+            review) prompt_file='.jules/newagents/review.md' ;;
+            test) prompt_file='.jules/newagents/test.md' ;;
+            utility) prompt_file='.jules/newagents/utility.md' ;;
+          esac
+
+          {
+            echo 'prompt<<__JULES_PROMPT__'
+            cat "${prompt_file}"
+            printf '\n\n## Task Context\n'
+            printf '<focus>%s</focus>\n' "${FOCUS:-auto}"
+            printf '<event_name>%s</event_name>\n' "${EVENT_NAME}"
+            printf '<repository>%s</repository>\n' "${REPOSITORY}"
+            printf '<starting_branch>%s</starting_branch>\n' "${STARTING_BRANCH:-}"
+            printf '<issue_or_pr_number>%s</issue_or_pr_number>\n' "${ISSUE_OR_PR_NUMBER:-}"
+            printf '<include_last_commit>%s</include_last_commit>\n' "${INCLUDE_LAST_COMMIT:-false}"
+            printf '<include_commit_log>%s</include_commit_log>\n' "${INCLUDE_COMMIT_LOG:-false}"
+            if [ -n "${ADDITIONAL_CONTEXT}" ]; then
+              printf '<additional_context>\n%s\n</additional_context>\n' "${ADDITIONAL_CONTEXT}"
+            fi
+            echo '__JULES_PROMPT__'
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Run Jules
+        uses: 'google-labs-code/jules-invoke@v1'
+        with:
+          prompt: '${{ steps.render.outputs.prompt }}'
+          jules_api_key: '${{ secrets.JULES_API_KEY }}'
+          starting_branch: '${{ inputs.starting_branch || github.event.repository.default_branch }}'
+          include_last_commit: '${{ inputs.include_last_commit }}'
+          include_commit_log: '${{ inputs.include_commit_log }}'

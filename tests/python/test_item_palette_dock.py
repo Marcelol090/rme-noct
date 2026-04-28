@@ -1,8 +1,9 @@
-"""Item palette widget tests: search, category selection, selection signals."""
+"""Item palette widget tests – search, category selection, selection signals."""
 
 from __future__ import annotations
 
 import pytest
+from PyQt6.QtCore import Qt
 
 from pyrme.ui.docks.item_palette import ItemPaletteWidget
 from pyrme.ui.models.item_palette_types import ItemEntry
@@ -34,7 +35,7 @@ def test_initial_load(palette_widget: ItemPaletteWidget) -> None:
 
 
 def test_search_filtering(palette_widget: ItemPaletteWidget) -> None:
-    # Use public API; search is driven by parent dock.
+    # Use public API — search is driven by parent dock
     palette_widget.set_search_text("S")
     # Stone, Sword, Shield, Grass (all contain 's' case-insensitive)
     assert palette_widget._result_model.rowCount() == 4
@@ -83,6 +84,10 @@ def test_empty_state_visibility(palette_widget: ItemPaletteWidget) -> None:
     palette_widget.set_search_text("NONEXISTENT_STUFF")
     assert palette_widget._empty_label.isVisible()
     assert not palette_widget._result_view.isVisible()
+
+
+def test_empty_state_label_is_centered(palette_widget: ItemPaletteWidget) -> None:
+    assert palette_widget._empty_label.alignment() == Qt.AlignmentFlag.AlignCenter
 
 
 def test_initial_all_category_selected(palette_widget: ItemPaletteWidget) -> None:

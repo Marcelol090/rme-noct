@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pyrme.rendering import SpriteItemMetadata, SpriteResourceResolver
 from pyrme.ui.main_window import MainWindow
 
 
@@ -16,6 +17,34 @@ def test_renderer_host_reports_frame_plan_after_tool_application(qtbot) -> None:
     assert "Visible Tiles: 1" in window._canvas.diagnostic_text()
     assert "Map Generation: 1" in window._canvas.diagnostic_text()
     assert "Visible Rect:" in window._canvas.diagnostic_text()
+    assert (
+        "Sprite Resources: 1 total | resolved 0 | missing item 1 | missing sprite 0"
+        in window._canvas.diagnostic_text()
+    )
+
+
+def test_renderer_host_sprite_diagnostics_use_injected_resolver(qtbot) -> None:
+    window = MainWindow()
+    qtbot.addWidget(window)
+    window._canvas.set_sprite_resource_resolver(
+        SpriteResourceResolver(
+            items={
+                2148: SpriteItemMetadata(item_id=2148, sprite_ids=(55,)),
+            },
+            sprites={
+                55: b"stone",
+            },
+        )
+    )
+    window._set_active_item_selection("Stone", 2148)
+
+    changed = window._apply_active_tool_at_cursor()
+
+    assert changed is True
+    assert (
+        "Sprite Resources: 1 total | resolved 1 | missing item 0 | missing sprite 0"
+        in window._canvas.diagnostic_text()
+    )
 
 
 def test_renderer_host_frame_plan_updates_after_erasing(qtbot) -> None:
