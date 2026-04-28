@@ -74,6 +74,7 @@ class TestPyRMEPackage:
         info = assistant.info()
         assert "project_root" in info
         assert "gsd_mode" in info
+        assert "codex_agents_dir" in info
         assert info["gsd_mode"] == "solo"
 
 

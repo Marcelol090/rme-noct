@@ -10,6 +10,94 @@ Use it to track what is actively in scope, what has been validated by completed 
 
 ## Validated
 
+### R057 - Renderer asset parser must read SPR compressed payloads before decoding pixels
+- Class: core-capability
+- Status: validated
+- Description: The renderer asset path must read raw compressed SPR payload bytes from archive offsets after frame-table metadata and before RLE decompression, atlas textures, or drawing.
+- Why it matters: Legacy sprite loading separates `SpriteArchive::readCompressed()` from `GameSprite::Decompress()`, so Python needs a tested raw-payload seam before interpreting pixels.
+- Source: execution
+- Primary owning slice: CANVAS-180-SPR-COMPRESSED-PAYLOAD
+- Supporting slices: CANVAS-170-SPR-FRAME-TABLE, CANVAS-160-DAT-ITEM-METADATA, CANVAS-150-CLIENT-ASSET-SIGNATURES
+- Validation: validated
+- Notes: Verified by `tests/python/test_spr_compressed_payload.py`; parsing seeks to `archive_offset + 3`, reads little-endian `u16` compressed sizes, returns exact raw payload bytes, reports explicit empty payloads for sprite id `0` or offset `0`, and rejects negative offsets, offsets outside data, truncated sizes, and truncated payload bytes without decoding RLE pixels.
+
+### R056 - Renderer asset parser must read SPR frame tables before pixels
+- Class: core-capability
+- Status: validated
+- Description: The renderer asset path must parse SPR signature, sprite count, and archive offset tables into frame metadata after DAT item metadata and before compressed pixel reads.
+- Why it matters: Legacy sprite loading builds an offset table first and only reads compressed sprite payloads later, so Python needs the same safe metadata seam before decoding pixels or claiming rendering.
+- Source: execution
+- Primary owning slice: CANVAS-170-SPR-FRAME-TABLE
+- Supporting slices: CANVAS-160-DAT-ITEM-METADATA, CANVAS-150-CLIENT-ASSET-SIGNATURES, CANVAS-80-SPR-FRAME-METADATA
+- Validation: validated
+- Notes: Verified by `tests/python/test_spr_frame_metadata.py`; parsing reads SPR signature, compact or extended sprite counts, one `u32` archive offset per sprite id, emits `SprFrameRecord` rows for nonzero offsets, preserves `archive_offset` in catalog metadata, and rejects excessive counts or truncated offset tables without decoding compressed pixels.
+
+### R055 - Renderer asset parser must read DAT item metadata before SPR pixels
+- Class: core-capability
+- Status: validated
+- Description: The renderer asset path must parse DAT item metadata into item-to-sprite records after signature reads and before SPR frame tables, pixels, atlas textures, or drawing.
+- Why it matters: Legacy asset loading builds the DAT catalog before loading SPR data, and renderer planning needs item ids mapped to sprite ids without claiming pixel rendering.
+- Source: execution
+- Primary owning slice: CANVAS-160-DAT-ITEM-METADATA
+- Supporting slices: CANVAS-150-CLIENT-ASSET-SIGNATURES, CANVAS-140-CLIENT-ASSET-DISCOVERY, CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER
+- Validation: validated
+- Notes: Verified by `tests/python/test_dat_item_metadata.py`; parsing reads DAT header counts, consumes item and creature entries for stream alignment, emits `DatSpriteRecord` rows for item ids, supports compact and extended sprite ids, remaps legacy DAT flags by explicit DAT format, and rejects invalid/truncated metadata without parsing SPR frames or pixels.
+
+### R054 - Renderer asset provider must read DAT/SPR signatures before parsing records
+- Class: core-capability
+- Status: validated
+- Description: The renderer asset path must read DAT and SPR signature headers from discovered client files before parsing item records, frame tables, pixels, or texture data.
+- Why it matters: Legacy client asset detection validates file identity through signatures before deeper parsing, and this keeps the binary-reading boundary narrow enough to verify.
+- Source: execution
+- Primary owning slice: CANVAS-150-CLIENT-ASSET-SIGNATURES
+- Supporting slices: CANVAS-140-CLIENT-ASSET-DISCOVERY, CANVAS-130-SPRITE-ASSET-BUNDLE, CANVAS-120-SPRITE-ASSET-PROVIDER
+- Validation: validated
+- Notes: Verified by `tests/python/test_client_asset_discovery.py`; signature reads open discovered files only, read one 4-byte little-endian header from each DAT/SPR file, preserve discovery warnings, and report legacy-style open/header warnings without parsing records or decoding pixels.
+
+### R053 - Renderer asset provider must discover client DAT/SPR paths before parsing
+- Class: core-capability
+- Status: validated
+- Description: The renderer asset path must locate configured client metadata and sprite files under a selected client root, with fallback to `Tibia.dat` and `Tibia.spr`, before reading or parsing those files.
+- Why it matters: This mirrors the legacy client asset detection boundary and creates a safe discovery seam before signature reads, binary parsing, pixel decoding, or texture ownership.
+- Source: execution
+- Primary owning slice: CANVAS-140-CLIENT-ASSET-DISCOVERY
+- Supporting slices: CANVAS-130-SPRITE-ASSET-BUNDLE, CANVAS-120-SPRITE-ASSET-PROVIDER
+- Validation: validated
+- Notes: Verified by `tests/python/test_client_asset_discovery.py`; discovery sanitizes configured names to basenames, prefers configured files, falls back to `Tibia.dat`/`Tibia.spr`, reports legacy-style missing-root/file warnings, and can be paired with an existing fixture sprite asset bundle provider.
+
+### R052 - Sprite draw provider must support fixture asset bundles
+- Class: core-capability
+- Status: validated
+- Description: Sprite draw assets must be groupable as an immutable fixture bundle of DAT-like records, SPR-like frame records, and atlas regions before real asset discovery exists.
+- Why it matters: This gives future discovery and atlas lifecycle work a single record-owner seam while keeping binary parsing, pixel decoding, texture upload, and drawing out of the provider layer.
+- Source: execution
+- Primary owning slice: CANVAS-130-SPRITE-ASSET-BUNDLE
+- Supporting slices: CANVAS-120-SPRITE-ASSET-PROVIDER, CANVAS-110-LIVE-SPRITE-DRAW-PLAN, CANVAS-90-SPRITE-DRAW-COMMAND-PLAN
+- Validation: validated
+- Notes: Verified by `tests/python/test_sprite_asset_provider.py`; `SpriteDrawAssetBundle` builds provider inputs from existing DAT-like, SPR-like, and atlas-region records, and `build_sprite_draw_asset_bundle()` snapshots incoming iterables.
+
+### R051 - Canvas host must consume sprite draw assets through a provider seam
+- Class: core-capability
+- Status: validated
+- Description: Live sprite draw planning must accept a provider that supplies `SpriteCatalog` and `SpriteAtlas` together instead of requiring the canvas host to own only raw tuple wiring.
+- Why it matters: This creates the ownership seam needed for future real DAT/SPR discovery and atlas lifecycle work while keeping frame planning independent from file loading and pixel painting.
+- Source: execution
+- Primary owning slice: CANVAS-120-SPRITE-ASSET-PROVIDER
+- Supporting slices: CANVAS-110-LIVE-SPRITE-DRAW-PLAN, CANVAS-100-SPRITE-DRAW-DIAGNOSTICS, CANVAS-90-SPRITE-DRAW-COMMAND-PLAN
+- Validation: validated
+- Notes: Verified by `tests/python/test_sprite_asset_provider.py` and `tests/python/test_canvas_sprite_draw_diagnostics.py`; canvas hosts accept `set_sprite_asset_provider(provider)`, refresh provider inputs during live frame synchronization, preserve direct fixture inputs, and keep explicit `set_sprite_draw_plan()` as an override.
+
+### R050 - Canvas host must build sprite draw plans from live frame data
+- Class: core-capability
+- Status: validated
+- Description: The canvas host must derive sprite draw diagnostics from the current `CanvasFrame` when fixture sprite catalog and atlas inputs are provided.
+- Why it matters: This proves the shell can connect live map/frame state to sprite draw command planning before real asset loading or pixel painting exists.
+- Source: execution
+- Primary owning slice: CANVAS-110-LIVE-SPRITE-DRAW-PLAN
+- Supporting slices: CANVAS-100-SPRITE-DRAW-DIAGNOSTICS, CANVAS-90-SPRITE-DRAW-COMMAND-PLAN, CANVAS-80-SPR-FRAME-METADATA
+- Validation: validated
+- Notes: Verified by `tests/python/test_canvas_sprite_draw_diagnostics.py`; live inputs regenerate command diagnostics from visible frame tiles, refresh when frame data changes, and explicit `set_sprite_draw_plan()` remains a manual override.
+
 ### R049 - Renderer host must expose sprite draw plan diagnostics before painting
 - Class: core-capability
 - Status: validated
@@ -337,6 +425,18 @@ Use it to track what is actively in scope, what has been validated by completed 
 | R043 | primary-user-loop | validated | CANVAS-30-MAP-VIEW-MATH | CANVAS-10-RENDERER-HOST, CANVAS-20-VIEWPORT-MODEL | validated |
 | R044 | core-capability | validated | CANVAS-40-RENDER-FRAME-PLAN | CANVAS-10-RENDERER-HOST, CANVAS-20-VIEWPORT-MODEL, CANVAS-30-MAP-VIEW-MATH | validated |
 | R045 | core-capability | validated | CANVAS-50-DIAGNOSTIC-TILE-PRIMITIVES | CANVAS-40-RENDER-FRAME-PLAN, CANVAS-30-MAP-VIEW-MATH | validated |
+| R046 | core-capability | validated | CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER | CANVAS-60-SPRITE-CATALOG-SEAM | validated |
+| R047 | core-capability | validated | CANVAS-80-SPR-FRAME-METADATA | CANVAS-60-SPRITE-CATALOG-SEAM, CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER | validated |
+| R048 | core-capability | validated | CANVAS-90-SPRITE-DRAW-COMMAND-PLAN | CANVAS-60-SPRITE-CATALOG-SEAM, CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER, CANVAS-80-SPR-FRAME-METADATA | validated |
+| R049 | core-capability | validated | CANVAS-100-SPRITE-DRAW-DIAGNOSTICS | CANVAS-60-SPRITE-CATALOG-SEAM, CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER, CANVAS-80-SPR-FRAME-METADATA, CANVAS-90-SPRITE-DRAW-COMMAND-PLAN | validated |
+| R050 | core-capability | validated | CANVAS-110-LIVE-SPRITE-DRAW-PLAN | CANVAS-100-SPRITE-DRAW-DIAGNOSTICS, CANVAS-90-SPRITE-DRAW-COMMAND-PLAN, CANVAS-80-SPR-FRAME-METADATA | validated |
+| R051 | core-capability | validated | CANVAS-120-SPRITE-ASSET-PROVIDER | CANVAS-110-LIVE-SPRITE-DRAW-PLAN, CANVAS-100-SPRITE-DRAW-DIAGNOSTICS, CANVAS-90-SPRITE-DRAW-COMMAND-PLAN | validated |
+| R052 | core-capability | validated | CANVAS-130-SPRITE-ASSET-BUNDLE | CANVAS-120-SPRITE-ASSET-PROVIDER, CANVAS-110-LIVE-SPRITE-DRAW-PLAN, CANVAS-90-SPRITE-DRAW-COMMAND-PLAN | validated |
+| R053 | core-capability | validated | CANVAS-140-CLIENT-ASSET-DISCOVERY | CANVAS-130-SPRITE-ASSET-BUNDLE, CANVAS-120-SPRITE-ASSET-PROVIDER | validated |
+| R054 | core-capability | validated | CANVAS-150-CLIENT-ASSET-SIGNATURES | CANVAS-140-CLIENT-ASSET-DISCOVERY, CANVAS-130-SPRITE-ASSET-BUNDLE, CANVAS-120-SPRITE-ASSET-PROVIDER | validated |
+| R055 | core-capability | validated | CANVAS-160-DAT-ITEM-METADATA | CANVAS-150-CLIENT-ASSET-SIGNATURES, CANVAS-140-CLIENT-ASSET-DISCOVERY, CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER | validated |
+| R056 | core-capability | validated | CANVAS-170-SPR-FRAME-TABLE | CANVAS-160-DAT-ITEM-METADATA, CANVAS-150-CLIENT-ASSET-SIGNATURES, CANVAS-80-SPR-FRAME-METADATA | validated |
+| R057 | core-capability | validated | CANVAS-180-SPR-COMPRESSED-PAYLOAD | CANVAS-170-SPR-FRAME-TABLE, CANVAS-160-DAT-ITEM-METADATA, CANVAS-150-CLIENT-ASSET-SIGNATURES | validated |
 | R030 | anti-feature | out-of-scope | none | none | n/a |
 | R031 | constraint | out-of-scope | none | none | n/a |
 | R032 | constraint | out-of-scope | none | none | n/a |
@@ -344,6 +444,6 @@ Use it to track what is actively in scope, what has been validated by completed 
 ## Coverage Summary
 
 - Active requirements: 0
-- Mapped to slices: 20
-- Validated: 20
+- Mapped to slices: 32
+- Validated: 32
 - Unmapped active requirements: 0

@@ -4,9 +4,9 @@
 **Active Slice:** none
 **Active Task:** none
 **Phase:** complete
-**Next Action:** Connect sprite draw plan generation to live canvas frame data with fixture catalog and atlas inputs, still without real pixel painting.
-**Last Updated:** 2026-04-20T17:25:58-03:00
-**Requirements Status:** 0 active · 25 validated · 0 deferred · 3 out of scope
+**Next Action:** Decode compressed SPR RLE payloads into fixed 32x32 RGBA buffers after raw payload reads, still without atlas texture construction or sprite painting.
+**Last Updated:** 2026-04-25T17:54:57-03:00
+**Requirements Status:** 0 active · 32 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
@@ -34,6 +34,14 @@
 - `CANVAS-80-SPR-FRAME-METADATA` is complete: SPR-like frame records now attach sorted frame metadata to matching `SpriteCatalog` entries without parsing files, decoding pixels, or planning atlas placement.
 - `CANVAS-90-SPRITE-DRAW-COMMAND-PLAN` is complete: resolved sprite-frame data now converts into deterministic atlas-backed draw commands with source/destination rectangles and missing draw-input reporting, without painting pixels.
 - `CANVAS-100-SPRITE-DRAW-DIAGNOSTICS` is complete: the canvas host now accepts sprite draw plans and reports command counts plus unresolved sprite ids in diagnostics, without painting sprites.
+- `CANVAS-110-LIVE-SPRITE-DRAW-PLAN` is complete: canvas hosts now derive sprite draw plan diagnostics from live `CanvasFrame` data using injected fixture `SpriteCatalog` and `SpriteAtlas` inputs, while explicit draw-plan injection remains an override.
+- `CANVAS-120-SPRITE-ASSET-PROVIDER` is complete: canvas hosts now consume live sprite draw assets through a provider seam that supplies catalog and atlas inputs together, while direct fixture inputs and explicit draw-plan overrides remain supported.
+- `CANVAS-130-SPRITE-ASSET-BUNDLE` is complete: sprite draw assets can now be grouped as a fixture bundle of DAT-like records, SPR-like frames, and atlas regions that implements the provider seam without file IO or pixel work.
+- `CANVAS-140-CLIENT-ASSET-DISCOVERY` is complete: renderer asset discovery now resolves configured DAT/SPR files under a client root, falls back to `Tibia.dat`/`Tibia.spr`, and pairs discovery with fixture bundle providers without opening files.
+- `CANVAS-150-CLIENT-ASSET-SIGNATURES` is complete: renderer asset discovery now reads only DAT/SPR header signatures from discovered files with legacy-style open/header warnings, while record parsing, pixels, texture ownership, and sprite painting remain future work.
+- `CANVAS-160-DAT-ITEM-METADATA` is complete: renderer asset parsing now reads DAT item metadata into `DatSpriteRecord` rows with explicit DAT format flag remapping, while SPR frame parsing, pixels, texture ownership, and sprite painting remain future work.
+- `CANVAS-170-SPR-FRAME-TABLE` is complete: renderer asset parsing now reads SPR signature, sprite count, and archive offset table into `SprFrameRecord` rows with retained archive offsets, while compressed pixels, texture ownership, and sprite painting remain future work.
+- `CANVAS-180-SPR-COMPRESSED-PAYLOAD` is complete: renderer asset parsing now reads raw compressed SPR payload bytes from archive offsets, while RLE decompression, texture ownership, and sprite painting remain future work.
 
 ## Blockers
 
