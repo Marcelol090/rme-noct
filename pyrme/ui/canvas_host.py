@@ -21,11 +21,15 @@ from pyrme.core_bridge import create_editor_shell_state
 from pyrme.editor import MapPosition
 from pyrme.rendering import (
     DiagnosticTilePrimitive,
-    SpriteResourceDiagnostics,
-    SpriteResourceResolver,
-    build_frame_sprite_resources,
-    build_render_frame_plan,
-    build_sprite_resource_diagnostics,
+    RenderFramePlan,
+    RenderTileCommand,
+    SpriteAtlas,
+    SpriteCatalog,
+    SpriteDrawAssetInputs,
+    SpriteDrawAssetProvider,
+    SpriteDrawPlan,
+    build_sprite_draw_plan,
+    build_sprite_frame,
 )
 from pyrme.ui.canvas_frame import CanvasFrame, build_canvas_frame
 from pyrme.ui.styles import qss_color
@@ -67,6 +71,10 @@ class EditorFramePrimitivesCanvasProtocol(Protocol):
     ) -> None: ...
 
 
+class EditorSpriteDrawPlanCanvasProtocol(Protocol):
+    def set_sprite_draw_plan(self, plan: SpriteDrawPlan) -> None: ...
+
+
 _CANVAS_WIDGET_METHOD_NAMES = (
     "bind_editor_context",
     "set_position",
@@ -84,6 +92,7 @@ _EDITOR_TOOL_CALLBACK_METHOD_NAMES = ("set_tool_applied_callback",)
 _EDITOR_POINT_MAPPING_METHOD_NAMES = ("map_position_for_point",)
 _EDITOR_FRAME_SUMMARY_METHOD_NAMES = ("set_frame_summary",)
 _EDITOR_FRAME_PRIMITIVES_METHOD_NAMES = ("set_frame_primitives",)
+_EDITOR_SPRITE_DRAW_PLAN_METHOD_NAMES = ("set_sprite_draw_plan",)
 _EDITOR_VIEWPORT_METHOD_NAMES = ("set_viewport_snapshot",)
 
 
@@ -145,6 +154,12 @@ def implements_editor_frame_primitives_canvas_protocol(
     return _implements_widget_methods(widget, _EDITOR_FRAME_PRIMITIVES_METHOD_NAMES)
 
 
+def implements_editor_sprite_draw_plan_canvas_protocol(
+    widget: object,
+) -> TypeGuard[EditorSpriteDrawPlanCanvasProtocol]:
+    return _implements_widget_methods(widget, _EDITOR_SPRITE_DRAW_PLAN_METHOD_NAMES)
+
+
 def implements_editor_viewport_canvas_protocol(
     widget: object,
 ) -> TypeGuard[EditorViewportCanvasProtocol]:
@@ -202,13 +217,9 @@ class _CanvasShellStateMixin:
         self._canvas_frame = build_canvas_frame(None, self._viewport)
         self._frame_summary = self._canvas_frame.summary()
         self._frame_primitives: tuple[DiagnosticTilePrimitive, ...] = ()
-        self._sprite_resource_resolver = SpriteResourceResolver(items={})
-        self._sprite_resource_diagnostics = SpriteResourceDiagnostics(
-            total=0,
-            resolved=0,
-            missing_item=0,
-            missing_sprite=0,
-        )
+        self._sprite_draw_plan = SpriteDrawPlan((), ())
+        self._sprite_draw_inputs: SpriteDrawAssetInputs | None = None
+        self._sprite_draw_asset_provider: SpriteDrawAssetProvider | None = None
         self._core_mode = "native" if self._shell_core.is_native() else "python-fallback"
         self._editor_mode = "drawing"
         self._active_brush_name = "Select"
@@ -367,12 +378,37 @@ class _CanvasShellStateMixin:
         self._frame_primitives = tuple(primitives)
         self._state_changed()
 
-    def set_sprite_resource_resolver(self, resolver: SpriteResourceResolver) -> None:
-        self._sprite_resource_resolver = resolver
-        self._state_changed()
-
     def frame_primitive_count(self) -> int:
         return len(self._frame_primitives)
+
+    def set_sprite_draw_plan(self, plan: SpriteDrawPlan) -> None:
+        self._sprite_draw_asset_provider = None
+        self._sprite_draw_inputs = None
+        self._sprite_draw_plan = SpriteDrawPlan(
+            commands=tuple(plan.commands),
+            unresolved_sprite_ids=tuple(sorted(set(plan.unresolved_sprite_ids))),
+        )
+        self._state_changed()
+
+    def set_sprite_draw_inputs(
+        self,
+        catalog: SpriteCatalog,
+        atlas: SpriteAtlas,
+    ) -> None:
+        self._sprite_draw_asset_provider = None
+        self._sprite_draw_inputs = SpriteDrawAssetInputs(catalog=catalog, atlas=atlas)
+        self._state_changed()
+
+    def set_sprite_asset_provider(self, provider: SpriteDrawAssetProvider) -> None:
+        self._sprite_draw_asset_provider = provider
+        self._sprite_draw_inputs = None
+        self._state_changed()
+
+    def sprite_draw_command_count(self) -> int:
+        return len(self._sprite_draw_plan.commands)
+
+    def unresolved_sprite_ids(self) -> tuple[int, ...]:
+        return self._sprite_draw_plan.unresolved_sprite_ids
 
     def canvas_frame(self) -> CanvasFrame:
         return self._canvas_frame
@@ -415,7 +451,8 @@ class _CanvasShellStateMixin:
             f"Map Generation: {self._canvas_frame.map_generation}\n"
             f"Visible Rect: {_format_visible_rect(self._canvas_frame.visible_rect)}\n"
             f"Tile Primitives: {self.frame_primitive_count()}\n"
-            f"{self._sprite_resource_diagnostics.summary()}"
+            f"Sprite Draw Commands: {self.sprite_draw_command_count()}\n"
+            f"Unresolved Sprites: {_format_unresolved_sprite_ids(self.unresolved_sprite_ids())}"
         )
 
     def _diagnostic_intro(self) -> str:
@@ -441,37 +478,32 @@ class _CanvasShellStateMixin:
                 )
                 for tile in self._canvas_frame.tiles
             )
-            map_model = getattr(
-                getattr(getattr(self.editor_context, "session", None), "document", None),
-                "map_model",
-                None,
-            )
-            if map_model is None:
-                self._sprite_resource_diagnostics = SpriteResourceDiagnostics(
-                    total=0,
-                    resolved=0,
-                    missing_item=0,
-                    missing_sprite=0,
-                )
-                return
-            frame_plan = build_render_frame_plan(map_model, self._viewport)
-            frame_resources = build_frame_sprite_resources(
-                frame_plan,
-                self._sprite_resource_resolver,
-            )
-            self._sprite_resource_diagnostics = build_sprite_resource_diagnostics(
-                frame_resources
-            )
+            self._sync_live_sprite_draw_plan()
         except Exception as exc:
             self._canvas_frame = build_canvas_frame(None, self._viewport)
             self._frame_summary = f"frame plan unavailable: {exc}"
             self._frame_primitives = ()
-            self._sprite_resource_diagnostics = SpriteResourceDiagnostics(
-                total=0,
-                resolved=0,
-                missing_item=0,
-                missing_sprite=0,
+
+    def _sync_live_sprite_draw_plan(self) -> None:
+        try:
+            inputs = self._active_sprite_draw_inputs()
+            if inputs is None:
+                return
+            frame_plan = _render_frame_plan_from_canvas_frame(self._canvas_frame)
+            sprite_frame = build_sprite_frame(frame_plan, inputs.catalog)
+            self._sprite_draw_plan = build_sprite_draw_plan(
+                sprite_frame,
+                inputs.atlas,
+                EditorViewport(self._canvas_frame.viewport_snapshot),
             )
+        except Exception as exc:
+            self._sprite_draw_plan = SpriteDrawPlan((), ())
+            self._render_summary = f"sprite draw plan unavailable: {exc}"
+
+    def _active_sprite_draw_inputs(self) -> SpriteDrawAssetInputs | None:
+        if self._sprite_draw_asset_provider is not None:
+            return self._sprite_draw_asset_provider.sprite_draw_inputs()
+        return self._sprite_draw_inputs
 
 
 class PlaceholderCanvasWidget(_CanvasShellStateMixin, QLabel):
@@ -601,6 +633,27 @@ class RendererHostCanvasWidget(_CanvasShellStateMixin, QOpenGLWidget):
 def _format_visible_rect(rect: tuple[float, float, float, float]) -> str:
     x, y, width, height = rect
     return f"{x:.2f},{y:.2f},{width:.2f},{height:.2f}"
+
+
+def _format_unresolved_sprite_ids(sprite_ids: tuple[int, ...]) -> str:
+    if not sprite_ids:
+        return "none"
+    return ", ".join(str(sprite_id) for sprite_id in sprite_ids)
+
+
+def _render_frame_plan_from_canvas_frame(frame: CanvasFrame) -> RenderFramePlan:
+    return RenderFramePlan(
+        viewport=frame.viewport_snapshot,
+        visible_rect=frame.visible_rect,
+        tile_commands=tuple(
+            RenderTileCommand(
+                position=tile.position,
+                ground_item_id=tile.ground_item_id,
+                item_ids=tile.item_ids,
+            )
+            for tile in frame.tiles
+        ),
+    )
 
 
 def _tile_label(ground_item_id: int | None, item_ids: tuple[int, ...]) -> str:
