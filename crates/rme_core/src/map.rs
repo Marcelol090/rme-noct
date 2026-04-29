@@ -180,7 +180,26 @@ pub struct MapModel {
     spawnfile: String,
     housefile: String,
     waypointfile: String,
+    towns: HashMap<u32, Town>,
     is_dirty: bool,
+}
+
+/// Town representation matching legacy C++ town.h contract.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Town {
+    pub id: u32,
+    pub name: String,
+    pub temple_pos: MapPosition,
+}
+
+impl Town {
+    pub fn new(id: u32, name: impl Into<String>, pos: MapPosition) -> Self {
+        Self {
+            id,
+            name: name.into(),
+            temple_pos: pos,
+        }
+    }
 }
 
 impl MapModel {
@@ -201,6 +220,7 @@ impl MapModel {
             spawnfile: String::new(),
             housefile: String::new(),
             waypointfile: String::new(),
+            towns: HashMap::new(),
             is_dirty: false,
         }
     }
@@ -349,6 +369,46 @@ impl MapModel {
 
     pub fn mark_clean(&mut self) {
         self.is_dirty = false;
+    }
+
+    // --- Town management ---
+
+    pub fn get_towns(&self) -> &HashMap<u32, Town> {
+        &self.towns
+    }
+
+    pub fn get_town(&self, id: u32) -> Option<&Town> {
+        self.towns.get(&id)
+    }
+
+    pub fn add_town(&mut self, name: String, pos: MapPosition) -> u32 {
+        let mut id = 1;
+        while self.towns.contains_key(&id) {
+            id += 1;
+        }
+        self.towns.insert(id, Town::new(id, name, pos));
+        self.is_dirty = true;
+        id
+    }
+
+    pub fn update_town(&mut self, id: u32, name: String, pos: MapPosition) -> bool {
+        if let Some(town) = self.towns.get_mut(&id) {
+            town.name = name;
+            town.temple_pos = pos;
+            self.is_dirty = true;
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn remove_town(&mut self, id: u32) -> bool {
+        if self.towns.remove(&id).is_some() {
+            self.is_dirty = true;
+            true
+        } else {
+            false
+        }
     }
 }
 

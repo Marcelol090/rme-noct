@@ -224,6 +224,38 @@ impl EditorShellState {
     fn map_is_dirty(&self) -> bool {
         self.map.is_dirty()
     }
+
+    // --- Town management bridge ---
+
+    /// Returns a list of all towns.
+    /// Format: (id, name, x, y, z)
+    fn get_towns(&self) -> Vec<(u32, String, u16, u16, u8)> {
+        self.map
+            .get_towns()
+            .values()
+            .map(|t| {
+                let (x, y, z) = t.temple_pos.as_tuple();
+                (t.id, t.name.clone(), x, y, z)
+            })
+            .collect()
+    }
+
+    /// Adds a new town and returns its ID.
+    fn add_town(&mut self, name: String, x: i32, y: i32, z: i32) -> u32 {
+        let pos = MapPosition::new(x, y, z);
+        self.map.add_town(name, pos)
+    }
+
+    /// Updates an existing town.
+    fn update_town(&mut self, id: u32, name: String, x: i32, y: i32, z: i32) -> bool {
+        let pos = MapPosition::new(x, y, z);
+        self.map.update_town(id, name, pos)
+    }
+
+    /// Removes a town by ID.
+    fn remove_town(&mut self, id: u32) -> bool {
+        self.map.remove_town(id)
+    }
 }
 
 #[cfg(test)]

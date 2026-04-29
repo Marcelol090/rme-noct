@@ -41,6 +41,7 @@ from pyrme.ui.dialogs import (
     FindItemDialog,
     GotoPositionDialog,
     MapPropertiesDialog,
+    TownManagerDialog,
 )
 from pyrme.ui.docks import BrushPaletteDock, MinimapDock, PropertiesDock, WaypointsDock
 from pyrme.ui.editor_context import EditorContext, EditorViewRecord, ShellStateSnapshot
@@ -68,12 +69,6 @@ QSETTINGS_SELECTION_MODE = "editor/selection_mode"
 QSETTINGS_SELECTION_COMPENSATE = "editor/selection_compensate"
 
 
-class TownManagerDialog(QDialog):
-    """Safe placeholder until the full town manager dialog is mounted."""
-
-    def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-        self.setWindowTitle("Town Manager")
 
 
 class _ToolOptionsDock(GlassDockWidget):
@@ -112,6 +107,7 @@ class MainWindow(QMainWindow):
         jump_to_brush_dialog_factory=None,
         jump_to_item_dialog_factory=None,
         find_item_dialog_factory=None,
+        town_manager_dialog_factory: DialogFactory | None = None,
         map_properties_dialog_factory: DialogFactory | None = None,
         canvas_factory: CanvasFactory | None = None,
         enable_docks: bool | None = None,
@@ -128,6 +124,9 @@ class MainWindow(QMainWindow):
         self._find_item_dialog_factory = find_item_dialog_factory or FindItemDialog
         self._map_properties_dialog_factory = (
             map_properties_dialog_factory or MapPropertiesDialog
+        )
+        self._town_manager_dialog_factory = (
+            town_manager_dialog_factory or TownManagerDialog
         )
         self._canvas_factory = canvas_factory or RendererHostCanvasWidget
         self._enable_docks = True if enable_docks is None else enable_docks
@@ -1096,7 +1095,7 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     def _show_town_manager(self) -> None:
-        dialog = TownManagerDialog(self)
+        dialog = self._town_manager_dialog_factory(self)
         dialog.exec()
 
     def _show_find_item(self) -> None:

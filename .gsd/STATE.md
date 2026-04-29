@@ -4,14 +4,15 @@
 **Active Slice:** none
 **Active Task:** none
 **Phase:** complete
-**Next Action:** Extract and review only the remaining scoped `pyrme/ui/main_window.py` hunks for M008, and leave the unrelated `package.json` `gsd:auto` delta out of the slice unless it is promoted into a separate preparatory scope.
-**Last Updated:** 2026-04-22T12:36:26-03:00
-**Requirements Status:** 0 active · 22 validated · 0 deferred · 3 out of scope
+**Next Action:** Await next milestone.
+**Last Updated:** 2026-04-27T14:45:10-03:00
+**Requirements Status:** 0 active · 23 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
-- `remeres-map-editor-redux/data/menubar.xml` is the source of truth for legacy menu order, labels, and shortcuts.
-- `LEGACY-00-CONTRACT` is treated as completed foundation work: top-level menu tree, action metadata, and contract tests exist in the current shell.
+- `M022-welcome-dialog` complete. Parity dashboard, Obsidian Cartographer design, legacy compat logic, `MainWindow` wiring.
+- `remeres-map-editor-redux/data/menubar.xml` = source of truth for legacy menu order/labels/shortcuts.
+- `LEGACY-00-CONTRACT` = foundation. Menu tree, action meta, contract tests exist in shell.
 - `M5-SHELL-NAVIGATION` remains reusable shell-state infrastructure, but it is not counted as full legacy parity.
 - `LEGACY-90-NAVIGATE`, `LEGACY-100-WINDOW`, `LEGACY-10-FILE`, `LEGACY-20-EDIT`, `LEGACY-30-EDITOR`, `LEGACY-40-SEARCH`, `LEGACY-50-MAP`, `LEGACY-60-SELECTION`, `LEGACY-70-VIEW`, and `LEGACY-80-SHOW` are complete and verified.
 - `LEGACY-70-VIEW` now persists its checkable per-view flags in tab shell snapshots instead of keeping them only in window-global state.

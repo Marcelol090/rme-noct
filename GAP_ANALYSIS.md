@@ -13,53 +13,74 @@ This document outlines the current progression of **RME Noct** (Python/Rust) rel
 
 ---
 
-## 2. Functional parity
+## 2. Functional Parity
 
 ### 2.1 UI & Experience
 - **Menubar**: 100% parity achieved. Uses `menubar.xml` as source of truth for all labels, shortcuts, and ordering.
-- **Dialogs**: Parity achieved for Tier 2/3 Dialogs (Town Manager, Waypoints, Map Properties, Find Item, About).
+- **Dialogs**: Parity achieved for Tier 2/3 Dialogs (`Find Item`, `Goto Position`, `Map Properties`).
+- **Honest Placeholders**: `Town Manager`, `Preferences`, and `About` are integrated with the Noct design system but currently serve as functional placeholders.
 - **Toolbars**: Basic parity achieved; Noct uses a refined, high-fidelity dock system.
-- **Docks**: Parity achieved for viewport navigation and visibility flags (Show All Floors, Grid, etc.).
+- **Docks**: Parity achieved for viewport navigation and visibility flags (`Show All Floors`, `Grid`, etc.). `Minimap` and `In-game Preview` are current placeholders.
 
 ### 2.2 Map & Core Logic
-- **Map Model**: Legacy uses a deep C++ tile/floor hierarchy. Noct uses a performance-optimized Rust model with sparse updates.
+- **Map Model**: Ported to Rust (`rme_core`). Supports sparse storage, metadata, and generation tracking.
 - **Asset Loading**: High parity for OTB, DAT, and SPR parsing via `rme_core`. Reliable support for Extended Edition format.
-- **Selection System**: Parity achieved for multi-floor selection and basic map manipulation math (screen-to-map).
+- **Persistence**: OTBM Read/Write parity achieved.
+- **Selection System**: Parity achieved for multi-floor selection and basic map manipulation math (screen-to-map). Selection-dependent actions (Replace on Selection) are still pending wiring.
 
 ### 2.3 Brushes & Tools
 - **Basic Brushes**: Parity for Raw and Item brushes.
-- **Autoborder**: **GAP**. Legacy has highly mature recursive autobordering logic for 100+ categories. Noct currently implements high-level hooks, but the granular rule-based logic is still being migrated to Rust core.
+- **Autoborder**: **GAP**. Legacy has highly mature recursive autobordering logic. Noct implements high-level hooks, but the granular rule-based logic is still being migrated to Rust core.
+- **Advanced Brushes**: **GAP**. `Wall`, `Doodad`, `Carpet`, `Table`, and `Spawn` brushes are currently missing.
 
 ---
 
-## 3. Major Gaps (Non-Goals)
+## 3. Major Gaps (Non-Goals & Deferred)
 
-These features exist in the legacy C++ codebase but are either not implemented or explicitly deferred in RME Noct.
+### 🛑 Undo/Redo System
+Legacy RME maintains an `ActionQueue` for full undo/redo support.
+- **Noct Status**: **GAP**. Neither the Rust core nor the Python shell currently implements a command pattern for undoable operations.
+
+### 🛑 Copy/Paste/Cut
+- **Noct Status**: **GAP**. No implementation of map-region buffers or clipboard serialization exists yet.
+
+### 🛑 Complex Item Attributes
+Legacy support for `Sign Text`, `Teleport Destination`, and `Container` content.
+- **Noct Status**: **GAP**. `Item` in `rme_core` only carries `id`, `count`, `action_id`, and `unique_id`. Text and nested items are deferred.
+
+### 🛑 Map Manipulation & Cleanup
+- **Noct Status**: **GAP**. Advanced map-wide operations such as `Randomize Selection/Map`, `Remove Items by ID`, `Remove Corpses`, and `Unreachable Tile Cleanup` are currently not implemented.
+- **Legacy Match**: These are mature C++ utilities in `source/editor/action.cpp`.
+
+### 🛑 Import / Export Systems
+- **Noct Status**: **GAP**. While the menu structure exists, the following are functional placeholders:
+    - `Import Map / Monsters / NPC`
+    - `Export Minimap / Tilesets`
+    - `Reload Data Files`
+    - `Missing Items Report`
+- **Architectural Note**: These require tight integration between the Rust `io` module and the Python UI shell, currently deferred to post-rendering milestones.
+
+### 🛑 Creatures & Spawns
+- **Noct Status**: **GAP**. No data model or rendering logic for NPC/Monster spawns exists in Noct yet.
+
+### 🛑 Houses & Towns
+- **Noct Status**: **GAP**. While the map properties support house-file paths, the actual house-tile management and town-entry logic are missing.
 
 ### 🛑 Live Collaborative Editing
 Legacy RME includes a standalone networking layer (`source/live`) for real-time collaborative map editing.
-- **Noct Status**: **GAP**. There is currently no implementation of the Networking/Live protocol. This is considered a low-priority feature compared to stable rendering and performance.
+- **Noct Status**: **GAP**. Considered a low-priority feature.
 
 ### 🛑 Lua Scripting Engine
-Legacy RME allows users to write Lua scripts for map generation and tool automation (`source/lua`).
-- **Noct Status**: **GAP**. No integrated scripting engine exists in Noct yet. Python itself serves as the "scripting" layer for the shell, but a sandboxed user-scripting API is not on the immediate roadmap.
-
-### 🛑 Minimap Generation
-Legacy RME maintains a real-time minimap with export capabilities.
-- **Noct Status**: **GAP**. Priority is currently on the high-performance main canvas rendering. Minimap generation is a future milestone.
+- **Noct Status**: **GAP**. Python serves as the shell layer, but a sandboxed user-scripting API is not on the immediate roadmap.
 
 ---
 
 ## 4. Architectural Improvements (The "Noct Advantage")
 
-Where RME Noct intentionally deviates from legacy for better results:
-
-> [!TIP]
-> **Performance at Scale**: Legacy RME often hit memory and UI thread bottlenecks with `50k+` items or massive maps. Noct offloads performance-critical logic (IO, Map Math, Rendering) to Rust/WGPU, keeping the UI responsive via Python/PyQt6's event loop.
-
-- **GPU Acceleration**: Move from legacy OpenGL to `wgpu`, allowing for more efficient tile drawing and modern effects.
-- **Search-First UX**: The Item Palette and Find Item tools use model-based virtualization and caching, providing instant feedback that the legacy `QListWidget` path could not sustain.
-- **Type Safety**: Rust core ensures map integrity and provides safe concurrency that was difficult to maintain in the legacy C++ pointers/manual memory management.
+- **GPU Acceleration**: Move from legacy OpenGL to `wgpu`, allowing for modern effects and higher tile counts.
+- **Search-First UX**: Item Palette and Find Item tools use model-based virtualization and caching.
+- **Type Safety**: Rust core ensures map integrity and safe concurrency.
+- **WGPU Pipeline**: Decoupled rendering from UI state, allowing for frame-plan resource collection before draw calls.
 
 ---
 
@@ -67,6 +88,11 @@ Where RME Noct intentionally deviates from legacy for better results:
 
 - [x] **LEGACY-00-CONTRACT**: Menubar and Action system parity.
 - [x] **TIER-2-DIALOGS**: Core management windows (Towns, Map Props).
-- [/] **CANVAS-HOST**: Renderer host and viewport math (Complete).
-- [ ] **SPRITE-PARITY**: Drawing real items instead of diagnostic placeholders (Next).
+- [x] **CANVAS-HOST**: Renderer host and viewport math.
+- [x] **OTBM-PERSISTENCE**: Full Read/Write parity for binary map files.
+- [x] **SPRITE-RESOLVER**: High-performance item-id to sprite mapping.
+- [/] **SPRITE-PARITY**: Drawing real items instead of diagnostic placeholders (Active).
+- [ ] **WGPU-CORE**: Migration of diagnostic drawing to full WGPU sprite pipeline.
 - [ ] **AUTOBORDER-CORE**: Migration of C++ autoborder rules to Rust.
+- [ ] **UNDO-REDO-CORE**: Command-pattern implementation for map mutations.
+
