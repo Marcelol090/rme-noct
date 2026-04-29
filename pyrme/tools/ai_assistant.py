@@ -69,6 +69,14 @@ class AIAssistant:
     def _run_gsd_command(self, *parts: str, timeout: int = 60) -> str:
         """Execute a GSD 2 CLI command and return output."""
         cmd = [*self._gsd_command_prefix(), *[part for part in parts if part]]
+
+        # Security: Validate all command parts are strings and contain no null bytes
+        for i, part in enumerate(cmd):
+            if not isinstance(part, str):
+                cmd[i] = str(part)
+            if "\0" in cmd[i]:
+                return f"Error: Command argument contains null byte: {cmd[i]!r}"
+
         try:
             result = subprocess.run(
                 cmd,
@@ -77,6 +85,7 @@ class AIAssistant:
                 capture_output=True,
                 text=True,
                 timeout=timeout,
+                shell=False,
             )
             return result.stdout or result.stderr or "(no output)"
         except FileNotFoundError:
