@@ -40,6 +40,7 @@ from pyrme.ui.dialogs import (
     FindBrushDialog,
     FindItemDialog,
     GotoPositionDialog,
+    HouseManagerDialog,
     MapPropertiesDialog,
 )
 from pyrme.ui.dialogs.welcome_dialog import WelcomeDialog
@@ -53,12 +54,12 @@ from pyrme.ui.legacy_menu_contract import (
     LEGACY_VIEW_FLAG_DEFAULTS,
     PHASE1_ACTIONS,
 )
-from pyrme.ui.models.startup_models import StartupLoadRequest
 from pyrme.ui.styles import qss_color
 from pyrme.ui.theme import THEME, TYPOGRAPHY
 
 if TYPE_CHECKING:
     from pyrme.ui.models.item_palette_types import ItemEntry
+    from pyrme.ui.models.startup_models import StartupLoadRequest
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +116,7 @@ class MainWindow(QMainWindow):
         jump_to_item_dialog_factory=None,
         find_item_dialog_factory=None,
         map_properties_dialog_factory: DialogFactory | None = None,
+        house_manager_dialog_factory: DialogFactory | None = None,
         canvas_factory: CanvasFactory | None = None,
         enable_docks: bool | None = None,
     ) -> None:
@@ -130,6 +132,9 @@ class MainWindow(QMainWindow):
         self._find_item_dialog_factory = find_item_dialog_factory or FindItemDialog
         self._map_properties_dialog_factory = (
             map_properties_dialog_factory or MapPropertiesDialog
+        )
+        self._house_manager_dialog_factory = (
+            house_manager_dialog_factory or HouseManagerDialog
         )
         self._canvas_factory = canvas_factory or RendererHostCanvasWidget
         self._enable_docks = True if enable_docks is None else enable_docks
@@ -479,6 +484,9 @@ class MainWindow(QMainWindow):
         self.map_edit_towns_action = self._action_from_spec(
             "map_edit_towns", self._show_town_manager
         )
+        self.map_edit_houses_action = self._action_from_spec(
+            "map_edit_houses", self._show_house_manager
+        )
         self.map_cleanup_invalid_tiles_action = self._action_from_spec(
             "map_cleanup_invalid_tiles",
             lambda: self._show_unavailable("Cleanup invalid tiles"),
@@ -494,6 +502,7 @@ class MainWindow(QMainWindow):
             "map_statistics", self._show_map_statistics
         )
         menu.addAction(self.map_edit_towns_action)
+        menu.addAction(self.map_edit_houses_action)
         menu.addSeparator()
         menu.addActions(
             [
@@ -895,6 +904,7 @@ class MainWindow(QMainWindow):
         """Create dock widgets for palettes and tools."""
         self.brush_palette_dock = BrushPaletteDock(self)
         self.brush_palette_dock.item_selected.connect(self._handle_item_palette_selection)
+        self.brush_palette_dock.manage_houses_requested.connect(self._show_house_manager)
         self.addDockWidget(
             Qt.DockWidgetArea.LeftDockWidgetArea,
             self.brush_palette_dock,
@@ -1133,6 +1143,10 @@ class MainWindow(QMainWindow):
 
     def _show_town_manager(self) -> None:
         dialog = TownManagerDialog(self)
+        dialog.exec()
+
+    def _show_house_manager(self) -> None:
+        dialog = self._house_manager_dialog_factory(self)
         dialog.exec()
 
     def _show_find_item(self) -> None:

@@ -53,9 +53,20 @@ class _TownManagerDialog:
         return int(QDialog.DialogCode.Accepted)
 
 
+class _HouseManagerDialog:
+    opened = False
+
+    def __init__(self, parent=None) -> None:
+        self.parent = parent
+
+    def exec(self) -> int:
+        type(self).opened = True
+        return int(QDialog.DialogCode.Accepted)
+
 def test_legacy_map_contract_matches_xml() -> None:
     assert LEGACY_MAP_MENU_SEQUENCE == (
         "Edit Towns",
+        "Edit Houses",
         None,
         "Cleanup invalid tiles...",
         "Cleanup invalid zones...",
@@ -146,3 +157,21 @@ def test_map_properties_action_uses_dialog_seam(qtbot, settings_workspace: Path)
     window.map_properties_action.trigger()
 
     assert _MapPropertiesDialog.opened is True
+
+
+def test_map_edit_houses_action_uses_house_manager_dialog(
+    qtbot,
+    settings_workspace: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _HouseManagerDialog.opened = False
+    monkeypatch.setattr("pyrme.ui.main_window.HouseManagerDialog", _HouseManagerDialog)
+    window = MainWindow(
+        settings=_build_settings(settings_workspace, "map-house-manager-action.ini"),
+        enable_docks=False,
+    )
+    qtbot.addWidget(window)
+
+    window.map_edit_houses_action.trigger()
+
+    assert _HouseManagerDialog.opened is True
