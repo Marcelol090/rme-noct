@@ -6,10 +6,11 @@ Provides item/creature search with type and property filters.
 
 from __future__ import annotations
 
+from typing import Any
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
 
-from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtCore import QAbstractListModel, QModelIndex, QSize, Qt
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
@@ -19,8 +20,6 @@ from PyQt6.QtWidgets import (
     QLabel,
     QLineEdit,
     QListView,
-    QListWidget,
-    QListWidgetItem,
     QPushButton,
     QSplitter,
     QVBoxLayout,
@@ -40,6 +39,58 @@ from pyrme.ui.styles import (
 from pyrme.ui.theme import TYPOGRAPHY
 
 
+class FindItemResultModel(QAbstractListModel):
+    """Virtualized result model for FindItemDialog."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._results: list[FindItemResult] = []
+        self._mode: FindItemResultMode = FindItemResultMode.LIST
+
+    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:  # noqa: N802
+        return len(self._results)
+
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
+        if not index.isValid() or not (0 <= index.row() < len(self._results)):
+            return None
+
+        result = self._results[index.row()]
+        if role == Qt.ItemDataRole.DisplayRole:
+            return FindItemDialog._format_item_text(result, self._mode)
+        if role == Qt.ItemDataRole.UserRole:
+            return result
+        if role == Qt.ItemDataRole.ToolTipRole:
+            return FindItemDialog._format_item_tooltip(result)
+        if role == Qt.ItemDataRole.FontRole:
+            return TYPOGRAPHY.ui_label()
+        if role == Qt.ItemDataRole.TextAlignmentRole:
+            return (
+                Qt.AlignmentFlag.AlignCenter
+                if self._mode == FindItemResultMode.GRID
+                else Qt.AlignmentFlag.AlignLeft
+            )
+        if role == Qt.ItemDataRole.SizeHintRole:
+            return (
+                QSize(132, 56)
+                if self._mode == FindItemResultMode.GRID
+                else QSize(0, 24)
+            )
+        return None
+
+    def update_results(self, results: list[FindItemResult], mode: FindItemResultMode) -> None:
+        """Update the model with new results and presentation mode."""
+        self.beginResetModel()
+        self._results = list(results)
+        self._mode = mode
+        self.endResetModel()
+
+    def result_at(self, row: int) -> FindItemResult | None:
+        """Return the result at the given row."""
+        if 0 <= row < len(self._results):
+            return self._results[row]
+        return None
+
+
 class FindItemResultMode(StrEnum):
     """Supported local result presentation modes."""
 
@@ -57,6 +108,7 @@ class FindItemResult:
     sprite_hash: str
     kind: str
     flags: set[str] = field(default_factory=set)
+    search_haystack: str = ""
 
 
 @dataclass(slots=True)
@@ -144,6 +196,7 @@ class FindItemDialog(QDialog):
         )
 
         self._catalog = [replace(result) for result in (catalog or DEFAULT_CATALOG)]
+        self._update_catalog_haystacks()
         self._query = self._clone_query(query or self._default_query())
         self._selected_result: FindItemResult | None = None
         self._current_results: list[FindItemResult] = []
@@ -159,7 +212,7 @@ class FindItemDialog(QDialog):
             "\n".join(
                 [
                     dialog_base_qss("QLineEdit"),
-                    item_view_qss("QListWidget"),
+                    item_view_qss("QListView"),
                     group_box_qss(),
                     checkbox_qss(),
                 ]
@@ -278,10 +331,12 @@ class FindItemDialog(QDialog):
         self.result_count.setStyleSheet(secondary_label_qss())
         right_layout.addWidget(self.result_count)
 
-        self.item_list = QListWidget()
+        self.item_list = QListView()
+        self._item_model = FindItemResultModel(self)
+        self.item_list.setModel(self._item_model)
         self.item_list.setToolTip("Double-click to select an item.")
-        self.item_list.itemSelectionChanged.connect(self._sync_selected_result)
-        self.item_list.itemDoubleClicked.connect(lambda *_: self.accept())
+        self.item_list.selectionModel().selectionChanged.connect(self._sync_selected_result)
+        self.item_list.doubleClicked.connect(lambda *_: self.accept())
         right_layout.addWidget(self.item_list, 1)
         splitter.addWidget(right_panel)
         splitter.setSizes([180, 320])
@@ -329,6 +384,7 @@ class FindItemDialog(QDialog):
     def set_catalog(self, catalog: list[FindItemResult] | tuple[FindItemResult, ...]) -> None:
         """Replace the local in-memory catalog and refresh results."""
         self._catalog = [replace(result) for result in catalog]
+        self._update_catalog_haystacks()
         self._refresh_results()
 
     def set_query(self, query: FindItemQuery) -> None:
@@ -417,27 +473,14 @@ class FindItemDialog(QDialog):
         self.result_count.setText(self._format_result_count(len(self._current_results)))
 
         previous = self._current_selected_result()
-        self.item_list.blockSignals(True)
-        self.item_list.clear()
-        for result in self._current_results:
-            item = QListWidgetItem(self._format_item_text(result, query.result_mode))
-            item.setFont(TYPOGRAPHY.ui_label())
-            item.setData(Qt.ItemDataRole.UserRole, result)
-            item.setToolTip(self._format_item_tooltip(result))
-            if query.result_mode == FindItemResultMode.GRID:
-                item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                item.setSizeHint(QSize(132, 56))
-            else:
-                item.setTextAlignment(Qt.AlignmentFlag.AlignLeft)
-                item.setSizeHint(QSize(0, 24))
-            self.item_list.addItem(item)
-
-        self.item_list.blockSignals(False)
+        self.item_list.selectionModel().blockSignals(True)
+        self._item_model.update_results(self._current_results, query.result_mode)
+        self.item_list.selectionModel().blockSignals(False)
 
         if previous is not None:
             for index, result in enumerate(self._current_results):
                 if result == previous:
-                    self.item_list.setCurrentRow(index)
+                    self.item_list.setCurrentIndex(self._item_model.index(index, 0))
                     break
             else:
                 self._select_first_result_if_available()
@@ -460,15 +503,26 @@ class FindItemDialog(QDialog):
         self._selected_result = self._current_selected_result()
 
     def _current_selected_result(self) -> FindItemResult | None:
-        current_item = self.item_list.currentItem()
-        if current_item is None:
+        index = self.item_list.currentIndex()
+        if not index.isValid():
             return None
-        result = current_item.data(Qt.ItemDataRole.UserRole)
-        return result if isinstance(result, FindItemResult) else None
+        return self._item_model.result_at(index.row())
 
     def _select_first_result_if_available(self) -> None:
-        if self.item_list.count() > 0 and self.item_list.currentRow() < 0:
-            self.item_list.setCurrentRow(0)
+        if self._item_model.rowCount() > 0 and not self.item_list.currentIndex().isValid():
+            self.item_list.setCurrentIndex(self._item_model.index(0, 0))
+
+    def _update_catalog_haystacks(self) -> None:
+        """Pre-calculate search haystacks for all catalog items."""
+        for result in self._catalog:
+            result.search_haystack = " ".join(
+                [
+                    result.name.lower(),
+                    str(result.server_id),
+                    str(result.client_id),
+                    result.sprite_hash.lower(),
+                ]
+            )
 
     def _apply_result_mode(self, mode: FindItemResultMode) -> None:
         """Update the view widget to match the requested mode."""
@@ -503,15 +557,7 @@ class FindItemDialog(QDialog):
     ) -> bool:
         search = query.search_text.strip().lower()
         if search:
-            haystack = " ".join(
-                [
-                    result.name.lower(),
-                    str(result.server_id),
-                    str(result.client_id),
-                    result.sprite_hash.lower(),
-                ]
-            )
-            if search not in haystack:
+            if search not in result.search_haystack:
                 return False
 
         if query.type_filters and result.kind not in query.type_filters:
