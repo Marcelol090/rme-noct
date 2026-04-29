@@ -11,10 +11,9 @@ from __future__ import annotations
 from typing import Optional
 
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QFont, QPixmap
+from PyQt6.QtGui import QPixmap
 import os
 from PyQt6.QtWidgets import (
-    QApplication,
     QCheckBox,
     QDialog,
     QHBoxLayout,
@@ -22,7 +21,6 @@ from PyQt6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QPushButton,
-    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
