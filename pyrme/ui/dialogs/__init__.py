@@ -9,6 +9,7 @@ from pyrme.ui.dialogs.find_item import (
 )
 from pyrme.ui.dialogs.goto_position import GotoPositionDialog
 from pyrme.ui.dialogs.map_properties import MapPropertiesDialog, MapPropertiesState
+from pyrme.ui.dialogs.map_statistics import MapStatisticsDialog
 
 __all__ = [
     "FindBrushDialog",
@@ -20,4 +21,5 @@ __all__ = [
     "GotoPositionDialog",
     "MapPropertiesDialog",
     "MapPropertiesState",
+    "MapStatisticsDialog",
 ]

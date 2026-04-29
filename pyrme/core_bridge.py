@@ -144,6 +144,9 @@ class _FallbackEditorShellState:
             f" worker_threads={self.recommended_worker_threads()}"
         )
 
+    def collect_statistics(self) -> Any:
+        return None
+
 
 class EditorShellCoreBridge:
     """Stable Python-facing adapter over the optional native extension."""
@@ -214,6 +217,11 @@ class EditorShellCoreBridge:
 
     def render_summary(self) -> str:
         return str(self._inner.render_summary())
+
+    def collect_statistics(self) -> Any:
+        if hasattr(self._inner, "collect_statistics"):
+            return self._inner.collect_statistics()
+        return None
 
 
 def create_editor_shell_state() -> EditorShellCoreBridge:
