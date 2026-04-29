@@ -37,11 +37,14 @@ from pyrme.ui.canvas_host import (
 )
 from pyrme.ui.components.glass import GlassDockWidget
 from pyrme.ui.dialogs import (
+    AboutDialog,
     FindBrushDialog,
     FindItemDialog,
     GotoPositionDialog,
     MapPropertiesDialog,
+    PreferencesDialog,
     TownManagerDialog,
+    HouseManagerDialog,
 )
 from pyrme.ui.docks import BrushPaletteDock, MinimapDock, PropertiesDock, WaypointsDock
 from pyrme.ui.editor_context import EditorContext, EditorViewRecord, ShellStateSnapshot
@@ -109,6 +112,9 @@ class MainWindow(QMainWindow):
         find_item_dialog_factory=None,
         town_manager_dialog_factory: DialogFactory | None = None,
         map_properties_dialog_factory: DialogFactory | None = None,
+        about_dialog_factory: DialogFactory | None = None,
+        preferences_dialog_factory: DialogFactory | None = None,
+        house_manager_dialog_factory: DialogFactory | None = None,
         canvas_factory: CanvasFactory | None = None,
         enable_docks: bool | None = None,
     ) -> None:
@@ -127,6 +133,13 @@ class MainWindow(QMainWindow):
         )
         self._town_manager_dialog_factory = (
             town_manager_dialog_factory or TownManagerDialog
+        )
+        self._about_dialog_factory = about_dialog_factory or AboutDialog
+        self._preferences_dialog_factory = (
+            preferences_dialog_factory or PreferencesDialog
+        )
+        self._house_manager_dialog_factory = (
+            house_manager_dialog_factory or HouseManagerDialog
         )
         self._canvas_factory = canvas_factory or RendererHostCanvasWidget
         self._enable_docks = True if enable_docks is None else enable_docks
@@ -287,7 +300,7 @@ class MainWindow(QMainWindow):
         recent_menu = menu.addMenu("Recent Files")
         assert recent_menu is not None
         self.file_preferences_action = self._action_from_spec(
-            "file_preferences", lambda: self._show_unavailable("Preferences")
+            "file_preferences", self._show_preferences
         )
         self.file_exit_action = self._action_from_spec(
             "file_exit", lambda: self._show_unavailable("Exit")
@@ -442,6 +455,9 @@ class MainWindow(QMainWindow):
         self.map_edit_towns_action = self._action_from_spec(
             "map_edit_towns", self._show_town_manager
         )
+        self.map_edit_houses_action = self._action_from_spec(
+            "map_edit_houses", self._show_house_manager
+        )
         self.map_cleanup_invalid_tiles_action = self._action_from_spec(
             "map_cleanup_invalid_tiles",
             lambda: self._show_unavailable("Cleanup invalid tiles"),
@@ -457,6 +473,7 @@ class MainWindow(QMainWindow):
             "map_statistics", self._show_map_statistics
         )
         menu.addAction(self.map_edit_towns_action)
+        menu.addAction(self.map_edit_houses_action)
         menu.addSeparator()
         menu.addActions(
             [
@@ -739,7 +756,7 @@ class MainWindow(QMainWindow):
             )
         )
         about.addAction(
-            self._action_from_spec("about", lambda: self._show_unavailable("About"))
+            self._action_from_spec("about", self._show_about)
         )
 
     def _setup_toolbars(self) -> None:
@@ -858,6 +875,7 @@ class MainWindow(QMainWindow):
         """Create dock widgets for palettes and tools."""
         self.brush_palette_dock = BrushPaletteDock(self)
         self.brush_palette_dock.item_selected.connect(self._handle_item_palette_selection)
+        self.brush_palette_dock.manage_houses_requested.connect(self._show_house_manager)
         self.addDockWidget(
             Qt.DockWidgetArea.LeftDockWidgetArea,
             self.brush_palette_dock,
@@ -1096,6 +1114,18 @@ class MainWindow(QMainWindow):
 
     def _show_town_manager(self) -> None:
         dialog = self._town_manager_dialog_factory(self)
+        dialog.exec()
+
+    def _show_house_manager(self) -> None:
+        dialog = self._house_manager_dialog_factory(self)
+        dialog.exec()
+
+    def _show_about(self) -> None:
+        dialog = self._about_dialog_factory(self)
+        dialog.exec()
+
+    def _show_preferences(self) -> None:
+        dialog = self._preferences_dialog_factory(self)
         dialog.exec()
 
     def _show_find_item(self) -> None:
