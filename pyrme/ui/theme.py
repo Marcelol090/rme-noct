@@ -42,6 +42,10 @@ class ColorTokens:
     verdant_green = QColor("#5CBF8A")
     amber_caution = QColor("#D4A847")
     steel_blue = QColor("#5B8ECC")
+    
+    # Overlays
+    selection_overlay = QColor(255, 255, 255, int(255 * 0.2))
+    invalid_overlay = QColor(224, 92, 92, int(255 * 0.4))
 
 @dataclass
 class TypographyTokens:

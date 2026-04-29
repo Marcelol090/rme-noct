@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from contextlib import suppress
 from dataclasses import dataclass
+from time import monotonic
 from typing import TYPE_CHECKING, Protocol, TypeGuard, cast
 
 from PyQt6.QtCore import QPoint, QRect, Qt
@@ -21,6 +22,7 @@ from pyrme.core_bridge import create_editor_shell_state
 from pyrme.editor import MapPosition
 from pyrme.rendering import (
     DiagnosticTilePrimitive,
+    FrameSpriteResource,
     SpriteResourceDiagnostics,
     SpriteResourceResolver,
     build_frame_sprite_resources,
@@ -33,7 +35,7 @@ from pyrme.ui.theme import THEME, TYPOGRAPHY
 from pyrme.ui.viewport import EditorViewport, ViewportSnapshot
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterable
 
     from pyrme.ui.editor_context import EditorContext
 
@@ -65,6 +67,10 @@ class EditorFramePrimitivesCanvasProtocol(Protocol):
         self,
         primitives: tuple[DiagnosticTilePrimitive, ...],
     ) -> None: ...
+
+
+class RenderDispatcherProtocol(Protocol):
+    def render_frame(self, sprites: list[dict[str, object]]) -> int: ...
 
 
 _CANVAS_WIDGET_METHOD_NAMES = (
@@ -202,6 +208,10 @@ class _CanvasShellStateMixin:
         self._canvas_frame = build_canvas_frame(None, self._viewport)
         self._frame_summary = self._canvas_frame.summary()
         self._frame_primitives: tuple[DiagnosticTilePrimitive, ...] = ()
+        self._invalid_tile_positions: set[MapPosition] = set()
+        self._frame_sprite_resources: tuple[FrameSpriteResource, ...] = ()
+        self._sprite_dispatch_count = 0
+        self._sprite_dispatch_error: str | None = None
         self._sprite_resource_resolver = SpriteResourceResolver(items={})
         self._sprite_resource_diagnostics = SpriteResourceDiagnostics(
             total=0,
@@ -367,6 +377,10 @@ class _CanvasShellStateMixin:
         self._frame_primitives = tuple(primitives)
         self._state_changed()
 
+    def set_invalid_tile_positions(self, positions: Iterable[MapPosition]) -> None:
+        self._invalid_tile_positions = set(positions)
+        self._state_changed()
+
     def set_sprite_resource_resolver(self, resolver: SpriteResourceResolver) -> None:
         self._sprite_resource_resolver = resolver
         self._state_changed()
@@ -415,6 +429,8 @@ class _CanvasShellStateMixin:
             f"Map Generation: {self._canvas_frame.map_generation}\n"
             f"Visible Rect: {_format_visible_rect(self._canvas_frame.visible_rect)}\n"
             f"Tile Primitives: {self.frame_primitive_count()}\n"
+            f"Sprite Dispatch: {self._sprite_dispatch_count} queued\n"
+            f"Sprite Dispatch Error: {self._sprite_dispatch_error or 'none'}\n"
             f"{self._sprite_resource_diagnostics.summary()}"
         )
 
@@ -428,6 +444,11 @@ class _CanvasShellStateMixin:
 
     def _state_changed(self) -> None:
         raise NotImplementedError
+
+    def _selected_tile_positions(self) -> set[MapPosition]:
+        if self.editor_context is None:
+            return set()
+        return set(self.editor_context.session.editor.selection_positions)
 
     def _sync_canvas_frame(self) -> None:
         try:
@@ -455,17 +476,18 @@ class _CanvasShellStateMixin:
                 )
                 return
             frame_plan = build_render_frame_plan(map_model, self._viewport)
-            frame_resources = build_frame_sprite_resources(
+            self._frame_sprite_resources = build_frame_sprite_resources(
                 frame_plan,
                 self._sprite_resource_resolver,
             )
             self._sprite_resource_diagnostics = build_sprite_resource_diagnostics(
-                frame_resources
+                self._frame_sprite_resources
             )
         except Exception as exc:
             self._canvas_frame = build_canvas_frame(None, self._viewport)
             self._frame_summary = f"frame plan unavailable: {exc}"
             self._frame_primitives = ()
+            self._frame_sprite_resources = ()
             self._sprite_resource_diagnostics = SpriteResourceDiagnostics(
                 total=0,
                 resolved=0,
@@ -511,10 +533,18 @@ class RendererHostCanvasWidget(_CanvasShellStateMixin, QOpenGLWidget):
     separate follow-on slices.
     """
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        render_dispatcher: RenderDispatcherProtocol | None = None,
+    ) -> None:
         super().__init__(parent)
         self._gl_initialized = False
         self._drawable_size = (0, 0)
+        self._last_paint_timestamp: float | None = None
+        self._diagnostic_fps: float | None = None
+        self._render_dispatcher = render_dispatcher
         self.setMouseTracking(True)
         self._init_canvas_shell_state()
 
@@ -528,6 +558,7 @@ class RendererHostCanvasWidget(_CanvasShellStateMixin, QOpenGLWidget):
         self.update()
 
     def paintGL(self) -> None:  # noqa: N802
+        self._dispatch_render_frame()
         painter = QPainter(self)
         self._paint_diagnostics(painter)
 
@@ -555,9 +586,30 @@ class RendererHostCanvasWidget(_CanvasShellStateMixin, QOpenGLWidget):
         width, height = self._drawable_size
         return (
             f"{base}\n"
+            f"FPS: {self._diagnostic_fps_text()}\n"
             f"OpenGL Context: {self._context_status()}\n"
             f"Drawable Size: {width}x{height}"
         )
+
+    def _diagnostic_fps_text(self) -> str:
+        if self._diagnostic_fps is None:
+            return "measuring"
+        return f"{self._diagnostic_fps:.1f}"
+
+    def _record_diagnostic_frame(self) -> None:
+        now = monotonic()
+        previous = self._last_paint_timestamp
+        self._last_paint_timestamp = now
+        if previous is None:
+            return
+        elapsed = now - previous
+        if elapsed <= 0:
+            return
+        current_fps = 1.0 / elapsed
+        if self._diagnostic_fps is None:
+            self._diagnostic_fps = current_fps
+        else:
+            self._diagnostic_fps = (self._diagnostic_fps * 0.8) + (current_fps * 0.2)
 
     def _context_status(self) -> str:
         if not self.isValid():
@@ -568,6 +620,7 @@ class RendererHostCanvasWidget(_CanvasShellStateMixin, QOpenGLWidget):
         return "ready" if self._gl_initialized else "created"
 
     def _paint_diagnostics(self, painter: QPainter) -> None:
+        self._record_diagnostic_frame()
         painter.fillRect(self.rect(), THEME.void_black)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         self._paint_tile_primitives(painter)
@@ -575,24 +628,75 @@ class RendererHostCanvasWidget(_CanvasShellStateMixin, QOpenGLWidget):
         painter.setPen(QPen(THEME.ghost_border))
         painter.drawRoundedRect(content_rect, 12.0, 12.0)
         text_rect = content_rect.adjusted(20, 20, -20, -20)
-        painter.setPen(THEME.moonstone_white)
-        font = QFont(TYPOGRAPHY.code_label(11))
+        font = QFont(TYPOGRAPHY.code_label(10))
         font.setStyleHint(QFont.StyleHint.Monospace)
         painter.setFont(font)
+        diagnostic_text = self.diagnostic_text()
+        painter.setPen(QColor(0, 0, 0, 204))
+        painter.drawText(
+            text_rect.translated(1, 1),
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop,
+            diagnostic_text,
+        )
+        painter.setPen(THEME.moonstone_white)
         painter.drawText(
             text_rect,
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop,
-            self.diagnostic_text(),
+            diagnostic_text,
         )
         painter.end()
+
+    def _build_sprite_frame_payload(self) -> list[dict[str, object]]:
+        payload: list[dict[str, object]] = []
+        for resource in self._frame_sprite_resources:
+            result = resource.result
+            if not result.available or result.sprite_id is None or result.pixels is None:
+                continue
+            payload.append(
+                {
+                    "x": resource.position.x,
+                    "y": resource.position.y,
+                    "layer": resource.stack_layer,
+                    "sprite_id": result.sprite_id,
+                    "pixels": result.pixels,
+                }
+            )
+        return payload
+
+    def _dispatch_render_frame(self) -> None:
+        payload = self._build_sprite_frame_payload()
+        try:
+            queued_count = self._render_dispatcher_for_canvas().render_frame(payload)
+        except Exception as exc:
+            self._sprite_dispatch_count = 0
+            self._sprite_dispatch_error = f"{type(exc).__name__}: {exc}"
+            return
+        self._sprite_dispatch_count = queued_count
+        self._sprite_dispatch_error = None
+
+    def _render_dispatcher_for_canvas(self) -> RenderDispatcherProtocol:
+        if self._render_dispatcher is None:
+            from pyrme.rme_core import render
+
+            self._render_dispatcher = render.SpriteAtlas()
+        return self._render_dispatcher
 
     def _paint_tile_primitives(self, painter: QPainter) -> None:
         if not self._frame_primitives:
             return
         painter.save()
         painter.setPen(QPen(THEME.moonstone_white))
-        painter.setBrush(QColor(80, 144, 112, 96))
+        selected_positions = self._selected_tile_positions()
         for primitive in self._frame_primitives:
+            if (
+                self._show_flags.get("show_invalid_tiles", True)
+                and primitive.position in self._invalid_tile_positions
+            ):
+                painter.setBrush(THEME.invalid_overlay)
+            elif primitive.position in selected_positions:
+                painter.setBrush(THEME.selection_overlay)
+            else:
+                painter.setBrush(THEME.amethyst_glow)
             x, y, width, height = primitive.screen_rect
             painter.drawRect(QRect(x, y, width, height))
         painter.restore()
