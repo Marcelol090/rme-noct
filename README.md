@@ -37,7 +37,7 @@ read legacy C++ first, then encode the contract in tests.
 ## Quick Start
 
 Use WSL2/Linux for development. The repo contract assumes `python3`, not
-Windows `python`.
+Windows `python`. Node.js 22+ is required for local GSD tooling.
 
 ```bash
 git clone https://github.com/Marcelol090/rme-noct.git
@@ -52,6 +52,10 @@ pip install maturin
 maturin develop
 pip install -e ".[dev]"
 ```
+
+`npm install` runs the `postinstall` hook, which patches the local `gsd-pi`
+runtime. Keep `GSD_HOME` repo-local when using automation so generated sessions
+and extensions stay isolated from global tools.
 
 Launch:
 
@@ -78,6 +82,9 @@ contract before changing code.
 - Read active `.gsd/STATE.md` plus the current milestone/slice docs before
   moving GSD state.
 - Use Context7 or official docs for third-party API details.
+- Codex/OpenAI is the primary orchestration layer; Superpowers supplies local
+  workflow gates, GSD 2 stores slice state, and Context7 is the library-docs
+  source of truth.
 - Preserve legacy `rme/` behavior when docs, generated designs, or new code
   disagree with the reference implementation.
 - Run the smallest relevant test path before marking a task done.
@@ -90,6 +97,8 @@ Common commands:
 npm run gsd:status
 npm run gsd:plan -- "Plan the next milestone"
 npm run gsd:auto
+gsd headless query
+gsd headless new-milestone --context-text
 ```
 
 `npm run gsd:auto` runs `npm run preflight` first. If preflight fails, fix the

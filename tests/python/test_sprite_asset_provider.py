@@ -61,11 +61,12 @@ def test_sprite_asset_bundle_builds_catalog_and_atlas_inputs_from_records() -> N
     assert entry is not None
     assert entry.sprite_id == 9001
     assert entry.metadata is not None
-    assert entry.metadata["sprite_frames"] == (
+    assert tuple(dict(frame) for frame in entry.metadata["sprite_frames"]) == (
         {
             "frame_index": 0,
             "size": (32, 32),
             "offset": (4, -2),
+            "archive_offset": 0,
         },
     )
     region = inputs.atlas.resolve(9001)

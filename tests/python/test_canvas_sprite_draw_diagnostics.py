@@ -283,7 +283,7 @@ def test_failed_asset_provider_clears_stale_commands_and_preserves_frame(qtbot) 
     assert "sprite draw plan unavailable: fixture provider unavailable" in text
 
 
-def test_failed_live_sprite_draw_generation_clears_stale_commands(qtbot) -> None:
+def test_invalid_live_sprite_metadata_clears_stale_commands(qtbot) -> None:
     canvas = PlaceholderCanvasWidget()
     qtbot.addWidget(canvas)
     canvas.set_viewport_snapshot(_viewport_snapshot())
@@ -309,4 +309,4 @@ def test_failed_live_sprite_draw_generation_clears_stale_commands(qtbot) -> None
     text = canvas.diagnostic_text()
     assert "Visible Tiles: 1" in text
     assert "Sprite Draw Commands: 0" in text
-    assert "sprite draw plan unavailable:" in text
+    assert "Unresolved Sprites: 9001" in text
