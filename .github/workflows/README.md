@@ -12,6 +12,9 @@ examples, Jules routing, and GitHub run history depend on them.
 | `jules-dispatch.yml` | `Jules Dispatch` | issue/PR comments, workflow dispatch | Accepts trusted `@jules /focus` comments |
 | `jules-maintenance.yml` | `Jules Maintenance` | weekly schedule, workflow dispatch | Calls `Jules Invoke` with maintenance focus |
 | `jules-ci-fix.yml` | `Jules CI Fix` | failed/timed-out CI workflow run | Sends failing CI context to `Jules Invoke` |
+| `jules-uiux.yml` | `Jules UI/UX` | workflow dispatch | Sends visual/UI shell context to Jules |
+| `jules-test.yml` | `Jules Test` | weekly schedule, workflow dispatch | Sends verification context to Jules |
+| `jules-system.yml` | `Jules System` | weekly schedule, workflow dispatch | Sends repo automation context to Jules |
 
 ## Jules Requirements
 
@@ -31,6 +34,8 @@ Supported comment forms:
 @jules /utility
 @jules /maintenance
 @jules /ci
+@jules /uiux
+@jules /system
 ```
 
 ## Manual Dispatch
@@ -44,6 +49,22 @@ gh workflow run "Jules Invoke" \
   -f additional_context="manual maintenance" \
   -f include_last_commit=true \
   -f include_commit_log=true
+```
+
+Focused wrappers are available when the GitHub Actions UI should show a lane:
+
+```bash
+gh workflow run "Jules UI/UX" --repo Marcelol090/rme-noct --ref main \
+  -f starting_branch=main \
+  -f additional_context="review dialog spacing and parity"
+
+gh workflow run "Jules Test" --repo Marcelol090/rme-noct --ref main \
+  -f starting_branch=main \
+  -f additional_context="select the smallest useful verification slice"
+
+gh workflow run "Jules System" --repo Marcelol090/rme-noct --ref main \
+  -f starting_branch=main \
+  -f additional_context="audit workflow and automation drift"
 ```
 
 ## Validation

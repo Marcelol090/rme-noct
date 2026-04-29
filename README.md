@@ -123,6 +123,9 @@ history currently includes:
 | `Jules Dispatch` | trusted issue/PR comments, workflow dispatch | route `@jules /focus` requests |
 | `Jules Maintenance` | weekly schedule, workflow dispatch | scheduled maintenance prompt |
 | `Jules CI Fix` | failed/timed-out CI workflow runs, workflow dispatch | route failing CI context to Jules |
+| `Jules UI/UX` | workflow dispatch | route UI shell and visual design context to Jules |
+| `Jules Test` | weekly schedule, workflow dispatch | route verification-slice context to Jules |
+| `Jules System` | weekly schedule, workflow dispatch | route repo automation context to Jules |
 
 The Jules action is pinned to `google-labs-code/jules-invoke@v1.0.0` because
 the upstream repo publishes `v1.0.0`, not `v1`.
@@ -146,6 +149,9 @@ Trusted comments also work on issues and PRs:
 @jules /python investigate the failing PyQt test
 @jules /rust inspect the rme_core parsing path
 @jules /bridge review PyO3 boundary changes
+@jules /uiux review dialog spacing and legacy parity
+@jules /test choose the smallest verification slice for this PR
+@jules /system audit workflow drift
 @jules /maintenance check repo hygiene
 @jules /ci fix the latest failing Actions run
 ```
