@@ -1,0 +1,33 @@
+name: Jules UI/UX
+
+on:
+  workflow_dispatch:
+    inputs:
+      additional_context:
+        description: 'Extra context for the UI/UX run'
+        type: string
+        required: false
+        default: ''
+      starting_branch:
+        description: 'Optional branch override'
+        type: string
+        required: false
+        default: ''
+
+concurrency:
+  group: '${{ github.workflow }}-${{ github.run_id }}'
+  cancel-in-progress: false
+
+jobs:
+  invoke:
+    uses: './.github/workflows/jules-invoke.yml'
+    secrets: 'inherit'
+    with:
+      additional_context: |-
+        focus=uiux
+        visual_scope=true
+        ${{ github.event.inputs.additional_context || '' }}
+      focus: 'uiux'
+      include_commit_log: false
+      include_last_commit: false
+      starting_branch: '${{ github.event.inputs.starting_branch || github.event.repository.default_branch }}'

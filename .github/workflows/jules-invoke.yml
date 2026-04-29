@@ -26,7 +26,7 @@ on:
   workflow_dispatch:
     inputs:
       focus:
-        description: 'auto, python, rust, bridge, review, test, utility, maintenance, ci'
+        description: 'auto, python, rust, bridge, review, test, utility, maintenance, ci, uiux, system'
         type: choice
         options:
           - 'auto'
@@ -38,6 +38,8 @@ on:
           - 'utility'
           - 'maintenance'
           - 'ci'
+          - 'uiux'
+          - 'system'
         required: false
         default: 'auto'
       starting_branch:
@@ -101,6 +103,8 @@ jobs:
             review) prompt_file='.jules/newagents/review.md' ;;
             test) prompt_file='.jules/newagents/test.md' ;;
             utility) prompt_file='.jules/newagents/utility.md' ;;
+            uiux) prompt_file='.jules/newagents/uiux.md' ;;
+            system) prompt_file='.jules/newagents/system.md' ;;
           esac
 
           {
