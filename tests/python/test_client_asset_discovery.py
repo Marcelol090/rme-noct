@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from unittest.mock import patch
+
 from pyrme.rendering import (
     ClientSpriteAssetBundle,
     SpriteAtlasRegion,
@@ -62,6 +64,30 @@ def test_discover_client_asset_files_reports_missing_assets(tmp_path) -> None:
     )
 
 
+def test_discover_client_asset_files_reports_partial_missing_dat(tmp_path) -> None:
+    (tmp_path / "Tibia.spr").touch()
+    files = discover_client_asset_files(tmp_path)
+
+    assert not files.is_complete
+    assert files.metadata_path is None
+    assert files.sprites_path == tmp_path / "Tibia.spr"
+    assert files.warnings == (
+        "Client asset detection failed: DAT file was not found in the selected client path.",
+    )
+
+
+def test_discover_client_asset_files_reports_partial_missing_spr(tmp_path) -> None:
+    (tmp_path / "Tibia.dat").touch()
+    files = discover_client_asset_files(tmp_path)
+
+    assert not files.is_complete
+    assert files.metadata_path == tmp_path / "Tibia.dat"
+    assert files.sprites_path is None
+    assert files.warnings == (
+        "Client asset detection failed: SPR file was not found in the selected client path.",
+    )
+
+
 def test_discover_client_asset_files_reports_missing_root(tmp_path) -> None:
     missing_root = tmp_path / "missing-client"
 
@@ -74,6 +100,36 @@ def test_discover_client_asset_files_reports_missing_root(tmp_path) -> None:
     assert files.warnings == (
         "Client asset detection skipped: selected client path does not exist.",
     )
+
+
+def test_discover_client_asset_files_sanitizes_windows_paths(tmp_path) -> None:
+    (tmp_path / "Tibia.dat").touch()
+    (tmp_path / "Tibia.spr").touch()
+
+    files = discover_client_asset_files(
+        tmp_path,
+        metadata_file_name="C:\\Program Files\\Tibia\\Tibia.dat",
+        sprites_file_name="D:/Assets/Tibia.spr",
+    )
+
+    assert files.is_complete
+    assert files.metadata_file_name == "Tibia.dat"
+    assert files.sprites_file_name == "Tibia.spr"
+
+
+def test_discover_client_asset_files_handles_empty_names(tmp_path) -> None:
+    (tmp_path / "Tibia.dat").touch()
+    (tmp_path / "Tibia.spr").touch()
+
+    files = discover_client_asset_files(
+        tmp_path,
+        metadata_file_name="",
+        sprites_file_name="",
+    )
+
+    assert files.is_complete
+    assert files.metadata_file_name == "Tibia.dat"
+    assert files.sprites_file_name == "Tibia.spr"
 
 
 def test_client_sprite_asset_bundle_pairs_discovery_with_existing_bundle(
@@ -143,6 +199,22 @@ def test_read_client_asset_signatures_reports_deleted_files(tmp_path) -> None:
     (tmp_path / "Tibia.spr").unlink()
 
     signatures = read_client_asset_signatures(files)
+
+    assert signatures.dat_signature is None
+    assert signatures.spr_signature is None
+    assert signatures.warnings == (
+        f"DAT signature detection failed: could not open {tmp_path / 'Tibia.dat'}",
+        f"SPR signature detection failed: could not open {tmp_path / 'Tibia.spr'}",
+    )
+
+
+def test_read_client_asset_signatures_reports_permission_errors(tmp_path) -> None:
+    (tmp_path / "Tibia.dat").write_bytes(bytes.fromhex("12345678"))
+    (tmp_path / "Tibia.spr").write_bytes(bytes.fromhex("90abcdef"))
+    files = discover_client_asset_files(tmp_path)
+
+    with patch("pathlib.Path.open", side_effect=PermissionError("Access denied")):
+        signatures = read_client_asset_signatures(files)
 
     assert signatures.dat_signature is None
     assert signatures.spr_signature is None
