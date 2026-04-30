@@ -103,8 +103,10 @@ impl OtbDatabase {
         let mut items = HashMap::new();
 
         for child in root.children {
-            let mut fr = OtbItem::default();
-            fr.group = child.node_type;
+            let mut fr = OtbItem {
+                group: child.node_type,
+                ..Default::default()
+            };
 
             let mut pl = PayloadReader::new(&child.data);
             if let Some(flags) = pl.read_u32() {
