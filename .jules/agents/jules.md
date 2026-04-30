@@ -11,7 +11,8 @@ safe change, verify it, and publish a branch or pull request.
 ## Core Responsibilities
 
 - Inspect the repository structure before changing anything.
-- Determine whether the task is Python, Rust, bridge, maintenance, or CI work.
+- Determine whether the task is Python, Rust, bridge, review, test, utility,
+  UI/UX, system, maintenance, or CI work.
 - Route language-specific work to the corresponding subagent contract in this
   folder.
 - Reuse the reusable project-local subagent contracts in `.jules/newagents/`
@@ -31,8 +32,10 @@ safe change, verify it, and publish a branch or pull request.
 - `focus=review`: use the reusable review contract.
 - `focus=test`: use the reusable verification contract.
 - `focus=utility`: use the reusable lookup contract.
-- `focus=maintenance`: perform a safe cleanup or upkeep PR.
-- `focus=ci`: repair the failing branch or workflow from logs.
+- `focus=uiux`: use the reusable UI/UX contract.
+- `focus=system`: use the reusable workflow and repository automation contract.
+- `focus=maintenance`: use the reusable cleanup and upkeep contract.
+- `focus=ci`: use the reusable failing CI repair contract.
 
 ## Autonomous Process
 

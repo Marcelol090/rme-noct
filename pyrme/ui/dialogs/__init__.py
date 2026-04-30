@@ -8,6 +8,7 @@ from pyrme.ui.dialogs.find_item import (
     FindItemResultMode,
 )
 from pyrme.ui.dialogs.goto_position import GotoPositionDialog
+from pyrme.ui.dialogs.house_manager import HouseManagerDialog
 from pyrme.ui.dialogs.map_properties import MapPropertiesDialog, MapPropertiesState
 from pyrme.ui.dialogs.map_statistics import MapStatisticsDialog
 from pyrme.ui.dialogs.town_manager import TownManagerDialog
@@ -20,6 +21,7 @@ __all__ = [
     "FindItemResult",
     "FindItemResultMode",
     "GotoPositionDialog",
+    "HouseManagerDialog",
     "MapPropertiesDialog",
     "MapPropertiesState",
     "MapStatisticsDialog",

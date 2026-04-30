@@ -1,0 +1,126 @@
+name: Jules Area Schedule
+
+on:
+  schedule:
+    - cron: '0 0 * * 1'
+    - cron: '0 1 * * 1'
+    - cron: '0 2 * * 1'
+    - cron: '0 3 * * 1'
+    - cron: '0 4 * * 1'
+    - cron: '0 10 * * 1'
+    - cron: '0 11 * * 1'
+    - cron: '0 12 * * 1'
+    - cron: '0 13 * * 1'
+  workflow_dispatch:
+    inputs:
+      focus:
+        description: 'Area lane to schedule manually'
+        type: choice
+        options:
+          - 'python'
+          - 'rust'
+          - 'bridge'
+          - 'review'
+          - 'test'
+          - 'utility'
+          - 'system'
+          - 'uiux'
+          - 'maintenance'
+        required: false
+        default: 'test'
+      additional_context:
+        description: 'Extra context for the scheduled area run'
+        type: string
+        required: false
+        default: ''
+      starting_branch:
+        description: 'Optional branch override'
+        type: string
+        required: false
+        default: ''
+
+concurrency:
+  group: '${{ github.workflow }}-${{ github.event.schedule || github.event.inputs.focus || github.run_id }}'
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: 'bash'
+
+jobs:
+  prepare:
+    runs-on: 'ubuntu-latest'
+    outputs:
+      additional_context: '${{ steps.context.outputs.additional_context }}'
+      focus: '${{ steps.context.outputs.focus }}'
+      include_commit_log: '${{ steps.context.outputs.include_commit_log }}'
+      include_last_commit: '${{ steps.context.outputs.include_last_commit }}'
+      starting_branch: '${{ steps.context.outputs.starting_branch }}'
+    steps:
+      - name: Resolve scheduled lane
+        id: context
+        env:
+          EVENT_NAME: '${{ github.event_name }}'
+          EVENT_SCHEDULE: '${{ github.event.schedule }}'
+          INPUT_ADDITIONAL_CONTEXT: "${{ github.event.inputs.additional_context || '' }}"
+          INPUT_FOCUS: "${{ github.event.inputs.focus || '' }}"
+          INPUT_STARTING_BRANCH: "${{ github.event.inputs.starting_branch || '' }}"
+          DEFAULT_BRANCH: '${{ github.event.repository.default_branch }}'
+        run: |-
+          set -euo pipefail
+
+          focus="${INPUT_FOCUS:-test}"
+          case "${EVENT_SCHEDULE}" in
+            "0 0 * * 1") focus="python" ;;
+            "0 1 * * 1") focus="rust" ;;
+            "0 2 * * 1") focus="bridge" ;;
+            "0 3 * * 1") focus="review" ;;
+            "0 4 * * 1") focus="test" ;;
+            "0 10 * * 1") focus="utility" ;;
+            "0 11 * * 1") focus="system" ;;
+            "0 12 * * 1") focus="uiux" ;;
+            "0 13 * * 1") focus="maintenance" ;;
+            "") ;;
+            *) echo "Unsupported Jules schedule: ${EVENT_SCHEDULE}" >&2; exit 1 ;;
+          esac
+
+          include_commit_log=false
+          include_last_commit=false
+          case "${focus}" in
+            maintenance|system) include_commit_log=true ;;
+            ci) include_last_commit=true ;;
+          esac
+
+          starting_branch="${INPUT_STARTING_BRANCH:-${DEFAULT_BRANCH}}"
+          scheduled=false
+          if [ "${EVENT_NAME}" = "schedule" ]; then
+            scheduled=true
+          fi
+
+          {
+            echo "focus=${focus}"
+            echo "include_commit_log=${include_commit_log}"
+            echo "include_last_commit=${include_last_commit}"
+            echo "starting_branch=${starting_branch}"
+            echo 'additional_context<<__JULES_CONTEXT__'
+            printf 'focus=%s\n' "${focus}"
+            printf 'scheduled=%s\n' "${scheduled}"
+            printf 'schedule=%s\n' "${EVENT_SCHEDULE:-manual}"
+            printf 'pause_policy=after_first_five_lanes_wait_five_hours\n'
+            if [ -n "${INPUT_ADDITIONAL_CONTEXT}" ]; then
+              printf '%s\n' "${INPUT_ADDITIONAL_CONTEXT}"
+            fi
+            echo '__JULES_CONTEXT__'
+          } >> "${GITHUB_OUTPUT}"
+
+  invoke:
+    needs:
+      - 'prepare'
+    uses: './.github/workflows/jules-invoke.yml'
+    secrets: 'inherit'
+    with:
+      additional_context: '${{ needs.prepare.outputs.additional_context }}'
+      focus: '${{ needs.prepare.outputs.focus }}'
+      include_commit_log: '${{ fromJSON(needs.prepare.outputs.include_commit_log) }}'
+      include_last_commit: '${{ fromJSON(needs.prepare.outputs.include_last_commit) }}'
+      starting_branch: '${{ needs.prepare.outputs.starting_branch }}'
