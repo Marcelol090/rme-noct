@@ -70,8 +70,10 @@ impl DatDatabase {
         // Skip creature, effect, distance counts
 
         for client_id in 100..=item_count {
-            let mut it = DatItem::default();
-            it.client_id = client_id;
+            let mut it = DatItem {
+                client_id,
+                ..Default::default()
+            };
 
             // Read flags
             loop {

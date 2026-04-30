@@ -11,15 +11,19 @@ jobs:
     name: Rust Tests
     runs-on: ubuntu-latest
     env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      PYO3_PYTHON: python
     steps:
       - uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: "crates/rme_core"
       - name: Run Rust tests
-        run: echo 'Skipping native Rust unit tests due to PyO3 linker conflict in CI. Python integration tests will provide coverage via maturin build target.'
+        run: cargo test --manifest-path crates/rme_core/Cargo.toml --verbose
       - name: Run clippy
         run: cargo clippy --manifest-path crates/rme_core/Cargo.toml -- -D warnings
       - name: Check formatting
@@ -29,8 +33,6 @@ jobs:
     name: Python Tests
     runs-on: ubuntu-latest
     needs: rust-tests
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     strategy:
       matrix:
         python-version: ["3.12"]

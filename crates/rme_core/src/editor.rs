@@ -214,6 +214,7 @@ impl EditorShellState {
         ))
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn add_spawn_creature(
         &mut self,
         spawn_index: usize,
@@ -233,6 +234,7 @@ impl EditorShellState {
             .map_err(PyValueError::new_err)
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn add_house(
         &mut self,
         houseid: u32,
