@@ -119,19 +119,15 @@ impl OtbDatabase {
 
                 match attr {
                     ITEM_ATTR_SERVERID => {
-                        if length == 2 {
-                            if let Some(id) = pl.read_u16() {
-                                fr.server_id = id;
-                            }
+                        if let (2, Some(id)) = (length, pl.read_u16()) {
+                            fr.server_id = id;
                         } else {
                             pl.skip(length);
                         }
                     }
                     ITEM_ATTR_CLIENTID => {
-                        if length == 2 {
-                            if let Some(id) = pl.read_u16() {
-                                fr.client_id = id;
-                            }
+                        if let (2, Some(id)) = (length, pl.read_u16()) {
+                            fr.client_id = id;
                         } else {
                             pl.skip(length);
                         }
@@ -147,19 +143,15 @@ impl OtbDatabase {
                         }
                     }
                     ITEM_ATTR_SPEED => {
-                        if length == 2 {
-                            if let Some(v) = pl.read_u16() {
-                                fr.speed = v;
-                            }
+                        if let (2, Some(v)) = (length, pl.read_u16()) {
+                            fr.speed = v;
                         } else {
                             pl.skip(length);
                         }
                     }
                     ITEM_ATTR_MAXITEMS => {
-                        if length == 2 {
-                            if let Some(v) = pl.read_u16() {
-                                fr.volume = v;
-                            }
+                        if let (2, Some(v)) = (length, pl.read_u16()) {
+                            fr.volume = v;
                         } else {
                             pl.skip(length);
                         }
