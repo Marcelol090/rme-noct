@@ -28,18 +28,6 @@ def _catalog() -> list[FindItemResult]:
     ]
 
 
-def _result_count(dialog: FindItemDialog) -> int:
-    return dialog.item_list.model().rowCount()
-
-
-def _current_result_text(dialog: FindItemDialog) -> str | None:
-    index = dialog.item_list.currentIndex()
-    if not index.isValid():
-        return None
-    value = dialog.item_list.model().data(index)
-    return str(value) if value is not None else None
-
-
 def test_find_item_dialog_renders_required_controls(qtbot) -> None:
     dialog = FindItemDialog(catalog=_catalog())
     qtbot.addWidget(dialog)
@@ -76,7 +64,7 @@ def test_find_item_dialog_updates_results_and_switches_modes(qtbot) -> None:
     qtbot.addWidget(dialog)
 
     assert dialog.item_list.viewMode() == QListView.ViewMode.ListMode
-    assert _result_count(dialog) == 4
+    assert dialog.item_list.count() == 4
 
     dialog.set_query(
         FindItemQuery(
@@ -89,9 +77,11 @@ def test_find_item_dialog_updates_results_and_switches_modes(qtbot) -> None:
 
     assert dialog.current_query().result_mode == FindItemResultMode.GRID
     assert dialog.item_list.viewMode() == QListView.ViewMode.IconMode
-    assert _result_count(dialog) == 1
+    assert dialog.item_list.count() == 1
     assert dialog.result_count.text() == "1 result"
-    assert _current_result_text(dialog) == "Stone Wall\n#1049"
+    current_item = dialog.item_list.currentItem()
+    assert current_item is not None
+    assert current_item.text() == "Stone Wall\n#1049"
 
     dialog.btn_search_map.click()
     assert dialog._last_search_map_query is not None
@@ -110,8 +100,8 @@ def test_find_item_dialog_returns_selected_result_on_accept(qtbot) -> None:
     )
     qtbot.addWidget(dialog)
 
-    assert _result_count(dialog) == 1
-    dialog.item_list.setCurrentIndex(dialog.item_list.model().index(0, 0))
+    assert dialog.item_list.count() == 1
+    dialog.item_list.setCurrentRow(0)
     dialog.accept()
 
     assert dialog.selected_result() == FindItemResult(
@@ -121,7 +111,6 @@ def test_find_item_dialog_returns_selected_result_on_accept(qtbot) -> None:
         "sprite-2148",
         "item",
         {"pickupable", "stackable"},
-        search_haystack="gold coin 2148 2148 sprite-2148",
     )
 
 

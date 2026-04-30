@@ -144,6 +144,18 @@ class _FallbackEditorShellState:
             f" worker_threads={self.recommended_worker_threads()}"
         )
 
+    def collect_statistics(self) -> Any:
+        return None
+
+    def towns(self) -> list[tuple[int, str, int, int, int]]:
+        return []
+
+    def add_town(self, id: int, name: str, x: int, y: int, z: int) -> None:
+        pass
+
+    def remove_town(self, id: int) -> bool:
+        return False
+
 
 class EditorShellCoreBridge:
     """Stable Python-facing adapter over the optional native extension."""
@@ -214,6 +226,25 @@ class EditorShellCoreBridge:
 
     def render_summary(self) -> str:
         return str(self._inner.render_summary())
+
+    def collect_statistics(self) -> Any:
+        if hasattr(self._inner, "collect_statistics"):
+            return self._inner.collect_statistics()
+        return None
+
+    def towns(self) -> list[tuple[int, str, int, int, int]]:
+        if hasattr(self._inner, "towns"):
+            return list(self._inner.towns())
+        return []
+
+    def add_town(self, id: int, name: str, x: int, y: int, z: int) -> None:
+        if hasattr(self._inner, "add_town"):
+            self._inner.add_town(id, name, x, y, z)
+
+    def remove_town(self, id: int) -> bool:
+        if hasattr(self._inner, "remove_town"):
+            return bool(self._inner.remove_town(id))
+        return False
 
 
 def create_editor_shell_state() -> EditorShellCoreBridge:

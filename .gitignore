@@ -16,8 +16,7 @@ ENV/
 # Rust
 target/
 **/*.rs.bk
-# Root Cargo.lock is tracked so renderer shader validation can use --locked.
-crates/*/Cargo.lock
+Cargo.lock
 
 # IDE
 .idea/

@@ -706,7 +706,7 @@ mod tests {
         let mut t1 = Tile::new(MapPosition::new(1005, 1003, 7));
         t1.set_ground(Some(Item::new(4526)));
         t1.set_mapflags(42);
-
+        
         let mut item1 = Item::new(100);
         item1.set_count(5);
         t1.add_item(item1);
@@ -715,7 +715,7 @@ mod tests {
         item2.set_action_id(1234);
         item2.set_unique_id(5678);
         t1.add_item(item2);
-
+        
         original_map.set_tile(t1);
 
         let mut t2 = Tile::new(MapPosition::new(1006, 1003, 7));

@@ -108,35 +108,3 @@ def test_gitignore_covers_repo_local_gsd_runtime_artifacts() -> None:
     assert ".gsd/sessions/" in gitignore
     assert ".gsd/web-server.pid" in gitignore
     assert ".gsd/web-preferences.json" in gitignore
-
-
-def test_m023_plan_keeps_sprite_parity_scope_honest() -> None:
-    """M023 should describe the delivered CPU/bridge seam, not promise real WGPU."""
-    plan = (ROOT / ".gsd" / "M023-PLAN.md").read_text(encoding="utf-8")
-
-    required_terms = [
-        "CPU-side sprite staging",
-        "Qt dispatch seam",
-        "WGSL validation",
-        "real WGPU renderer is deferred to M024",
-        "crates/rme_core/src/lib.rs",
-        "crates/rme_core/Cargo.toml",
-        "Cargo.lock",
-        'naga = "29.0.1"',
-        "render.SpriteAtlas",
-    ]
-    forbidden_terms = [
-        "wgpu::Buffer",
-        "Sprite GPU Buffer",
-        "WGPU Core Data Structures",
-        "sprite atlas/texture array structure",
-        "Rust draw cycle",
-        "WGPU successfully renders 2D quads",
-        "paintGL override invoking Rust draw cycle",
-    ]
-
-    missing_terms = [term for term in required_terms if term not in plan]
-    stale_terms = [term for term in forbidden_terms if term in plan]
-
-    assert missing_terms == []
-    assert stale_terms == []

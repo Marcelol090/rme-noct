@@ -10,7 +10,7 @@ Legacy parity should advance in small, verifiable slices with XML-backed tests, 
 
 ## Current State
 
-Milestone `M001-1pt4oy` remains closed on disk: all legacy parity slices `LEGACY-00-CONTRACT` through `LEGACY-140-FINAL-AUDIT` are completed and summarized, and the Python shell is verified against `remeres-map-editor-redux/data/menubar.xml` for every in-scope top-level legacy menu family. Milestone `M002-canvas-renderer` is closed: the production default canvas is a real `QOpenGLWidget` host, each editor view owns an independent viewport model, and default canvas input uses legacy-style screen/map translation over that viewport model. Milestone `M003-render` is closed with the first draw-planning seam: map tiles are converted into a stable frame plan. Milestone `M004-render-primitives` is closed with diagnostic tile primitives. Milestones `M005` through `M014` close the sprite planning ladder from catalog seam through client asset signature reads. Milestone `M019` adds DAT item metadata parsing. Milestone `M020` adds SPR frame table parsing. Milestone `M021` adds raw compressed SPR payload reads, while decompression and real sprite painting remain future work.
+Milestone `M001-1pt4oy` remains closed on disk: all legacy parity slices `LEGACY-00-CONTRACT` through `LEGACY-140-FINAL-AUDIT` are completed and summarized, and the Python shell is verified against `remeres-map-editor-redux/data/menubar.xml` for every in-scope top-level legacy menu family. Milestone `M002-canvas-renderer` is closed: the production default canvas is a real `QOpenGLWidget` host, each editor view owns an independent viewport model, and default canvas input uses legacy-style screen/map translation over that viewport model. Milestone `M003-render` is closed with the first draw-planning seam: map tiles are converted into a stable frame plan. Milestone `M004-render-primitives` is closed with diagnostic tile primitives. Milestone `M005-sprite-resolver` is closed: item-id sprite resolution, frame resource records, and renderer diagnostic counts are tested while renderer drawing remains diagnostic-only. Milestone `M006-item-palette` is closed: the brush palette `Item` tab is now search-first, model-backed, cached, and tested while sprite rendering remains explicit follow-up work. Milestone `M007-brush-activation-backend` is closed: backend mode, brush activation, item activation, and active tool behavior are covered by focused contract tests. Milestone `M008-brush-shell-wiring` is closed: local jump dialogs, palette switching, brush mode toolbar behavior, and WSL preflight now align the UI shell with the canonical brush backend contract. Milestones `M015`, `M016`, and `M017` moved OTBM map persistence into `rme_core` for map model, read, and write paths. Milestone `M018-otbm-xml-serialization` is closed: Python `save_otbm` writes legacy waypoint, spawn, and house XML sidecars beside the binary `.otbm`.
 
 ## Architecture / Key Patterns
 
@@ -30,16 +30,11 @@ See `.gsd/REQUIREMENTS.md` for the explicit capability contract and slice owners
 | M002-canvas-renderer | Renderer-backed canvas foundation | Complete - `S01 / CANVAS-10-RENDERER-HOST`, `S02 / CANVAS-20-VIEWPORT-MODEL`, and `S03 / CANVAS-30-MAP-VIEW-MATH` verified and summarized |
 | M003-render | Renderer draw foundation | Complete - `S01 / CANVAS-40-RENDER-FRAME-PLAN` verified and summarized |
 | M004-render-primitives | Diagnostic tile primitives | Complete - `S01 / CANVAS-50-DIAGNOSTIC-TILE-PRIMITIVES` verified and summarized |
-| M005 | Sprite catalog seam | Complete - `S01 / CANVAS-60-SPRITE-CATALOG-SEAM` verified and summarized |
-| M006 | Sprite catalog DAT adapter | Complete - `S01 / CANVAS-70-SPRITE-CATALOG-DAT-ADAPTER` verified and summarized |
-| M007 | SPR frame metadata | Complete - `S01 / CANVAS-80-SPR-FRAME-METADATA` verified and summarized |
-| M008 | Sprite draw command plan | Complete - `S01 / CANVAS-90-SPRITE-DRAW-COMMAND-PLAN` verified and summarized |
-| M009 | Sprite draw diagnostics | Complete - `S01 / CANVAS-100-SPRITE-DRAW-DIAGNOSTICS` verified and summarized |
-| M010 | Live sprite draw plan integration | Complete - `S01 / CANVAS-110-LIVE-SPRITE-DRAW-PLAN` verified and summarized |
-| M011 | Sprite asset provider | Complete - `S01 / CANVAS-120-SPRITE-ASSET-PROVIDER` verified and summarized |
-| M012 | Sprite asset bundle | Complete - `S01 / CANVAS-130-SPRITE-ASSET-BUNDLE` verified and summarized |
-| M013 | Client asset discovery | Complete - `S01 / CANVAS-140-CLIENT-ASSET-DISCOVERY` verified and summarized |
-| M014 | Client asset signatures | Complete - `S01 / CANVAS-150-CLIENT-ASSET-SIGNATURES` verified and summarized |
-| M019 | DAT item metadata | Complete - `S01 / CANVAS-160-DAT-ITEM-METADATA` verified and summarized |
-| M020 | SPR frame table metadata | Complete - `S01 / CANVAS-170-SPR-FRAME-TABLE` verified and summarized |
-| M021 | SPR compressed payload reads | Complete - `S01 / CANVAS-180-SPR-COMPRESSED-PAYLOAD` verified and summarized |
+| M005-sprite-resolver | Sprite resolver seam | Complete - `S01 / CANVAS-60-SPRITE-RESOLVER-CONTRACT`, `S02 / CANVAS-61-FRAME-SPRITE-RESOURCES`, and `S03 / CANVAS-62-SPRITE-RESOLVER-DIAGNOSTICS` verified and summarized |
+| M006-item-palette | Item palette model/view seam | Complete - `S01 / ITEM-10-MODEL-VIEW-PALETTE` verified and summarized |
+| M007-brush-activation-backend | Brush activation backend contract | Complete - `S01 / BRUSH-10-ACTIVATION-BACKEND-CONTRACT` verified and summarized |
+| M008-brush-shell-wiring | Brush shell wiring | Complete - `S01 / BRUSH-20-SHELL-COMMAND-WIRING` verified and summarized |
+| M015-core-map-model | Rust map model bridge | Complete - sparse map storage and metadata exposed through PyO3 |
+| M016-otbm-persistence | OTBM read persistence | Complete - binary OTBM read path ported to `rme_core` |
+| M017-otbm-persistence | OTBM write persistence | Complete - binary OTBM save path ported to `rme_core` |
+| M018-otbm-xml-serialization | OTBM XML sidecars | Complete - `S01 / XML Writing implementation` verified and summarized |
