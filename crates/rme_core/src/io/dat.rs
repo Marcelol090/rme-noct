@@ -93,8 +93,8 @@ impl DatDatabase {
                         it.speed = u16::from_le_bytes(speed_buf);
                     }
                     0x01..=0x03 => {} // Bottom/Top order
-                    0x04 => {}               // Container
-                    0x05 => {}               // Stackable
+                    0x04 => {}        // Container
+                    0x05 => {}        // Stackable
                     0x09 => {
                         it.impassable = true;
                     }
