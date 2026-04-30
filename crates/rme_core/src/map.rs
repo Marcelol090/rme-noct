@@ -683,14 +683,14 @@ impl MapModel {
     ///
     /// Performance: Synchronous iteration over the tile hashmap.
     pub fn collect_statistics(&self) -> MapStatistics {
-        let mut stats = MapStatistics::default();
-
-        stats.tile_count = self.tiles.len() as u64;
-        stats.spawn_count = self.spawns.len() as u64;
-        stats.house_count = self.houses.len() as u64;
-        stats.waypoint_count = self.waypoints.len() as u64;
-
-        stats.town_count = self.towns.len() as u64;
+        let mut stats = MapStatistics {
+            tile_count: self.tiles.len() as u64,
+            spawn_count: self.spawns.len() as u64,
+            house_count: self.houses.len() as u64,
+            waypoint_count: self.waypoints.len() as u64,
+            town_count: self.towns.len() as u64,
+            ..Default::default()
+        };
         for house in &self.houses {
             stats.total_house_sqm += house.size() as u64;
         }
