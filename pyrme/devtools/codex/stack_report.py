@@ -91,47 +91,21 @@ def _extract_model_providers(preferences_text: str) -> set[str]:
     return providers
 
 
-def build_stack_report(
-    project_root: Path | None = None,
-    home_dir: Path | None = None,
-) -> StackReport:
-    project_root = project_root or Path.cwd()
-    home_dir = home_dir or _default_home(project_root)
 
-    gsd_config = GSDConfig(project_root=project_root)
-    skills_loader = SkillsLoader(
-        project_root=project_root,
-        user_skills_dir=home_dir / ".gsd" / "agent" / "skills",
-        codex_skills_dir=home_dir / ".codex" / "skills",
-        superpowers_dir=home_dir / ".codex" / "superpowers" / "skills",
-    )
-    codex_stack = CodexAgentStack(agent_dir=home_dir / ".codex" / "agents")
-
-    agents = codex_stack.by_name()
-    issues = codex_stack.validate_required_agents()
-    codex_skills = [skill for skill in skills_loader.find_skills() if skill.source_type == "codex"]
-    superpowers_skills = [
-        skill for skill in skills_loader.find_skills() if skill.source_type == "superpowers"
-    ]
-    caveman_skill = home_dir / ".agents" / "skills" / "caveman"
-    ui_system_skill = home_dir / ".codex" / "skills" / "ui-system-discipline"
-    premium_ui_skill = home_dir / ".codex" / "skills" / "premium-ui"
-    repo_agents = project_root / "AGENTS.md"
-    context7_command = shutil.which("c7-mcp-server")
-    ollama_command = shutil.which("ollama")
-    preferences_text = _read_project_preferences(project_root)
-    configured_model_providers = sorted(_extract_model_providers(preferences_text))
-
-    if not _skill_exists(caveman_skill):
-        issues.append(f"missing skill: {caveman_skill}")
-    if not repo_agents.is_file():
-        issues.append(f"missing repo instruction file: {repo_agents}")
-    if "ollama" in configured_model_providers and not ollama_command:
-        issues.append(
-            "project models require ollama/* but `ollama` command is missing; "
-            "local no-API runtime is unavailable"
-        )
-
+def _build_report_lines(
+    project_root: Path,
+    gsd_config: GSDConfig,
+    codex_stack: CodexAgentStack,
+    skills_loader: SkillsLoader,
+    agents: dict[str, Any],
+    codex_skills: list[Any],
+    superpowers_skills: list[Any],
+    caveman_skill: Path,
+    repo_agents: Path,
+    context7_command: str | None,
+    ollama_command: str | None,
+    issues: list[str],
+) -> list[str]:
     lines = [
         "Codex + GSD + Superpowers Stack",
         f"Project root: {project_root}",
@@ -190,37 +164,130 @@ def build_stack_report(
     else:
         lines.append("- ok")
 
-    return StackReport(
-        data={
-            "project_root": str(project_root),
-            "gsd_dir": str(gsd_config.gsd_dir),
-            "codex_agents_dir": str(codex_stack.agent_dir),
-            "codex_skills_dir": str(skills_loader.codex_skills_dir),
-            "superpowers_dir": str(skills_loader.superpowers_dir),
-            "checks": {
-                "caveman_skill": _skill_exists(caveman_skill),
-                "ui_system_discipline": _skill_exists(ui_system_skill),
-                "premium_ui": _skill_exists(premium_ui_skill),
-                "repo_agents_md": repo_agents.is_file(),
-                "local_agents_optional": not bool(agents),
-                "context7_command": context7_command is not None,
-                "ollama_command": ollama_command is not None,
-            },
-            "gsd": {
-                "configured_model_providers": configured_model_providers,
-            },
-            "agents": {
-                name: {
-                    "model": agent.model,
-                    "sandbox_mode": agent.sandbox_mode,
-                }
-                for name, agent in agents.items()
-            },
-            "skills": {
-                "codex": [skill.name for skill in codex_skills],
-                "superpowers": [skill.name for skill in superpowers_skills],
-            },
-            "validation": {"issues": issues},
+    return lines
+
+
+def _build_report_data(
+    project_root: Path,
+    gsd_config: GSDConfig,
+    codex_stack: CodexAgentStack,
+    skills_loader: SkillsLoader,
+    agents: dict[str, Any],
+    codex_skills: list[Any],
+    superpowers_skills: list[Any],
+    caveman_skill: Path,
+    ui_system_skill: Path,
+    premium_ui_skill: Path,
+    repo_agents: Path,
+    context7_command: str | None,
+    ollama_command: str | None,
+    configured_model_providers: list[str],
+    issues: list[str],
+) -> dict[str, Any]:
+    return {
+        "project_root": str(project_root),
+        "gsd_dir": str(gsd_config.gsd_dir),
+        "codex_agents_dir": str(codex_stack.agent_dir),
+        "codex_skills_dir": str(skills_loader.codex_skills_dir),
+        "superpowers_dir": str(skills_loader.superpowers_dir),
+        "checks": {
+            "caveman_skill": _skill_exists(caveman_skill),
+            "ui_system_discipline": _skill_exists(ui_system_skill),
+            "premium_ui": _skill_exists(premium_ui_skill),
+            "repo_agents_md": repo_agents.is_file(),
+            "local_agents_optional": not bool(agents),
+            "context7_command": context7_command is not None,
+            "ollama_command": ollama_command is not None,
         },
-        lines=lines,
+        "gsd": {
+            "configured_model_providers": configured_model_providers,
+        },
+        "agents": {
+            name: {
+                "model": agent.model,
+                "sandbox_mode": agent.sandbox_mode,
+            }
+            for name, agent in agents.items()
+        },
+        "skills": {
+            "codex": [skill.name for skill in codex_skills],
+            "superpowers": [skill.name for skill in superpowers_skills],
+        },
+        "validation": {"issues": issues},
+    }
+
+def build_stack_report(
+    project_root: Path | None = None,
+    home_dir: Path | None = None,
+) -> StackReport:
+    project_root = project_root or Path.cwd()
+    home_dir = home_dir or _default_home(project_root)
+
+    gsd_config = GSDConfig(project_root=project_root)
+    skills_loader = SkillsLoader(
+        project_root=project_root,
+        user_skills_dir=home_dir / ".gsd" / "agent" / "skills",
+        codex_skills_dir=home_dir / ".codex" / "skills",
+        superpowers_dir=home_dir / ".codex" / "superpowers" / "skills",
     )
+    codex_stack = CodexAgentStack(agent_dir=home_dir / ".codex" / "agents")
+
+    agents = codex_stack.by_name()
+    issues = codex_stack.validate_required_agents()
+    codex_skills = [skill for skill in skills_loader.find_skills() if skill.source_type == "codex"]
+    superpowers_skills = [
+        skill for skill in skills_loader.find_skills() if skill.source_type == "superpowers"
+    ]
+    caveman_skill = home_dir / ".agents" / "skills" / "caveman"
+    ui_system_skill = home_dir / ".codex" / "skills" / "ui-system-discipline"
+    premium_ui_skill = home_dir / ".codex" / "skills" / "premium-ui"
+    repo_agents = project_root / "AGENTS.md"
+    context7_command = shutil.which("c7-mcp-server")
+    ollama_command = shutil.which("ollama")
+    preferences_text = _read_project_preferences(project_root)
+    configured_model_providers = sorted(_extract_model_providers(preferences_text))
+
+    if not _skill_exists(caveman_skill):
+        issues.append(f"missing skill: {caveman_skill}")
+    if not repo_agents.is_file():
+        issues.append(f"missing repo instruction file: {repo_agents}")
+    if "ollama" in configured_model_providers and not ollama_command:
+        issues.append(
+            "project models require ollama/* but `ollama` command is missing; "
+            "local no-API runtime is unavailable"
+        )
+
+    lines = _build_report_lines(
+        project_root,
+        gsd_config,
+        codex_stack,
+        skills_loader,
+        agents,
+        codex_skills,
+        superpowers_skills,
+        caveman_skill,
+        repo_agents,
+        context7_command,
+        ollama_command,
+        issues,
+    )
+
+    data = _build_report_data(
+        project_root,
+        gsd_config,
+        codex_stack,
+        skills_loader,
+        agents,
+        codex_skills,
+        superpowers_skills,
+        caveman_skill,
+        ui_system_skill,
+        premium_ui_skill,
+        repo_agents,
+        context7_command,
+        ollama_command,
+        configured_model_providers,
+        issues,
+    )
+
+    return StackReport(data=data, lines=lines)
