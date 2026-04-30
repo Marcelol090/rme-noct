@@ -9,7 +9,7 @@ description = "High-performance Rust core for PyRME – Remere's Map Editor"
 
 [lib]
 name = "rme_core"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 pyo3 = { version = "0.23", features = ["extension-module", "abi3-py312"] }
