@@ -41,6 +41,8 @@ from pyrme.ui.dialogs import (
     FindItemDialog,
     GotoPositionDialog,
     MapPropertiesDialog,
+    MapStatisticsDialog,
+    TownManagerDialog,
 )
 from pyrme.ui.docks import BrushPaletteDock, MinimapDock, PropertiesDock, WaypointsDock
 from pyrme.ui.editor_context import EditorContext, EditorViewRecord, ShellStateSnapshot
@@ -68,12 +70,13 @@ QSETTINGS_SELECTION_MODE = "editor/selection_mode"
 QSETTINGS_SELECTION_COMPENSATE = "editor/selection_compensate"
 
 
-class TownManagerDialog(QDialog):
-    """Safe placeholder until the full town manager dialog is mounted."""
 
-    def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-        self.setWindowTitle("Town Manager")
+
+    
+
+    
+        
+        
 
 
 class _ToolOptionsDock(GlassDockWidget):
@@ -113,6 +116,8 @@ class MainWindow(QMainWindow):
         jump_to_item_dialog_factory=None,
         find_item_dialog_factory=None,
         map_properties_dialog_factory: DialogFactory | None = None,
+        map_statistics_dialog_factory=None,
+        town_manager_dialog_factory=None,
         canvas_factory: CanvasFactory | None = None,
         enable_docks: bool | None = None,
     ) -> None:
@@ -128,6 +133,12 @@ class MainWindow(QMainWindow):
         self._find_item_dialog_factory = find_item_dialog_factory or FindItemDialog
         self._map_properties_dialog_factory = (
             map_properties_dialog_factory or MapPropertiesDialog
+        )
+        self._map_statistics_dialog_factory = (
+            map_statistics_dialog_factory or MapStatisticsDialog
+        )
+        self._town_manager_dialog_factory = (
+            town_manager_dialog_factory or TownManagerDialog
         )
         self._canvas_factory = canvas_factory or RendererHostCanvasWidget
         self._enable_docks = True if enable_docks is None else enable_docks
@@ -454,9 +465,10 @@ class MainWindow(QMainWindow):
         self.map_properties_action = self._action_from_spec(
             "map_properties", self._show_map_properties
         )
-        self.map_statistics_action = self._action_from_spec(
-            "map_statistics", self._show_map_statistics
-        )
+        self.map_statistics_action = self._action_from_spec("map_statistics", self._show_map_statistics)
+
+
+
         menu.addAction(self.map_edit_towns_action)
         menu.addSeparator()
         menu.addActions(
@@ -465,6 +477,7 @@ class MainWindow(QMainWindow):
                 self.map_cleanup_invalid_zones_action,
                 self.map_properties_action,
                 self.map_statistics_action,
+
             ]
         )
 
@@ -559,6 +572,13 @@ class MainWindow(QMainWindow):
         menu.addSeparator()
         for key in ("view_ghost_loose_items", "ghost_higher_floors", "view_show_shade"):
             self._add_view_action(menu, key)
+
+        menu.addSeparator()
+        self.map_statistics_action = self._action_from_spec(
+            "map_statistics", self._show_map_statistics
+        )
+        menu.addAction(self.map_statistics_action)
+
 
         self.show_grid_action = self.view_menu_actions["show_grid"]
         self.ghost_higher_action = self.view_menu_actions["ghost_higher_floors"]
@@ -1096,7 +1116,7 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     def _show_town_manager(self) -> None:
-        dialog = TownManagerDialog(self)
+        dialog = self._town_manager_dialog_factory(bridge=getattr(self._canvas, "_shell_core", None), parent=self)
         dialog.exec()
 
     def _show_find_item(self) -> None:
@@ -1138,7 +1158,9 @@ class MainWindow(QMainWindow):
         self._status_bar().showMessage("Replace Items is not available yet.", 3000)
 
     def _show_map_statistics(self) -> None:
-        self._status_bar().showMessage("Map Statistics is not available yet.", 3000)
+        shell_state = getattr(self._canvas, "_shell_core", None)
+        dialog = self._map_statistics_dialog_factory(self, shell_state=shell_state)
+        dialog.exec()
 
     def _show_goto_position(self) -> None:
         dialog = self._goto_dialog_factory(self)

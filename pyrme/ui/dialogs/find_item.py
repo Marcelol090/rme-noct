@@ -7,7 +7,12 @@ Provides item/creature search with type and property filters.
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
-from enum import StrEnum
+try:
+    from enum import StrEnum
+except ImportError:
+    from enum import Enum
+    class StrEnum(str, Enum):
+        pass
 
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtWidgets import (
