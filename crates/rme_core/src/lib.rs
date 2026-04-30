@@ -1,3 +1,4 @@
+#![allow(clippy::too_many_arguments, clippy::field_reassign_with_default)]
 //! Python-facing entrypoint for the Rust core.
 //!
 //! Architecture note:
