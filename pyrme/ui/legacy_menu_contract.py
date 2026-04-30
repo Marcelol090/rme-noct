@@ -9,7 +9,6 @@ the Python shell.
 from __future__ import annotations
 
 import xml.etree.ElementTree as ET
-from functools import cache
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -30,16 +29,35 @@ LEGACY_MENUBAR_XML = _PYRME_ROOT / "assets" / "contracts" / "legacy" / "menubar.
 _MENUBAR_ROOT = ET.parse(LEGACY_MENUBAR_XML).getroot()
 
 
-@cache
+_MENU_DICT_CACHE = {}
+
+def _build_menu_dict():
+    def traverse(node):
+        for child in node.findall("menu"):
+            name = child.get("name")
+            if name:
+                _MENU_DICT_CACHE[(node, name)] = child
+            traverse(child)
+
+    traverse(_MENUBAR_ROOT)
+
+_build_menu_dict()
+
 def _menu(name: str, parent: ET.Element | None = None) -> ET.Element:
     source = _MENUBAR_ROOT if parent is None else parent
+
+    # Try fast path via cache for static menubar lookups
+    cached = _MENU_DICT_CACHE.get((source, name))
+    if cached is not None:
+        return cached
+
+    # Fallback for dynamic/un-cached nodes
     for node in source.findall("menu"):
         if node.get("name") == name:
             return node
     raise KeyError(f"Legacy menu not found: {name}")
 
 
-@cache
 def _menu_path(*names: str) -> ET.Element:
     current: ET.Element | None = None
     for name in names:

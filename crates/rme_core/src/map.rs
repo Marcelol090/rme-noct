@@ -985,7 +985,6 @@ mod tests {
         model
             .add_spawn_creature(spawn_index, Creature::new("Rat", 1, -1, 60, false, 2))
             .unwrap();
-
         model.add_house(House::new(
             12,
             "House",
@@ -995,9 +994,6 @@ mod tests {
             true,
             14,
         ));
-
-        model.add_town(Town::new(1, "Thais", MapPosition::new(32369, 32241, 7)));
-
 
         assert_eq!(model.waypoints()[0].name(), "Depot");
         assert_eq!(model.spawns()[0].creatures()[0].name(), "Rat");
@@ -1027,7 +1023,6 @@ mod tests {
         model
             .add_spawn_creature(spawn_index, Creature::new("Guide", 0, 0, 30, true, 0))
             .unwrap();
-
         model.add_house(House::new(
             12,
             "House",
@@ -1037,9 +1032,6 @@ mod tests {
             true,
             14,
         ));
-
-        model.add_town(Town::new(1, "Thais", MapPosition::new(32369, 32241, 7)));
-
 
         let stats = model.collect_statistics();
 
