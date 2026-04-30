@@ -904,7 +904,10 @@ class MainWindow(QMainWindow):
         """Create dock widgets for palettes and tools."""
         self.brush_palette_dock = BrushPaletteDock(self)
         self.brush_palette_dock.item_selected.connect(self._handle_item_palette_selection)
-        self.brush_palette_dock.manage_houses_requested.connect(self._show_house_manager)
+        if hasattr(self.brush_palette_dock, "manage_houses_requested"):
+            self.brush_palette_dock.manage_houses_requested.connect(
+                self._show_house_manager
+            )
         self.addDockWidget(
             Qt.DockWidgetArea.LeftDockWidgetArea,
             self.brush_palette_dock,
@@ -1168,18 +1171,29 @@ class MainWindow(QMainWindow):
             )
 
     def _apply_item_dialog_selection(self, dialog: object) -> bool:
-        selected = dialog.selected_result() if hasattr(dialog, "selected_result") else None
+        selected = (
+            dialog.selected_result() if hasattr(dialog, "selected_result") else None
+        )
         if selected is None:
             return False
-        try:
-            item_id = selected.server_id
-        except AttributeError:
-            item_id = selected.item_id
+
+        item_id = getattr(selected, "server_id", None)
         if item_id is None:
-            item_id = selected.item_id
-        self._set_active_item_selection(selected.name, int(item_id))
+            item_id = getattr(selected, "item_id", None)
+
+        if item_id is None:
+            raise ValueError(
+                f"Dialog selection {selected!r} has no server_id or item_id"
+            )
+
+        try:
+            item_id = int(item_id)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Invalid item_id {item_id!r}") from exc
+
+        self._set_active_item_selection(selected.name, item_id)
         self._status_bar().showMessage(
-            f"Selected item {selected.name} (#{int(item_id)}).",
+            f"Selected item {selected.name} (#{item_id}).",
             3000,
         )
         return True

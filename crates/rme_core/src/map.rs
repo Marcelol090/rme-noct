@@ -3,7 +3,7 @@
 //! Keep map representation data-oriented so hot paths can stay cache-friendly
 //! and easy to parallelize later with Rayon.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use pyo3::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -681,12 +681,25 @@ impl MapModel {
     ///
     /// Performance: Synchronous iteration over the tile hashmap.
     pub fn collect_statistics(&self) -> MapStatistics {
+        let town_count = self
+            .towns
+            .iter()
+            .map(Town::id)
+            .chain(
+                self.houses
+                    .iter()
+                    .map(House::townid)
+                    .filter(|townid| *townid != 0),
+            )
+            .collect::<HashSet<_>>()
+            .len() as u64;
+
         let mut stats = MapStatistics {
             tile_count: self.tiles.len() as u64,
             spawn_count: self.spawns.len() as u64,
             house_count: self.houses.len() as u64,
             waypoint_count: self.waypoints.len() as u64,
-            town_count: self.towns.len() as u64,
+            town_count,
             ..Default::default()
         };
         for house in &self.houses {
@@ -1042,6 +1055,6 @@ mod tests {
         assert_eq!(stats.waypoint_count, 1);
         assert_eq!(stats.house_count, 1);
         assert_eq!(stats.total_house_sqm, 14);
-        assert_eq!(stats.town_count, 0);
+        assert_eq!(stats.town_count, 1);
     }
 }

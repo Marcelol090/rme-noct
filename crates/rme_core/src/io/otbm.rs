@@ -574,8 +574,7 @@ mod tests {
                 buf.push(OTBM_TILE);
                 buf.push(ox as u8); // offset_x
                 buf.push(oy as u8); // offset_y
-                                    // Inline ground item
-                buf.push(OTBM_ATTR_ITEM);
+                buf.push(OTBM_ATTR_ITEM); // Inline ground item
                 push_u16_le(&mut buf, ground_id);
                 buf.push(NODE_END); // end tile
             }
