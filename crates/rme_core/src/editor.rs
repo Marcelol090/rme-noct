@@ -10,7 +10,8 @@ use pyo3::prelude::*;
 
 use crate::item::Item;
 use crate::map::{
-    Creature, House, MapModel, MapPosition, Spawn, Waypoint, DEFAULT_X, DEFAULT_Y, DEFAULT_Z,
+    Creature, House, MapModel, MapPosition, MapStatistics, Spawn, Town, Waypoint, DEFAULT_X,
+    DEFAULT_Y, DEFAULT_Z,
 };
 use crate::rendering::{RenderBudget, RenderState};
 
@@ -97,6 +98,10 @@ impl EditorShellState {
 
     fn set_show_lower(&mut self, enabled: bool) -> bool {
         self.render.set_show_lower(enabled)
+    }
+
+    fn collect_statistics(&self) -> MapStatistics {
+        self.map.collect_statistics()
     }
 
     fn set_view_flag(&mut self, name: &str, enabled: bool) -> PyResult<bool> {
@@ -250,6 +255,27 @@ impl EditorShellState {
             size,
         ));
         true
+    }
+
+    // --- Town management bridge ---
+
+    /// Returns list of towns as (id, name, x, y, z).
+    fn towns(&self) -> Vec<(u32, String, u16, u16, u8)> {
+        self.map
+            .towns()
+            .iter()
+            .map(|t| (t.id(), t.name().to_string(), t.temple_position().x(), t.temple_position().y(), t.temple_position().z()))
+            .collect()
+    }
+
+    /// Adds a town.
+    fn add_town(&mut self, id: u32, name: String, x: u16, y: u16, z: u8) {
+        self.map.add_town(Town::new(id, name, MapPosition::new(x as i32, y as i32, z as i32)));
+    }
+
+    /// Removes a town by ID. Returns true if removed.
+    fn remove_town(&mut self, id: u32) -> bool {
+        self.map.remove_town(id)
     }
 
     // --- OTBM persistence bridge ---

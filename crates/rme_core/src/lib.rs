@@ -44,6 +44,7 @@ fn rme_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(version, m)?)?;
     m.add_function(wrap_pyfunction!(build_info, m)?)?;
     m.add_class::<editor::EditorShellState>()?;
+    m.add_class::<map::MapStatistics>()?;
     m.add_class::<io::otb::OtbDatabase>()?;
     m.add_class::<io::otb::OtbItem>()?;
     m.add_class::<io::spr::SprDatabase>()?;

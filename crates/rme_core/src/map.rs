@@ -5,6 +5,7 @@
 
 use std::collections::HashMap;
 
+use pyo3::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::item::Item;
@@ -180,6 +181,47 @@ pub struct House {
     size: u32,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Town {
+    id: u32,
+    name: String,
+    temple_position: MapPosition,
+}
+
+impl Town {
+    pub fn new(id: u32, name: impl Into<String>, temple_position: MapPosition) -> Self {
+        Self {
+            id,
+            name: name.into(),
+            temple_position,
+        }
+    }
+
+    pub const fn id(&self) -> u32 {
+        self.id
+    }
+
+    pub fn set_id(&mut self, id: u32) {
+        self.id = id;
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn set_name(&mut self, name: impl Into<String>) {
+        self.name = name.into();
+    }
+
+    pub const fn temple_position(&self) -> MapPosition {
+        self.temple_position
+    }
+
+    pub fn set_temple_position(&mut self, pos: MapPosition) {
+        self.temple_position = pos;
+    }
+}
+
 impl House {
     pub fn new(
         id: u32,
@@ -227,6 +269,37 @@ impl House {
 
     pub const fn size(&self) -> u32 {
         self.size
+    }
+}
+
+#[pyclass]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct MapStatistics {
+    #[pyo3(get)]
+    pub tile_count: u64,
+    #[pyo3(get)]
+    pub blocking_tile_count: u64,
+    #[pyo3(get)]
+    pub walkable_tile_count: u64,
+    #[pyo3(get)]
+    pub item_count: u64,
+    #[pyo3(get)]
+    pub spawn_count: u64,
+    #[pyo3(get)]
+    pub creature_count: u64,
+    #[pyo3(get)]
+    pub house_count: u64,
+    #[pyo3(get)]
+    pub total_house_sqm: u64,
+    #[pyo3(get)]
+    pub town_count: u64,
+    #[pyo3(get)]
+    pub waypoint_count: u64,
+}
+
+impl MapStatistics {
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 
@@ -335,6 +408,19 @@ impl Tile {
     pub fn mark_modified(&mut self) {
         self.statflags |= 0x0040;
     }
+
+    /// TILESTATE_BLOCKING = 0x0004.
+    pub fn is_blocking(&self) -> bool {
+        self.statflags & 0x0004 != 0
+    }
+
+    pub fn set_blocking(&mut self, blocking: bool) {
+        if blocking {
+            self.statflags |= 0x0004;
+        } else {
+            self.statflags &= !0x0004;
+        }
+    }
 }
 
 /// Map model with sparse tile storage, viewport position, and map metadata.
@@ -354,6 +440,7 @@ pub struct MapModel {
     waypoints: Vec<Waypoint>,
     spawns: Vec<Spawn>,
     houses: Vec<House>,
+    towns: Vec<Town>,
     is_dirty: bool,
 }
 
@@ -378,6 +465,7 @@ impl MapModel {
             waypoints: Vec::new(),
             spawns: Vec::new(),
             houses: Vec::new(),
+            towns: Vec::new(),
             is_dirty: false,
         }
     }
@@ -532,6 +620,27 @@ impl MapModel {
         &self.houses
     }
 
+    pub fn towns(&self) -> &[Town] {
+        &self.towns
+    }
+
+    pub fn add_town(&mut self, town: Town) {
+        self.towns.push(town);
+        self.is_dirty = true;
+    }
+
+    pub fn remove_town(&mut self, town_id: u32) -> bool {
+        let len_before = self.towns.len();
+        self.towns.retain(|t| t.id() != town_id);
+        let removed = self.towns.len() < len_before;
+        if removed {
+            self.is_dirty = true;
+        }
+        removed
+    }
+
+
+
     pub fn add_waypoint(&mut self, waypoint: Waypoint) {
         self.waypoints.push(waypoint);
         self.is_dirty = true;
@@ -568,6 +677,39 @@ impl MapModel {
 
     pub fn mark_clean(&mut self) {
         self.is_dirty = false;
+    }
+
+    /// Collects map statistics by iterating over all tiles and metadata.
+    ///
+    /// Performance: Synchronous iteration over the tile hashmap.
+    pub fn collect_statistics(&self) -> MapStatistics {
+        let mut stats = MapStatistics::default();
+
+        stats.tile_count = self.tiles.len() as u64;
+        stats.spawn_count = self.spawns.len() as u64;
+        stats.house_count = self.houses.len() as u64;
+        stats.waypoint_count = self.waypoints.len() as u64;
+
+        stats.town_count = self.towns.len() as u64;
+        for house in &self.houses {
+            stats.total_house_sqm += house.size() as u64;
+        }
+
+        for spawn in &self.spawns {
+            stats.creature_count += spawn.creatures().len() as u64;
+        }
+
+        for tile in self.tiles.values() {
+            if tile.is_blocking() {
+                stats.blocking_tile_count += 1;
+            } else {
+                stats.walkable_tile_count += 1;
+            }
+
+            stats.item_count += tile.size() as u64;
+        }
+
+        stats
     }
 }
 
@@ -811,6 +953,20 @@ mod tests {
     }
 
     #[test]
+    fn map_model_town_operations() {
+        let mut model = MapModel::new();
+        let town = Town::new(1, "Thais", MapPosition::new(100, 100, 7));
+        model.add_town(town);
+        assert_eq!(model.towns().len(), 1);
+        assert_eq!(model.towns()[0].name(), "Thais");
+        assert!(model.is_dirty());
+
+        let removed = model.remove_town(1);
+        assert!(removed);
+        assert_eq!(model.towns().len(), 0);
+    }
+
+    #[test]
     fn map_dirty_from_tile_mutation() {
         let mut model = MapModel::new();
         assert!(!model.is_dirty());
@@ -843,5 +999,51 @@ mod tests {
         assert_eq!(model.spawns()[0].creatures()[0].name(), "Rat");
         assert_eq!(model.houses()[0].id(), 12);
         assert!(model.is_dirty());
+    }
+
+    #[test]
+    fn map_model_collects_statistics_from_tiles_and_sidecars() {
+        let mut model = MapModel::new();
+
+        let mut walkable = Tile::new(MapPosition::new(1, 1, 7));
+        walkable.set_ground(Some(Item::new(100)));
+        walkable.add_item(Item::new(200));
+        model.set_tile(walkable);
+
+        let mut blocking = Tile::new(MapPosition::new(2, 1, 7));
+        blocking.set_blocking(true);
+        blocking.add_item(Item::new(300));
+        model.set_tile(blocking);
+
+        model.add_waypoint(Waypoint::new("Depot", MapPosition::new(10, 20, 7)));
+        let spawn_index = model.add_spawn(Spawn::new(MapPosition::new(11, 21, 7), 5));
+        model
+            .add_spawn_creature(spawn_index, Creature::new("Rat", 1, -1, 60, false, 2))
+            .unwrap();
+        model
+            .add_spawn_creature(spawn_index, Creature::new("Guide", 0, 0, 30, true, 0))
+            .unwrap();
+        model.add_house(House::new(
+            12,
+            "House",
+            MapPosition::new(12, 22, 7),
+            500,
+            3,
+            true,
+            14,
+        ));
+
+        let stats = model.collect_statistics();
+
+        assert_eq!(stats.tile_count, 2);
+        assert_eq!(stats.walkable_tile_count, 1);
+        assert_eq!(stats.blocking_tile_count, 1);
+        assert_eq!(stats.item_count, 3);
+        assert_eq!(stats.spawn_count, 1);
+        assert_eq!(stats.creature_count, 2);
+        assert_eq!(stats.waypoint_count, 1);
+        assert_eq!(stats.house_count, 1);
+        assert_eq!(stats.total_house_sqm, 14);
+        assert_eq!(stats.town_count, 1);
     }
 }
