@@ -123,10 +123,15 @@ class GotoPositionDialog(QDialog):
         """Load recent positions from QSettings."""
         raw = self._settings.value("recent_positions/list", "[]")
         try:
-            self._recent: list[tuple[int, int, int]] = [
-                tuple(p) for p in json.loads(str(raw))
-            ]
-        except (json.JSONDecodeError, TypeError):
+            parsed = json.loads(str(raw))
+            self._recent: list[tuple[int, int, int]] = []
+            for p in parsed:
+                if not isinstance(p, list) or len(p) != 3:
+                    raise ValueError("Invalid format")
+                if not all(isinstance(x, int) for x in p):
+                    raise TypeError("Expected ints")
+                self._recent.append(tuple(p))
+        except (json.JSONDecodeError, TypeError, ValueError):
             self._recent = []
         self._rebuild_recent_chips()
 
