@@ -29,29 +29,30 @@ LEGACY_MENUBAR_XML = _PYRME_ROOT / "assets" / "contracts" / "legacy" / "menubar.
 _MENUBAR_ROOT = ET.parse(LEGACY_MENUBAR_XML).getroot()
 
 
-_MENU_DICT_CACHE = {}
+_MENU_CHILD_CACHE: dict[tuple[int, str], ET.Element] = {}
 
-def _build_menu_dict():
-    def traverse(node):
+
+def _build_menu_child_cache() -> None:
+    def traverse(node: ET.Element) -> None:
         for child in node.findall("menu"):
             name = child.get("name")
             if name:
-                _MENU_DICT_CACHE[(node, name)] = child
+                _MENU_CHILD_CACHE[(id(node), name)] = child
             traverse(child)
 
     traverse(_MENUBAR_ROOT)
 
-_build_menu_dict()
+
+_build_menu_child_cache()
+
 
 def _menu(name: str, parent: ET.Element | None = None) -> ET.Element:
     source = _MENUBAR_ROOT if parent is None else parent
 
-    # Try fast path via cache for static menubar lookups
-    cached = _MENU_DICT_CACHE.get((source, name))
+    cached = _MENU_CHILD_CACHE.get((id(source), name))
     if cached is not None:
         return cached
 
-    # Fallback for dynamic/un-cached nodes
     for node in source.findall("menu"):
         if node.get("name") == name:
             return node
