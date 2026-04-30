@@ -95,6 +95,15 @@ def _extract_frontmatter(text: str) -> dict[str, str]:
     return result
 
 
+
+@dataclass
+class _ScanContext:
+    """Context for recursive skill scanning."""
+
+    source_type: str
+    max_depth: int
+    results: list[Skill]
+
 class SkillsLoader:
     """Discovers and loads Superpowers skills."""
 
@@ -172,29 +181,28 @@ class SkillsLoader:
         if not directory.exists():
             return skills
 
-        self._scan_recursive(directory, source_type, 0, max_depth, skills)
+        context = _ScanContext(source_type=source_type, max_depth=max_depth, results=skills)
+        self._scan_recursive(directory, 0, context)
         return skills
 
     def _scan_recursive(
         self,
         directory: Path,
-        source_type: str,
         depth: int,
-        max_depth: int,
-        results: list[Skill],
+        context: _ScanContext,
     ) -> None:
-        """Recursively scan for SKILL.md files up to max_depth."""
-        if depth > max_depth:
+        """Recursively scan for SKILL.md files up to context.max_depth."""
+        if depth > context.max_depth:
             return
 
         for item in directory.iterdir():
             if item.is_dir():
                 if (item / "SKILL.md").exists():
-                    skill = self._load_skill(item, source_type)
+                    skill = self._load_skill(item, context.source_type)
                     if skill:
-                        results.append(skill)
+                        context.results.append(skill)
                 else:
-                    self._scan_recursive(item, source_type, depth + 1, max_depth, results)
+                    self._scan_recursive(item, depth + 1, context)
 
     def _load_skill(self, path: Path, source_type: str) -> Skill | None:
         """Load a single skill from its directory."""
