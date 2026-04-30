@@ -8,11 +8,10 @@ Design: Obsidian Cartographer tokens from .stitch/DESIGN.md.
 
 from __future__ import annotations
 
-from typing import Optional
+import os
 
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QPixmap
-import os
 from PyQt6.QtWidgets import (
     QCheckBox,
     QDialog,
