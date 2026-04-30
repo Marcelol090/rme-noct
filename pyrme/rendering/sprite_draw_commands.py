@@ -60,15 +60,22 @@ def build_sprite_draw_plan(
             tile.position.y,
             tile.position.z,
         )
-        for layer, entry in enumerate(_tile_entries(tile.ground_entry, tile.item_entries)):
+        layer = 0
+
+        def _process_entry(
+            entry: SpriteCatalogEntry,
+            layer: int,
+            tile_x: int,
+            tile_y: int,
+        ) -> None:
             region = atlas.resolve(entry.sprite_id)
             if region is None:
                 unresolved.add(entry.sprite_id)
-                continue
+                return
             destination_rect = _destination_rect(tile_x, tile_y, entry)
             if destination_rect is None:
                 unresolved.add(entry.sprite_id)
-                continue
+                return
             commands.append(
                 SpriteDrawCommand(
                     sprite_id=entry.sprite_id,
@@ -78,19 +85,18 @@ def build_sprite_draw_plan(
                     destination_rect=destination_rect,
                 )
             )
+
+        if tile.ground_entry is not None:
+            _process_entry(tile.ground_entry, layer, tile_x, tile_y)
+            layer += 1
+        for item_entry in tile.item_entries:
+            _process_entry(item_entry, layer, tile_x, tile_y)
+            layer += 1
+
     return SpriteDrawPlan(
         commands=tuple(commands),
         unresolved_sprite_ids=tuple(sorted(unresolved)),
     )
-
-
-def _tile_entries(
-    ground_entry: SpriteCatalogEntry | None,
-    item_entries: tuple[SpriteCatalogEntry, ...],
-) -> tuple[SpriteCatalogEntry, ...]:
-    if ground_entry is None:
-        return item_entries
-    return (ground_entry, *item_entries)
 
 
 def _destination_rect(
