@@ -124,13 +124,15 @@ class GotoPositionDialog(QDialog):
         raw = self._settings.value("recent_positions/list", "[]")
         try:
             parsed = json.loads(str(raw))
-            self._recent: list[tuple[int, int, int]] = []
-            for p in parsed:
-                if not isinstance(p, list) or len(p) != 3:
-                    raise ValueError("Invalid format")
-                if not all(isinstance(x, int) for x in p):
-                    raise TypeError("Expected ints")
-                self._recent.append(tuple(p))
+            recent: list[tuple[int, int, int]] = []
+            for position in parsed:
+                if not isinstance(position, list) or len(position) != 3:
+                    raise ValueError("Invalid recent position")
+                x, y, z = position
+                if not all(isinstance(coord, int) for coord in (x, y, z)):
+                    raise TypeError("Recent position coordinates must be integers")
+                recent.append((x, y, z))
+            self._recent = recent
         except (json.JSONDecodeError, TypeError, ValueError):
             self._recent = []
         self._rebuild_recent_chips()
