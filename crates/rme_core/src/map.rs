@@ -682,6 +682,7 @@ impl MapModel {
     /// Collects map statistics by iterating over all tiles and metadata.
     ///
     /// Performance: Synchronous iteration over the tile hashmap.
+    #[allow(clippy::field_reassign_with_default)]
     pub fn collect_statistics(&self) -> MapStatistics {
         let mut stats = MapStatistics::default();
 
