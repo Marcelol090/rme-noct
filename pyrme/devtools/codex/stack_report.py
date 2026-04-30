@@ -63,6 +63,9 @@ def _extract_frontmatter(text: str) -> str:
     return parts[1]
 
 
+_PROVIDER_PATTERN = re.compile(r"\b([a-z0-9_-]+)/[A-Za-z0-9_.:-]+")
+
+
 def _extract_model_providers(preferences_text: str) -> set[str]:
     frontmatter = _extract_frontmatter(preferences_text)
     if not frontmatter:
@@ -85,7 +88,7 @@ def _extract_model_providers(preferences_text: str) -> set[str]:
         if not line.startswith(" "):
             break
 
-        for match in re.finditer(r"\b([a-z0-9_-]+)/[A-Za-z0-9_.:-]+", stripped):
+        for match in _PROVIDER_PATTERN.finditer(stripped):
             providers.add(match.group(1))
 
     return providers
