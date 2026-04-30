@@ -111,7 +111,9 @@ pub fn write_header(map: &MapModel) -> OtbNode {
     let mut writer = PayloadWriter::new();
     writer.write_u8(0); // type byte inside payload is 0 for root
     writer.write_u32(2); // version = OTBM v2
+    #[allow(clippy::unnecessary_cast)]
     writer.write_u16(map.width() as u16);
+    #[allow(clippy::unnecessary_cast)]
     writer.write_u16(map.height() as u16);
     writer.write_u32(1); // items_major
     writer.write_u32(0); // items_minor

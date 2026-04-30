@@ -70,8 +70,8 @@ impl DatDatabase {
         // Skip creature, effect, distance counts
 
         for client_id in 100..=item_count {
-            let mut it = DatItem::default();
-            it.client_id = client_id;
+            #[allow(clippy::field_reassign_with_default)]
+            let mut it = DatItem { client_id, ..Default::default() };
 
             // Read flags
             loop {
@@ -92,6 +92,7 @@ impl DatDatabase {
                         file.read_exact(&mut speed_buf)?;
                         it.speed = u16::from_le_bytes(speed_buf);
                     }
+                    #[allow(clippy::manual_range_patterns)]
                     0x01 | 0x02 | 0x03 => {} // Bottom/Top order
                     0x04 => {}               // Container
                     0x05 => {}               // Stackable
