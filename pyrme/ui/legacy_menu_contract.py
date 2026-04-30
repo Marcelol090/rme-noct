@@ -9,6 +9,7 @@ the Python shell.
 from __future__ import annotations
 
 import xml.etree.ElementTree as ET
+from functools import cache
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -29,6 +30,7 @@ LEGACY_MENUBAR_XML = _PYRME_ROOT / "assets" / "contracts" / "legacy" / "menubar.
 _MENUBAR_ROOT = ET.parse(LEGACY_MENUBAR_XML).getroot()
 
 
+@cache
 def _menu(name: str, parent: ET.Element | None = None) -> ET.Element:
     source = _MENUBAR_ROOT if parent is None else parent
     for node in source.findall("menu"):
