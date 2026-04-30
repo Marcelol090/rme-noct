@@ -8,11 +8,36 @@ pub const NODE_START: u8 = 0xFE;
 pub const NODE_END: u8 = 0xFF;
 pub const ESCAPE_CHAR: u8 = 0xFD;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Default)]
 pub struct OtbNode {
     pub node_type: u8,
     pub data: Vec<u8>,
     pub children: Vec<OtbNode>,
+}
+
+impl OtbNode {
+    /// Recursively serializes the node and its children into a binary buffer,
+    /// escaping payload bytes to avoid conflicts with control characters.
+    pub fn write_to(&self, out: &mut Vec<u8>) {
+        out.push(NODE_START);
+        out.push(self.node_type);
+
+        for &b in &self.data {
+            match b {
+                NODE_START | NODE_END | ESCAPE_CHAR => {
+                    out.push(ESCAPE_CHAR);
+                    out.push(b);
+                }
+                _ => out.push(b),
+            }
+        }
+
+        for child in &self.children {
+            child.write_to(out);
+        }
+
+        out.push(NODE_END);
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -206,6 +231,49 @@ impl<'a> PayloadReader<'a> {
     }
 }
 
+/// A lightweight cursor to build a primitive payload for an `OtbNode`.
+#[derive(Default)]
+pub struct PayloadWriter {
+    data: Vec<u8>,
+}
+
+impl PayloadWriter {
+    pub fn new() -> Self {
+        Self { data: Vec::new() }
+    }
+
+    pub fn write_u8(&mut self, val: u8) {
+        self.data.push(val);
+    }
+
+    pub fn write_u16(&mut self, val: u16) {
+        self.data.extend_from_slice(&val.to_le_bytes());
+    }
+
+    pub fn write_u32(&mut self, val: u32) {
+        self.data.extend_from_slice(&val.to_le_bytes());
+    }
+
+    pub fn write_u64(&mut self, val: u64) {
+        self.data.extend_from_slice(&val.to_le_bytes());
+    }
+
+    pub fn write_bytes(&mut self, bytes: &[u8]) {
+        self.data.extend_from_slice(bytes);
+    }
+
+    /// Writes a string prefixed by a 16-bit length
+    pub fn write_string(&mut self, val: &str) {
+        let bytes = val.as_bytes();
+        self.write_u16(bytes.len() as u16);
+        self.write_bytes(bytes);
+    }
+
+    pub fn into_inner(self) -> Vec<u8> {
+        self.data
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -281,5 +349,40 @@ mod tests {
         assert_eq!(reader.read_u16(), Some(0x0302)); // LE: 02 03
         assert_eq!(reader.read_bytes(2), Some(&[0x04, 0x05][..]));
         assert_eq!(reader.read_u8(), None);
+    }
+
+    #[test]
+    fn test_write_and_read_node() {
+        let mut root = OtbNode {
+            node_type: 0x01,
+            data: vec![0xFE, 0xFF, 0xFD, 0x42],
+            children: vec![],
+        };
+
+        let child = OtbNode {
+            node_type: 0x02,
+            data: vec![0x99],
+            children: vec![],
+        };
+        root.children.push(child);
+
+        let mut out = Vec::new();
+        root.write_to(&mut out);
+
+        let mut reader = OtbTreeReader::new(&out);
+        let read_root = reader.parse_root().unwrap();
+
+        assert_eq!(root, read_root);
+    }
+
+    #[test]
+    fn test_payload_writer() {
+        let mut writer = PayloadWriter::new();
+        writer.write_u8(0x01);
+        writer.write_u16(0x0302);
+        writer.write_string("abc");
+
+        let bytes = writer.into_inner();
+        assert_eq!(bytes, vec![0x01, 0x02, 0x03, 0x03, 0x00, b'a', b'b', b'c']);
     }
 }

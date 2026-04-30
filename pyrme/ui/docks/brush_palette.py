@@ -13,7 +13,6 @@ from PyQt6.QtCore import (
 from PyQt6.QtWidgets import (
     QLineEdit,
     QListView,
-    QPushButton,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -22,7 +21,7 @@ from PyQt6.QtWidgets import (
 from pyrme.ui.components.glass import GlassDockWidget
 from pyrme.ui.docks.item_palette import ItemPaletteWidget
 from pyrme.ui.models.item_palette_types import ItemEntry
-from pyrme.ui.styles import primary_button_qss, qss_color
+from pyrme.ui.styles import qss_color
 from pyrme.ui.theme import THEME, TYPOGRAPHY
 
 _ROOT_INDEX = QModelIndex()
@@ -67,9 +66,8 @@ class BrushPaletteDock(GlassDockWidget):
     """Legacy-style brush palette dock with a real model/view Item tab."""
 
     item_selected = pyqtSignal(ItemEntry)
-    manage_houses_requested = pyqtSignal()
 
-    _PALETTE_NAMES = ("Terrain", "Doodads", "Item", "Creature", "House", "Waypoint", "RAW")
+    _PALETTE_NAMES = ("Terrain", "Doodads", "Item", "Creature", "RAW")
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__("BRUSH PALETTE", parent)
@@ -132,12 +130,6 @@ class BrushPaletteDock(GlassDockWidget):
         """)
         self._search_bar.textChanged.connect(self._apply_search_to_current_palette)
         layout.addWidget(self._search_bar)
-
-        self._manage_houses_btn = QPushButton("Manage Houses...")
-        self._manage_houses_btn.setStyleSheet(primary_button_qss())
-        self._manage_houses_btn.clicked.connect(self.manage_houses_requested.emit)
-        self._manage_houses_btn.hide()
-        layout.addWidget(self._manage_houses_btn)
 
         self.tabs = QTabWidget()
         self.tabs.currentChanged.connect(self._on_palette_changed)
@@ -237,9 +229,3 @@ class BrushPaletteDock(GlassDockWidget):
     def _on_palette_changed(self, _index: int) -> None:
         self._sync_search_placeholder()
         self._apply_search_to_current_palette(self._search_bar.text())
-
-        # Toggle Manage Houses button
-        if self.current_palette() == "House":
-            self._manage_houses_btn.show()
-        else:
-            self._manage_houses_btn.hide()

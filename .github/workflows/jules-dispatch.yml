@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       focus:
-        description: 'auto, python, rust, bridge, review, test, utility, maintenance, ci, uiux, system'
+        description: 'auto, python, rust, bridge, review, test, utility, maintenance, ci'
         type: choice
         options:
           - 'auto'
@@ -22,8 +22,6 @@ on:
           - 'utility'
           - 'maintenance'
           - 'ci'
-          - 'uiux'
-          - 'system'
         required: false
         default: 'auto'
       additional_context:
@@ -95,7 +93,7 @@ jobs:
 
               const body = (comment.body || '').trimStart();
               const firstLine = body.split(/\r?\n/, 1)[0] || '';
-              const match = firstLine.match(/^@jules(?:\s+\/(?<focus>auto|python|rust|bridge|review|test|utility|maintenance|ci|uiux|system))?(?:\s+(?<rest>.*))?$/i);
+              const match = firstLine.match(/^@jules(?:\s+\/(?<focus>auto|python|rust|bridge|review|test|utility|maintenance|ci))?(?:\s+(?<rest>.*))?$/i);
               if (!match) {
                 core.setOutput('should_run', 'false');
                 return;
@@ -144,7 +142,7 @@ jobs:
               );
             }
 
-            if (focus === 'maintenance' || focus === 'system') {
+            if (focus === 'maintenance') {
               includeCommitLog = 'true';
             }
             if (focus === 'ci') {

@@ -6,7 +6,7 @@
 
 ### R1 — Sempre ler o repositório local e origin antes de qualquer implementação
 
-```powershell
+```bash
 # Sincronizar com origin antes de qualquer trabalho
 git fetch origin
 git status
@@ -56,7 +56,7 @@ use_skill("github")                → inspecionar estado do repo/PR/issues
 
 ### R3 — gh auth obrigatório antes de qualquer operação GitHub
 
-```powershell
+```bash
 # Verificar antes de qualquer publish-changes
 gh auth status
 
@@ -66,7 +66,7 @@ gh auth login
 ```
 
 **Nunca chamar `publish-changes` sem auth verde.**
-Se auth falhar após netsh winsock reset → reboot resolveu na sessão anterior.
+Se auth falhar → reautenticar no browser e repetir o comando.
 
 ---
 
@@ -74,7 +74,7 @@ Se auth falhar após netsh winsock reset → reboot resolveu na sessão anterior
 
 GSD exige commits por milestone/slice. Sempre separar:
 
-```powershell
+```bash
 # Verificar o que está staged antes de commitar
 git diff --cached --stat
 
@@ -94,21 +94,21 @@ git commit -m "feat(M###/S##): one-liner do summary"
 
 ### R5 — PR body deve usar resultados reais de teste — nunca hardcodar
 
-```powershell
+```bash
 # Capturar resultado real antes de publish-changes
-$pytest_result = .\.venv\Scripts\python.exe -m pytest tests/python/ -q 2>&1 | Select-Object -Last 3
+pytest_result="$(python3 -m pytest tests/python/ -q 2>&1 | tail -n 3)"
 
 # Criar .tmp-pr-body.md com resultado real
-@"
+cat > .tmp-pr-body.md <<EOF
 ## Summary
 <descrever o que o PR fecha>
 
 ## Verification
-$($pytest_result)
+$pytest_result
 
 ## Changes
 <listar arquivos e o que mudou>
-"@ | Out-File -FilePath .tmp-pr-body.md -Encoding utf8
+EOF
 
 # Passar para publish-changes ou fallback gh pr create
 gh pr create --draft --base main --body-file .tmp-pr-body.md
@@ -118,13 +118,13 @@ gh pr create --draft --base main --body-file .tmp-pr-body.md
 
 ### R6 — Squash merge só após CI verde — nunca antes
 
-```powershell
+```bash
 # Aguardar CI completar antes de merge
 gh pr checks --watch
 
 # Só após CI verde:
-gh pr merge --squash --delete-branch `
-  --subject "{type}(M###-M###): {slice title}" `
+gh pr merge --squash --delete-branch \
+  --subject "{type}(M###-M###): {slice title}" \
   --body "{descrição concisa do que foi fechado}"
 
 # Verificar main após merge
@@ -137,7 +137,7 @@ git log --oneline -5
 
 ### R7 — Abrir próximo milestone como planning limpo — nunca implementar no closeout
 
-```powershell
+```bash
 # Após merge confirmado:
 git checkout -b gsd/M005/S01
 
@@ -203,9 +203,9 @@ use_skill("using-git-worktrees")
 
 **Gate:** worktree criado + testes baseline passando → avançar para SP3.
 
-```powershell
+```bash
 # Verificar baseline antes de avançar
-.\.venv\Scripts\python.exe -m pytest tests/python/ -q
+python3 -m pytest tests/python/ -q
 # Deve passar sem falhas no baseline
 ```
 
@@ -268,13 +268,13 @@ Ciclo obrigatório RED-GREEN-REFACTOR:
 
 ```
 1. RED   → escrever teste que falha
-           .\.venv\Scripts\python.exe -m pytest <test_file> -q → deve FALHAR
+           python3 -m pytest <test_file> -q → deve FALHAR
 
 2. GREEN → escrever código mínimo para passar
-           .\.venv\Scripts\python.exe -m pytest <test_file> -q → deve PASSAR
+           python3 -m pytest <test_file> -q → deve PASSAR
 
 3. REFACTOR → limpar código sem quebrar teste
-              .\.venv\Scripts\python.exe -m pytest <test_file> -q → ainda PASSA
+              python3 -m pytest <test_file> -q → ainda PASSA
 
 4. COMMIT → só após RED-GREEN-REFACTOR completo
 ```

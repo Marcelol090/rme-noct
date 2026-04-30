@@ -43,3 +43,4 @@ and scope drift without widening the change.
 ## Model Bias
 
 - Use `gpt-5.4-mini` for this contract.
+

@@ -11,8 +11,8 @@ use pyo3::prelude::*;
 pub mod brushes;
 pub mod editor;
 pub mod io;
+pub mod item;
 pub mod map;
-pub mod render;
 pub mod rendering;
 
 /// Returns the version of the rme_core Rust library.
@@ -44,15 +44,12 @@ fn rme_core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(version, m)?)?;
     m.add_function(wrap_pyfunction!(build_info, m)?)?;
     m.add_class::<editor::EditorShellState>()?;
+    m.add_class::<map::MapStatistics>()?;
     m.add_class::<io::otb::OtbDatabase>()?;
     m.add_class::<io::otb::OtbItem>()?;
     m.add_class::<io::spr::SprDatabase>()?;
     m.add_class::<io::dat::DatDatabase>()?;
     m.add_class::<io::dat::DatItem>()?;
-
-    let render_module = PyModule::new(m.py(), "render")?;
-    render_module.add_class::<render::sprite_atlas::SpriteAtlas>()?;
-    m.add_submodule(&render_module)?;
 
     Ok(())
 }

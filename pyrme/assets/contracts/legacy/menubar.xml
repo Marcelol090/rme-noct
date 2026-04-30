@@ -106,7 +106,6 @@
 	</menu>
 	<menu name="Map">
 		<item name="Edit Towns" hotkey="Ctrl+T" action="EDIT_TOWNS" help="Edit towns."/>
-		<item name="Edit Houses" action="EDIT_HOUSES" help="Edit houses."/>
 		<!-- these were never implemented
 		<item name="Edit Items" hotkey="Ctrl+I" action="EDIT_ITEMS" help="Edit items."/>
 		<item name="Edit Monsters" action="EDIT_MONSTERS" help="Edit monsters."/>

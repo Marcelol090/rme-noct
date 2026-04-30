@@ -79,6 +79,3 @@ Never use memory or web search for library API details. Always:
 3. Read the official API, not tutorials or StackOverflow
 4. If docs conflict with legacy `rme/` behavior, legacy wins — document the divergence in code comment
 5. Cache the relevant snippet in the task summary when API is non-obvious
-
-## Third-party Libraries — Context7 MCP (mandatory)
-Never use memory or web search for library API details. Always:
