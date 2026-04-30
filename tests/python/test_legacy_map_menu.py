@@ -11,6 +11,7 @@ from pyrme.ui.main_window import MainWindow
 if TYPE_CHECKING:
     from pathlib import Path
 
+    import pytest
     from PyQt6.QtWidgets import QMenu
 
 
@@ -41,38 +42,31 @@ class _MapPropertiesDialog:
         return int(QDialog.DialogCode.Accepted)
 
 
-class _MapStatisticsDialog:
-    opened = False
-    parent = None
-    shell_state = None
-
-    def __init__(self, parent=None, shell_state=None) -> None:
-        type(self).parent = parent
-        type(self).shell_state = shell_state
-
-    def exec(self) -> int:
-        type(self).opened = True
-        return int(QDialog.DialogCode.Accepted)
-
-
 class _TownManagerDialog:
     opened = False
-    parent = None
-    bridge = None
 
-    def __init__(self, bridge=None, parent=None) -> None:
-        type(self).opened = False  # Reset
-        type(self).bridge = bridge
-        type(self).parent = parent
+    def __init__(self, parent=None) -> None:
+        self.parent = parent
 
     def exec(self) -> int:
         type(self).opened = True
         return int(QDialog.DialogCode.Accepted)
 
+
+class _HouseManagerDialog:
+    opened = False
+
+    def __init__(self, parent=None) -> None:
+        self.parent = parent
+
+    def exec(self) -> int:
+        type(self).opened = True
+        return int(QDialog.DialogCode.Accepted)
 
 def test_legacy_map_contract_matches_xml() -> None:
     assert LEGACY_MAP_MENU_SEQUENCE == (
         "Edit Towns",
+        "Edit Houses",
         None,
         "Cleanup invalid tiles...",
         "Cleanup invalid zones...",
@@ -125,6 +119,7 @@ def test_map_backend_gap_actions_are_safe_until_backend_exists(
     for action, expected in (
         (window.map_cleanup_invalid_tiles_action, "cleanup invalid tiles"),
         (window.map_cleanup_invalid_zones_action, "cleanup invalid zones"),
+        (window.map_statistics_action, "map statistics"),
     ):
         action.trigger()
         message = window.statusBar().currentMessage().lower()
@@ -135,22 +130,19 @@ def test_map_backend_gap_actions_are_safe_until_backend_exists(
 def test_map_edit_towns_action_uses_town_manager_dialog(
     qtbot,
     settings_workspace: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _TownManagerDialog.opened = False
-    _TownManagerDialog.parent = None
-    _TownManagerDialog.bridge = None
+    monkeypatch.setattr("pyrme.ui.main_window.TownManagerDialog", _TownManagerDialog)
     window = MainWindow(
         settings=_build_settings(settings_workspace, "map-town-manager-action.ini"),
         enable_docks=False,
-        town_manager_dialog_factory=_TownManagerDialog,
     )
     qtbot.addWidget(window)
 
     window.map_edit_towns_action.trigger()
 
     assert _TownManagerDialog.opened is True
-    assert _TownManagerDialog.parent is window
-    assert _TownManagerDialog.bridge is not None
 
 
 def test_map_properties_action_uses_dialog_seam(qtbot, settings_workspace: Path) -> None:
@@ -167,19 +159,19 @@ def test_map_properties_action_uses_dialog_seam(qtbot, settings_workspace: Path)
     assert _MapPropertiesDialog.opened is True
 
 
-def test_map_statistics_action_uses_dialog_seam(qtbot, settings_workspace: Path) -> None:
-    _MapStatisticsDialog.opened = False
-    _MapStatisticsDialog.parent = None
-    _MapStatisticsDialog.shell_state = None
+def test_map_edit_houses_action_uses_house_manager_dialog(
+    qtbot,
+    settings_workspace: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _HouseManagerDialog.opened = False
+    monkeypatch.setattr("pyrme.ui.main_window.HouseManagerDialog", _HouseManagerDialog)
     window = MainWindow(
-        settings=_build_settings(settings_workspace, "map-statistics-action.ini"),
+        settings=_build_settings(settings_workspace, "map-house-manager-action.ini"),
         enable_docks=False,
-        map_statistics_dialog_factory=_MapStatisticsDialog,
     )
     qtbot.addWidget(window)
 
-    window.map_statistics_action.trigger()
+    window.map_edit_houses_action.trigger()
 
-    assert _MapStatisticsDialog.opened is True
-    assert _MapStatisticsDialog.parent is window
-    assert _MapStatisticsDialog.shell_state is not None
+    assert _HouseManagerDialog.opened is True

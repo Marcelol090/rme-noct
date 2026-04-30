@@ -40,10 +40,10 @@ from pyrme.ui.dialogs import (
     FindBrushDialog,
     FindItemDialog,
     GotoPositionDialog,
+    HouseManagerDialog,
     MapPropertiesDialog,
-    MapStatisticsDialog,
-    TownManagerDialog,
 )
+from pyrme.ui.dialogs.welcome_dialog import WelcomeDialog
 from pyrme.ui.docks import BrushPaletteDock, MinimapDock, PropertiesDock, WaypointsDock
 from pyrme.ui.editor_context import EditorContext, EditorViewRecord, ShellStateSnapshot
 from pyrme.ui.legacy_menu_contract import (
@@ -59,6 +59,7 @@ from pyrme.ui.theme import THEME, TYPOGRAPHY
 
 if TYPE_CHECKING:
     from pyrme.ui.models.item_palette_types import ItemEntry
+    from pyrme.ui.models.startup_models import StartupLoadRequest
 
 logger = logging.getLogger(__name__)
 
@@ -70,13 +71,12 @@ QSETTINGS_SELECTION_MODE = "editor/selection_mode"
 QSETTINGS_SELECTION_COMPENSATE = "editor/selection_compensate"
 
 
+class TownManagerDialog(QDialog):
+    """Safe placeholder until the full town manager dialog is mounted."""
 
-
-    
-
-    
-        
-        
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Town Manager")
 
 
 class _ToolOptionsDock(GlassDockWidget):
@@ -116,8 +116,7 @@ class MainWindow(QMainWindow):
         jump_to_item_dialog_factory=None,
         find_item_dialog_factory=None,
         map_properties_dialog_factory: DialogFactory | None = None,
-        map_statistics_dialog_factory=None,
-        town_manager_dialog_factory=None,
+        house_manager_dialog_factory: DialogFactory | None = None,
         canvas_factory: CanvasFactory | None = None,
         enable_docks: bool | None = None,
     ) -> None:
@@ -134,11 +133,8 @@ class MainWindow(QMainWindow):
         self._map_properties_dialog_factory = (
             map_properties_dialog_factory or MapPropertiesDialog
         )
-        self._map_statistics_dialog_factory = (
-            map_statistics_dialog_factory or MapStatisticsDialog
-        )
-        self._town_manager_dialog_factory = (
-            town_manager_dialog_factory or TownManagerDialog
+        self._house_manager_dialog_factory = (
+            house_manager_dialog_factory or HouseManagerDialog
         )
         self._canvas_factory = canvas_factory or RendererHostCanvasWidget
         self._enable_docks = True if enable_docks is None else enable_docks
@@ -165,6 +161,7 @@ class MainWindow(QMainWindow):
         self._active_brush_name = "Select"
         self._active_brush_id: str | None = None
         self._active_item_id: int | None = None
+        self._welcome_dialog: WelcomeDialog | None = None
         self._setup_window()
         self._setup_menu_bar()
         self._setup_toolbars()
@@ -186,6 +183,39 @@ class MainWindow(QMainWindow):
         self.setStyleSheet(
             f"QMainWindow {{ background-color: {qss_color(THEME.void_black)}; }}"
         )
+
+    def show_startup_dashboard(self) -> None:
+        """Display the welcome dialog dashboard."""
+        if self._welcome_dialog is None:
+            self._welcome_dialog = WelcomeDialog(parent=self)
+            self._welcome_dialog.new_map_requested.connect(self._on_welcome_new_map)
+            self._welcome_dialog.browse_map_requested.connect(
+                self._on_welcome_browse_map
+            )
+            self._welcome_dialog.load_requested.connect(self._on_welcome_load_map)
+            self._welcome_dialog.rejected.connect(self._on_welcome_rejected)
+        self._welcome_dialog.show()
+
+    def _on_welcome_new_map(self) -> None:
+        if self._welcome_dialog is not None:
+            self._welcome_dialog.accept()
+        self.file_new_action.trigger()
+
+    def _on_welcome_browse_map(self) -> None:
+        if self._welcome_dialog is not None:
+            self._welcome_dialog.accept()
+        self.file_open_action.trigger()
+
+    def _on_welcome_load_map(self, request: StartupLoadRequest) -> None:
+        if self._welcome_dialog is not None:
+            self._welcome_dialog.accept()
+        self._open_map_file(request.map_path)
+
+    def _on_welcome_rejected(self) -> None:
+        pass
+
+    def _open_map_file(self, path: str) -> None:
+        self._show_unavailable(f"Open map: {path}")
 
     def _setup_menu_bar(self) -> None:
         """Create the main menu bar."""
@@ -454,6 +484,9 @@ class MainWindow(QMainWindow):
         self.map_edit_towns_action = self._action_from_spec(
             "map_edit_towns", self._show_town_manager
         )
+        self.map_edit_houses_action = self._action_from_spec(
+            "map_edit_houses", self._show_house_manager
+        )
         self.map_cleanup_invalid_tiles_action = self._action_from_spec(
             "map_cleanup_invalid_tiles",
             lambda: self._show_unavailable("Cleanup invalid tiles"),
@@ -465,11 +498,11 @@ class MainWindow(QMainWindow):
         self.map_properties_action = self._action_from_spec(
             "map_properties", self._show_map_properties
         )
-        self.map_statistics_action = self._action_from_spec("map_statistics", self._show_map_statistics)
-
-
-
+        self.map_statistics_action = self._action_from_spec(
+            "map_statistics", self._show_map_statistics
+        )
         menu.addAction(self.map_edit_towns_action)
+        menu.addAction(self.map_edit_houses_action)
         menu.addSeparator()
         menu.addActions(
             [
@@ -477,7 +510,6 @@ class MainWindow(QMainWindow):
                 self.map_cleanup_invalid_zones_action,
                 self.map_properties_action,
                 self.map_statistics_action,
-
             ]
         )
 
@@ -572,13 +604,6 @@ class MainWindow(QMainWindow):
         menu.addSeparator()
         for key in ("view_ghost_loose_items", "ghost_higher_floors", "view_show_shade"):
             self._add_view_action(menu, key)
-
-        menu.addSeparator()
-        self.map_statistics_action = self._action_from_spec(
-            "map_statistics", self._show_map_statistics
-        )
-        menu.addAction(self.map_statistics_action)
-
 
         self.show_grid_action = self.view_menu_actions["show_grid"]
         self.ghost_higher_action = self.view_menu_actions["ghost_higher_floors"]
@@ -879,6 +904,7 @@ class MainWindow(QMainWindow):
         """Create dock widgets for palettes and tools."""
         self.brush_palette_dock = BrushPaletteDock(self)
         self.brush_palette_dock.item_selected.connect(self._handle_item_palette_selection)
+        self.brush_palette_dock.manage_houses_requested.connect(self._show_house_manager)
         self.addDockWidget(
             Qt.DockWidgetArea.LeftDockWidgetArea,
             self.brush_palette_dock,
@@ -1116,7 +1142,11 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     def _show_town_manager(self) -> None:
-        dialog = self._town_manager_dialog_factory(bridge=getattr(self._canvas, "_shell_core", None), parent=self)
+        dialog = TownManagerDialog(self)
+        dialog.exec()
+
+    def _show_house_manager(self) -> None:
+        dialog = self._house_manager_dialog_factory(self)
         dialog.exec()
 
     def _show_find_item(self) -> None:
@@ -1158,9 +1188,7 @@ class MainWindow(QMainWindow):
         self._status_bar().showMessage("Replace Items is not available yet.", 3000)
 
     def _show_map_statistics(self) -> None:
-        shell_state = getattr(self._canvas, "_shell_core", None)
-        dialog = self._map_statistics_dialog_factory(self, shell_state=shell_state)
-        dialog.exec()
+        self._status_bar().showMessage("Map Statistics is not available yet.", 3000)
 
     def _show_goto_position(self) -> None:
         dialog = self._goto_dialog_factory(self)
