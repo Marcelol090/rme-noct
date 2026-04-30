@@ -669,6 +669,20 @@ impl MapModel {
         self.is_dirty = true;
     }
 
+    pub fn sidecar_counts(&self) -> (usize, usize, usize, usize) {
+        let creature_count = self
+            .spawns
+            .iter()
+            .map(|spawn| spawn.creatures().len())
+            .sum();
+        (
+            self.waypoints.len(),
+            self.spawns.len(),
+            creature_count,
+            self.houses.len(),
+        )
+    }
+
     pub const fn is_dirty(&self) -> bool {
         self.is_dirty
     }

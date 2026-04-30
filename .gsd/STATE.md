@@ -1,11 +1,11 @@
 # GSD State
 
-**Active Milestone:** none
-**Active Slice:** none
-**Active Task:** none
-**Phase:** complete
-**Next Action:** Plan the next persistence slice: XML readback/load integration for waypoints, spawns, and houses, or UI/domain workflows that populate these sidecar collections.
-**Last Updated:** 2026-04-24T01:01:54-03:00
+**Active Milestone:** M026-xml-sidecar-readback
+**Active Slice:** S01
+**Active Task:** complete
+**Phase:** review
+**Next Action:** Commit M026/S01 and run development-branch closeout.
+**Last Updated:** 2026-04-30T00:00:00-03:00
 **Requirements Status:** 0 active · 23 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
