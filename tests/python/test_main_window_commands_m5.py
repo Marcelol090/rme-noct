@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+import pytest
 
 from PyQt6.QtCore import QSettings
 from PyQt6.QtWidgets import QDialog
@@ -421,3 +422,135 @@ def test_main_window_unknown_brush_mode_falls_back_to_drawing(
     assert window.tool_options_dock is not None
     assert window.brush_mode_actions["drawing"].isChecked()
     assert window.tool_options_dock._mode_label.text() == "Draw"
+
+import pytest
+
+@pytest.mark.parametrize("server_id,item_id,expected", [
+    (None, 2145, 2145),
+    (None, "2145", 2145),
+    (100, 2145, 100),
+    (0, 2145, 0),
+])
+def test_main_window_find_item_selection_robustness(
+    qtbot,
+    settings_workspace: Path,
+    server_id,
+    item_id,
+    expected,
+) -> None:
+    class _FindItemDialog:
+        def __init__(self, parent=None) -> None:
+            self.parent = parent
+
+        def exec(self) -> int:
+            return int(QDialog.DialogCode.Accepted)
+
+        def selected_result(self):
+            class _Result:
+                name = "Test Coin"
+                # Need to use setattr to allow None/missing simulation
+                def __init__(self):
+                    if server_id is not None or expected is None:
+                        # only set if not 'missing' test case unless explicitly None
+                        pass
+
+            res = _Result()
+            if server_id != "missing":
+                res.server_id = server_id
+            if item_id != "missing":
+                res.item_id = item_id
+            return res
+
+    window = MainWindow(
+        settings=_build_settings(settings_workspace, f"find-item-selection-{expected}.ini"),
+        find_item_dialog_factory=_FindItemDialog,
+    )
+    qtbot.addWidget(window)
+
+    window._show_find_item()
+
+    assert window._active_brush_name == "Test Coin"
+    assert window._editor_context.session.active_item_id == expected
+    assert window._editor_context.session.active_brush_id == f"item:{expected}"
+    assert window.statusBar().currentMessage() == f"Selected item Test Coin (#{expected})."
+
+def test_main_window_find_item_selection_handles_none_selected_result(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    class _FindItemDialog:
+        def __init__(self, parent=None) -> None:
+            self.parent = parent
+
+        def exec(self) -> int:
+            return int(QDialog.DialogCode.Accepted)
+
+        def selected_result(self):
+            return None
+
+    window = MainWindow(
+        settings=_build_settings(settings_workspace, "find-item-selection-none-result.ini"),
+        find_item_dialog_factory=_FindItemDialog,
+    )
+    qtbot.addWidget(window)
+
+    window._show_find_item()
+    # No action should have been taken
+
+def test_main_window_find_item_selection_missing_ids(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    class _FindItemDialog:
+        def __init__(self, parent=None) -> None:
+            self.parent = parent
+
+        def exec(self) -> int:
+            return int(QDialog.DialogCode.Accepted)
+
+        def selected_result(self):
+            class _Result:
+                name = "Missing Coin"
+            return _Result()
+
+    window = MainWindow(
+        settings=_build_settings(settings_workspace, "find-item-selection-missing.ini"),
+        find_item_dialog_factory=_FindItemDialog,
+    )
+    qtbot.addWidget(window)
+
+    import pytest
+    with pytest.raises(ValueError, match="has no server_id or item_id"):
+        window._show_find_item()
+
+def test_main_window_find_item_selection_invalid_ids(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    class _FindItemDialog:
+        def __init__(self, parent=None) -> None:
+            self.parent = parent
+
+        def exec(self) -> int:
+            return int(QDialog.DialogCode.Accepted)
+
+        def selected_result(self):
+            class _Result:
+                name = "Invalid Coin"
+                server_id = "abc"
+            return _Result()
+
+    window = MainWindow(
+        settings=_build_settings(settings_workspace, "find-item-selection-invalid.ini"),
+        find_item_dialog_factory=_FindItemDialog,
+    )
+    qtbot.addWidget(window)
+
+    import pytest
+    with pytest.raises(ValueError, match="Invalid item_id"):
+        window._show_find_item()
+
+def test_dialog_exports_house_manager():
+    from pyrme.ui.dialogs import HouseManagerDialog
+
+    assert HouseManagerDialog is not None
