@@ -7,6 +7,7 @@ Provides item/creature search with type and property filters.
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
+
 try:
     from enum import StrEnum
 except ImportError:
