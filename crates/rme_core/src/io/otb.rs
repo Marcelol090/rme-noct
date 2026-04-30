@@ -118,24 +118,18 @@ impl OtbDatabase {
                 };
 
                 match attr {
-                    ITEM_ATTR_SERVERID => {
-                        if length == 2 {
-                            if let Some(id) = pl.read_u16() {
-                                fr.server_id = id;
-                            }
-                        } else {
-                            pl.skip(length);
+                    ITEM_ATTR_SERVERID if length == 2 => {
+                        if let Some(id) = pl.read_u16() {
+                            fr.server_id = id;
                         }
                     }
-                    ITEM_ATTR_CLIENTID => {
-                        if length == 2 {
-                            if let Some(id) = pl.read_u16() {
-                                fr.client_id = id;
-                            }
-                        } else {
-                            pl.skip(length);
+                    ITEM_ATTR_SERVERID => { pl.skip(length); }
+                    ITEM_ATTR_CLIENTID if length == 2 => {
+                        if let Some(id) = pl.read_u16() {
+                            fr.client_id = id;
                         }
                     }
+                    ITEM_ATTR_CLIENTID => { pl.skip(length); }
                     ITEM_ATTR_NAME => {
                         if let Some(bytes) = pl.read_bytes(length) {
                             fr.name = String::from_utf8_lossy(bytes).into_owned();
@@ -146,24 +140,18 @@ impl OtbDatabase {
                             fr.description = String::from_utf8_lossy(bytes).into_owned();
                         }
                     }
-                    ITEM_ATTR_SPEED => {
-                        if length == 2 {
-                            if let Some(v) = pl.read_u16() {
-                                fr.speed = v;
-                            }
-                        } else {
-                            pl.skip(length);
+                    ITEM_ATTR_SPEED if length == 2 => {
+                        if let Some(v) = pl.read_u16() {
+                            fr.speed = v;
                         }
                     }
-                    ITEM_ATTR_MAXITEMS => {
-                        if length == 2 {
-                            if let Some(v) = pl.read_u16() {
-                                fr.volume = v;
-                            }
-                        } else {
-                            pl.skip(length);
+                    ITEM_ATTR_SPEED => { pl.skip(length); }
+                    ITEM_ATTR_MAXITEMS if length == 2 => {
+                        if let Some(v) = pl.read_u16() {
+                            fr.volume = v;
                         }
                     }
+                    ITEM_ATTR_MAXITEMS => { pl.skip(length); }
                     // weight is stored as 8-byte double? Wait, or what is it?
                     // legacy: double weight = 0.0; readFixedPayload(item_node, length, weight) => length=8?
                     // We'll skip for now if we can't parse it reliably, wait, legacy reads it as double (float64) under ITEM_ATTR_WEIGHT.
