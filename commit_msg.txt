@@ -1,0 +1,6 @@
+🧹 [code health] Remove unused imports in startup_models.py
+
+🎯 **What:** Removed unused `Optional` from `typing` and unused `field` from `dataclasses` in `pyrme/ui/models/startup_models.py`.
+💡 **Why:** Simplifies file dependencies, avoids linting warnings, and improves readability.
+✅ **Verification:** Verified by running `ruff check` and `pytest tests/python/test_startup_models.py`, which passed successfully.
+✨ **Result:** A cleaner codebase with fewer extraneous imports.
