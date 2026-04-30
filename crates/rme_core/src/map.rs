@@ -691,6 +691,8 @@ impl MapModel {
         stats.waypoint_count = self.waypoints.len() as u64;
 
         stats.town_count = self.towns.len() as u64;
+
+        stats.town_count = self.towns.len() as u64;
         for house in &self.houses {
             stats.total_house_sqm += house.size() as u64;
         }
