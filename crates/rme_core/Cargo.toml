@@ -9,10 +9,10 @@ description = "High-performance Rust core for PyRME – Remere's Map Editor"
 
 [lib]
 name = "rme_core"
-crate-type = ["cdylib", "rlib"]
+crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.23", features = ["extension-module"] }
+pyo3 = { version = "0.23", features = ["extension-module", "abi3-py312"] }
 fnv = "1.0"
 rayon = "1.10"
 serde = { version = "1.0", features = ["derive"] }
@@ -24,7 +24,7 @@ memmap2 = "0.9.10"
 
 [dev-dependencies]
 criterion = "0.8.2"
-pyo3 = { version = "0.23", features = ["auto-initialize"] }
+pyo3 = { version = "0.23", features = ["auto-initialize", "abi3-py312"] }
 tempfile = "3.8"
 
 [features]
