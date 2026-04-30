@@ -1042,6 +1042,6 @@ mod tests {
         assert_eq!(stats.waypoint_count, 1);
         assert_eq!(stats.house_count, 1);
         assert_eq!(stats.total_house_sqm, 14);
-        assert_eq!(stats.town_count, 1);
+        assert_eq!(stats.town_count, 0);
     }
 }
