@@ -36,7 +36,7 @@ def _make_workspace(name: str) -> Path:
 
 
 def test_loader_prefers_repo_then_user_then_bundled() -> None:
-    from pyrme.devtools.superpowers.skills_loader import SkillsLoader
+    from pyrme.devtools.superpowers.skills_loader import SkillsLoader, SkillsLoaderConfig
 
     temp_root = _make_workspace("loader-prefer")
     try:
@@ -53,11 +53,13 @@ def test_loader_prefers_repo_then_user_then_bundled() -> None:
         _write_skill(bundled_skills, "requesting-code-review", "Bundled review")
 
         loader = SkillsLoader(
-            project_root=project_root,
-            repo_skills_dir=repo_skills,
-            user_skills_dir=user_skills,
-            codex_skills_dir=codex_skills,
-            superpowers_dir=bundled_skills,
+            config=SkillsLoaderConfig(
+                project_root=project_root,
+                repo_skills_dir=repo_skills,
+                user_skills_dir=user_skills,
+                codex_skills_dir=codex_skills,
+                superpowers_dir=bundled_skills,
+            )
         )
 
         skill = loader.resolve_skill("brainstorming")
@@ -77,14 +79,14 @@ def test_loader_prefers_repo_then_user_then_bundled() -> None:
 
 
 def test_loader_defaults_use_project_pi_and_user_gsd_skills(monkeypatch) -> None:
-    from pyrme.devtools.superpowers.skills_loader import SkillsLoader
+    from pyrme.devtools.superpowers.skills_loader import SkillsLoader, SkillsLoaderConfig
 
     temp_root = _make_workspace("loader-defaults")
     try:
         monkeypatch.setattr(Path, "home", lambda: temp_root / "home")
 
         project_root = temp_root / "repo"
-        loader = SkillsLoader(project_root=project_root)
+        loader = SkillsLoader(config=SkillsLoaderConfig(project_root=project_root))
 
         assert loader.repo_skills_dir == project_root / ".pi" / "agent" / "skills"
         assert loader.user_skills_dir == temp_root / "home" / ".gsd" / "agent" / "skills"

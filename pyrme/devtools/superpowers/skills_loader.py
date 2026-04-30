@@ -95,26 +95,33 @@ def _extract_frontmatter(text: str) -> dict[str, str]:
     return result
 
 
+@dataclass
+class SkillsLoaderConfig:
+    """Configuration for SkillsLoader directories."""
+
+    project_root: Path | None = None
+    repo_skills_dir: Path | None = None
+    user_skills_dir: Path | None = None
+    codex_skills_dir: Path | None = None
+    superpowers_dir: Path | None = None
+    personal_dir: Path | None = None
+
+
 class SkillsLoader:
     """Discovers and loads Superpowers skills."""
 
-    def __init__(
-        self,
-        project_root: Path | None = None,
-        repo_skills_dir: Path | None = None,
-        user_skills_dir: Path | None = None,
-        codex_skills_dir: Path | None = None,
-        superpowers_dir: Path | None = None,
-        personal_dir: Path | None = None,
-    ) -> None:
-        self.project_root = project_root or Path.cwd()
+    def __init__(self, config: SkillsLoaderConfig | None = None) -> None:
+        config = config or SkillsLoaderConfig()
+        self.project_root = config.project_root or Path.cwd()
         home_dir = _safe_home(self.project_root)
-        self.repo_skills_dir = repo_skills_dir or personal_dir or (
+        self.repo_skills_dir = config.repo_skills_dir or config.personal_dir or (
             self.project_root / ".pi" / "agent" / "skills"
         )
-        self.user_skills_dir = user_skills_dir or (home_dir / ".gsd" / "agent" / "skills")
-        self.codex_skills_dir = codex_skills_dir or (home_dir / ".codex" / "skills")
-        self.superpowers_dir = superpowers_dir or (home_dir / ".codex" / "superpowers" / "skills")
+        self.user_skills_dir = config.user_skills_dir or (home_dir / ".gsd" / "agent" / "skills")
+        self.codex_skills_dir = config.codex_skills_dir or (home_dir / ".codex" / "skills")
+        self.superpowers_dir = config.superpowers_dir or (
+            home_dir / ".codex" / "superpowers" / "skills"
+        )
 
     def find_skills(self, max_depth: int = 3) -> list[Skill]:
         """Find all available skills in precedence order."""
