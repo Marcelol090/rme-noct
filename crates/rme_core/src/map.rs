@@ -994,6 +994,7 @@ mod tests {
             true,
             14,
         ));
+        model.add_town(Town::new(1, "Test Town", MapPosition::new(100, 100, 7)));
 
         assert_eq!(model.waypoints()[0].name(), "Depot");
         assert_eq!(model.spawns()[0].creatures()[0].name(), "Rat");
@@ -1032,6 +1033,7 @@ mod tests {
             true,
             14,
         ));
+        model.add_town(Town::new(1, "Test Town", MapPosition::new(100, 100, 7)));
 
         let stats = model.collect_statistics();
 
