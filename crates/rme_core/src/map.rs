@@ -639,8 +639,6 @@ impl MapModel {
         removed
     }
 
-
-
     pub fn add_waypoint(&mut self, waypoint: Waypoint) {
         self.waypoints.push(waypoint);
         self.is_dirty = true;

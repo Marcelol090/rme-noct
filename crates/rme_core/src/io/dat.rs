@@ -66,7 +66,7 @@ impl DatDatabase {
         let mut counts = [0u8; 8];
         file.read_exact(&mut counts)?;
 
-        let item_count = u16::from_le_bytes(counts[0..2].try_into().unwrap());
+        let item_count = u16::from_le_bytes(counts[0..2].try_into().unwrap_or_default());
         // Skip creature, effect, distance counts
 
         for client_id in 100..=item_count {
@@ -92,7 +92,7 @@ impl DatDatabase {
                         file.read_exact(&mut speed_buf)?;
                         it.speed = u16::from_le_bytes(speed_buf);
                     }
-                    0x01 | 0x02 | 0x03 => {} // Bottom/Top order
+                    0x01..=0x03 => {} // Bottom/Top order
                     0x04 => {}               // Container
                     0x05 => {}               // Stackable
                     0x09 => {

@@ -111,8 +111,8 @@ pub fn write_header(map: &MapModel) -> OtbNode {
     let mut writer = PayloadWriter::new();
     writer.write_u8(0); // type byte inside payload is 0 for root
     writer.write_u32(2); // version = OTBM v2
-    writer.write_u16(map.width() as u16);
-    writer.write_u16(map.height() as u16);
+    writer.write_u16(map.width());
+    writer.write_u16(map.height());
     writer.write_u32(1); // items_major
     writer.write_u32(0); // items_minor
 
@@ -380,7 +380,11 @@ pub fn write_tile(tile: &Tile, base_x: u16, base_y: u16) -> OtbNode {
     let offset_x = (pos.x() - base_x) as u8;
     let offset_y = (pos.y() - base_y) as u8;
 
-    let node_type = if tile.is_house_tile() { OTBM_HOUSETILE } else { OTBM_TILE };
+    let node_type = if tile.is_house_tile() {
+        OTBM_HOUSETILE
+    } else {
+        OTBM_TILE
+    };
     w.write_u8(node_type);
     w.write_u8(offset_x);
     w.write_u8(offset_y);
@@ -423,7 +427,10 @@ pub fn write_tile_areas(map: &MapModel, map_data_node: &mut OtbNode) {
         let base_y = pos.y() & 0xFF00;
         let base_z = pos.z();
 
-        areas.entry((base_x, base_y, base_z)).or_default().push(tile);
+        areas
+            .entry((base_x, base_y, base_z))
+            .or_default()
+            .push(tile);
     }
 
     for ((base_x, base_y, base_z), tiles) in areas {
@@ -567,7 +574,7 @@ mod tests {
                 buf.push(OTBM_TILE);
                 buf.push(ox as u8); // offset_x
                 buf.push(oy as u8); // offset_y
-                // Inline ground item
+                                    // Inline ground item
                 buf.push(OTBM_ATTR_ITEM);
                 push_u16_le(&mut buf, ground_id);
                 buf.push(NODE_END); // end tile
@@ -613,90 +620,99 @@ mod tests {
     // ── S01 Tests ───────────────────────────────────────────────────
 
     #[test]
-    fn otbm_header_parsed_correctly() {
+    fn otbm_header_parsed_correctly() -> Result<(), OtbmError> {
         let data = build_test_otbm("", "", "", &[]);
-        let (header, _map) = load_otbm(&data).unwrap();
+        let (header, _map) = load_otbm(&data)?;
         assert_eq!(header.version, 2);
         assert_eq!(header.width, 256);
         assert_eq!(header.height, 256);
         assert_eq!(header.items_major, 1);
         assert_eq!(header.items_minor, 0);
+        Ok(())
     }
 
     #[test]
-    fn otbm_map_attributes_parsed() {
+    fn otbm_map_attributes_parsed() -> Result<(), OtbmError> {
         let data = build_test_otbm("Test Map", "spawn.xml", "house.xml", &[]);
-        let (_header, map) = load_otbm(&data).unwrap();
+        let (_header, map) = load_otbm(&data)?;
         assert_eq!(map.description(), "Test Map");
         assert_eq!(map.spawnfile(), "spawn.xml");
         assert_eq!(map.housefile(), "house.xml");
         assert_eq!(map.width(), 256);
         assert_eq!(map.height(), 256);
+        Ok(())
     }
 
     #[test]
-    fn otbm_dimensions_set_from_header() {
+    fn otbm_dimensions_set_from_header() -> Result<(), OtbmError> {
         let data = build_test_otbm("", "", "", &[]);
-        let (_header, map) = load_otbm(&data).unwrap();
+        let (_header, map) = load_otbm(&data)?;
         assert_eq!(map.width(), 256);
         assert_eq!(map.height(), 256);
+        Ok(())
     }
 
     #[test]
-    fn otbm_map_clean_after_load() {
+    fn otbm_map_clean_after_load() -> Result<(), OtbmError> {
         let data = build_test_otbm("test", "", "", &[]);
-        let (_header, map) = load_otbm(&data).unwrap();
+        let (_header, map) = load_otbm(&data)?;
         assert!(!map.is_dirty());
+        Ok(())
     }
 
     // ── S02 Tests ───────────────────────────────────────────────────
 
     #[test]
-    fn otbm_tile_area_loads_tiles() {
+    fn otbm_tile_area_loads_tiles() -> Result<(), OtbmError> {
         let tiles = vec![(0, 0, 7, 4526), (1, 0, 7, 4527), (0, 1, 7, 4528)];
         let data = build_test_otbm("", "", "", &tiles);
-        let (_header, map) = load_otbm(&data).unwrap();
+        let (_header, map) = load_otbm(&data)?;
         assert_eq!(map.tile_count(), 3);
+        Ok(())
     }
 
     #[test]
-    fn otbm_tile_has_correct_ground() {
+    fn otbm_tile_has_correct_ground() -> Result<(), OtbmError> {
         let tiles = vec![(5, 3, 7, 4526)];
         let data = build_test_otbm("", "", "", &tiles);
-        let (_header, map) = load_otbm(&data).unwrap();
+        let (_header, map) = load_otbm(&data)?;
 
         let pos = MapPosition::new(1005, 1003, 7);
         let tile = map.get_tile(&pos).expect("tile should exist");
-        assert_eq!(tile.ground().unwrap().id(), 4526);
+        assert_eq!(tile.ground().ok_or(OtbmError::InvalidTile)?.id(), 4526);
+        Ok(())
     }
 
     #[test]
-    fn otbm_tile_position_offset_from_base() {
+    fn otbm_tile_position_offset_from_base() -> Result<(), OtbmError> {
         let tiles = vec![(10, 20, 7, 100)];
         let data = build_test_otbm("", "", "", &tiles);
-        let (_header, map) = load_otbm(&data).unwrap();
+        let (_header, map) = load_otbm(&data)?;
 
         // base is 1000,1000,7 + offset 10,20
         let pos = MapPosition::new(1010, 1020, 7);
         assert!(map.get_tile(&pos).is_some());
+        Ok(())
     }
 
     #[test]
-    fn otbm_empty_map_zero_tiles() {
+    fn otbm_empty_map_zero_tiles() -> Result<(), OtbmError> {
         let data = build_test_otbm("empty", "", "", &[]);
-        let (_header, map) = load_otbm(&data).unwrap();
+        let (_header, map) = load_otbm(&data)?;
         assert_eq!(map.tile_count(), 0);
         assert!(map.is_empty());
+        Ok(())
     }
 
     #[test]
-    fn otbm_too_short_returns_error() {
+    fn otbm_too_short_returns_error() -> Result<(), OtbmError> {
         let data = vec![0u8; 2];
         assert!(load_otbm(&data).is_err());
+        Ok(())
     }
 
     #[test]
-    fn test_otbm_roundtrip_serialization() {
+    fn test_otbm_roundtrip_serialization() -> Result<(), OtbmError> {
         let mut original_map = MapModel::new();
         original_map.set_description("Roundtrip Map");
         original_map.set_spawnfile("spawns.xml");
@@ -706,7 +722,7 @@ mod tests {
         let mut t1 = Tile::new(MapPosition::new(1005, 1003, 7));
         t1.set_ground(Some(Item::new(4526)));
         t1.set_mapflags(42);
-        
+
         let mut item1 = Item::new(100);
         item1.set_count(5);
         t1.add_item(item1);
@@ -715,7 +731,7 @@ mod tests {
         item2.set_action_id(1234);
         item2.set_unique_id(5678);
         t1.add_item(item2);
-        
+
         original_map.set_tile(t1);
 
         let mut t2 = Tile::new(MapPosition::new(1006, 1003, 7));
@@ -734,7 +750,7 @@ mod tests {
         root.write_to(&mut out);
 
         // Deserialize
-        let (_header, loaded_map) = load_otbm(&out).expect("Failed to load serialized map");
+        let (_header, loaded_map) = load_otbm(&out)?;
 
         assert_eq!(loaded_map.description(), original_map.description());
         assert_eq!(loaded_map.spawnfile(), original_map.spawnfile());
@@ -743,8 +759,10 @@ mod tests {
         assert_eq!(loaded_map.height(), original_map.height());
         assert_eq!(loaded_map.tile_count(), original_map.tile_count());
 
-        let t1_loaded = loaded_map.get_tile(&MapPosition::new(1005, 1003, 7)).unwrap();
-        assert_eq!(t1_loaded.ground().unwrap().id(), 4526);
+        let t1_loaded = loaded_map
+            .get_tile(&MapPosition::new(1005, 1003, 7))
+            .ok_or(OtbmError::InvalidTile)?;
+        assert_eq!(t1_loaded.ground().ok_or(OtbmError::InvalidTile)?.id(), 4526);
         assert_eq!(t1_loaded.mapflags(), 42);
         assert_eq!(t1_loaded.item_count(), 2);
         assert_eq!(t1_loaded.items()[0].id(), 100);
@@ -753,8 +771,11 @@ mod tests {
         assert_eq!(t1_loaded.items()[1].action_id(), 1234);
         assert_eq!(t1_loaded.items()[1].unique_id(), 5678);
 
-        let t2_loaded = loaded_map.get_tile(&MapPosition::new(1006, 1003, 7)).unwrap();
-        assert_eq!(t2_loaded.ground().unwrap().id(), 4527);
+        let t2_loaded = loaded_map
+            .get_tile(&MapPosition::new(1006, 1003, 7))
+            .ok_or(OtbmError::InvalidTile)?;
+        assert_eq!(t2_loaded.ground().ok_or(OtbmError::InvalidTile)?.id(), 4527);
         assert_eq!(t2_loaded.house_id(), 99);
+        Ok(())
     }
 }

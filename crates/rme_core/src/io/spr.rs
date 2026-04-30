@@ -38,14 +38,14 @@ impl SprDatabase {
             return Err(SprError::InvalidFormat("File too small for header"));
         }
 
-        let _signature = u32::from_le_bytes(mmap[0..4].try_into().unwrap());
+        let _signature = u32::from_le_bytes(mmap[0..4].try_into().unwrap_or_default());
 
         // In legacy RME, it checks for extended format based on signature or hint.
         // For now, let's assume legacy 16-bit count, but we can detect it.
         // Actually, many 10.x clients use 32-bit count.
         // Let's check if the file size matches a 16-bit count or 32-bit count for the table.
         let is_extended = false;
-        let count16 = u16::from_le_bytes(mmap[4..6].try_into().unwrap()) as u32;
+        let count16 = u16::from_le_bytes(mmap[4..6].try_into().unwrap_or_default()) as u32;
 
         // Heuristic: if count16 * 4 + 6 > mmap.len(), it's likely not 16-bit count or corrupted.
         // If it's a very large file, it might be 32-bit.
@@ -69,7 +69,7 @@ impl SprDatabase {
             if pos + 4 > mmap.len() {
                 break;
             }
-            let off = u32::from_le_bytes(mmap[pos..pos + 4].try_into().unwrap());
+            let off = u32::from_le_bytes(mmap[pos..pos + 4].try_into().unwrap_or_default());
             offsets.push(off);
         }
 
@@ -98,8 +98,11 @@ impl SprDatabase {
             return Err(SprError::InvalidFormat("Offset out of bounds"));
         }
 
-        let compressed_size =
-            u16::from_le_bytes(self.mmap[data_pos..data_pos + 2].try_into().unwrap()) as usize;
+        let compressed_size = u16::from_le_bytes(
+            self.mmap[data_pos..data_pos + 2]
+                .try_into()
+                .unwrap_or_default(),
+        ) as usize;
         let rle_start = data_pos + 2;
 
         if rle_start + compressed_size > self.mmap.len() {
@@ -119,8 +122,11 @@ impl SprDatabase {
             if read_idx + 2 > rle_data.len() {
                 break;
             }
-            let transparent_count =
-                u16::from_le_bytes(rle_data[read_idx..read_idx + 2].try_into().unwrap()) as usize;
+            let transparent_count = u16::from_le_bytes(
+                rle_data[read_idx..read_idx + 2]
+                    .try_into()
+                    .unwrap_or_default(),
+            ) as usize;
             read_idx += 2;
 
             write_pixel += transparent_count;
@@ -133,8 +139,11 @@ impl SprDatabase {
             if read_idx + 2 > rle_data.len() {
                 break;
             }
-            let colored_count =
-                u16::from_le_bytes(rle_data[read_idx..read_idx + 2].try_into().unwrap()) as usize;
+            let colored_count = u16::from_le_bytes(
+                rle_data[read_idx..read_idx + 2]
+                    .try_into()
+                    .unwrap_or_default(),
+            ) as usize;
             read_idx += 2;
 
             for _ in 0..colored_count {
