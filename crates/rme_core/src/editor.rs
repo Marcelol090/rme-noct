@@ -189,6 +189,11 @@ impl EditorShellState {
         self.map.tile_count()
     }
 
+    /// Returns (waypoints, spawns, creatures, houses).
+    fn sidecar_counts(&self) -> (usize, usize, usize, usize) {
+        self.map.sidecar_counts()
+    }
+
     /// Returns the map mutation generation counter.
     fn map_generation(&self) -> u64 {
         self.map.generation()
@@ -262,6 +267,9 @@ impl EditorShellState {
             .map_err(|e| PyValueError::new_err(format!("OTBM parse error: {e:?}")))?;
         let tile_count = model.tile_count();
         self.map = model;
+        crate::io::xml::load_sidecar_xml(&mut self.map, path)
+            .map_err(|e| PyValueError::new_err(format!("XML load error: {e}")))?;
+        self.map.mark_clean();
         Ok((header.width, header.height, tile_count))
     }
 
@@ -357,5 +365,28 @@ mod tests {
             .add_spawn_creature(spawn_index, "Rat", 1, -1, 60, false, 2)
             .unwrap());
         assert!(shell.add_house(12, "Depot", 102, 202, 7, 500, 3, true, 14));
+    }
+
+    #[test]
+    fn editor_load_otbm_loads_xml_sidecars_and_marks_clean() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("roundtrip.otbm");
+        let path_str = path.to_str().unwrap();
+
+        let mut writer = EditorShellState::default();
+        assert!(writer.add_waypoint("Temple", 100, 200, 7));
+        let spawn_index = writer.add_spawn(101, 201, 7, 5);
+        assert!(writer
+            .add_spawn_creature(spawn_index, "Rat", 1, -1, 60, false, 2)
+            .unwrap());
+        assert!(writer.add_house(12, "Depot", 102, 202, 7, 500, 3, true, 14));
+        writer.save_otbm(path_str).unwrap();
+
+        let mut reader = EditorShellState::default();
+        let loaded = reader.load_otbm(path_str).unwrap();
+
+        assert_eq!(loaded.2, 0);
+        assert_eq!(reader.sidecar_counts(), (1, 1, 1, 1));
+        assert!(!reader.map_is_dirty());
     }
 }
