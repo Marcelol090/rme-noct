@@ -904,8 +904,10 @@ class MainWindow(QMainWindow):
         """Create dock widgets for palettes and tools."""
         self.brush_palette_dock = BrushPaletteDock(self)
         self.brush_palette_dock.item_selected.connect(self._handle_item_palette_selection)
-        if hasattr(self.brush_palette_dock, 'manage_houses_requested'):
-            self.brush_palette_dock.manage_houses_requested.connect(self._show_house_manager)
+        if hasattr(self.brush_palette_dock, "manage_houses_requested"):
+            self.brush_palette_dock.manage_houses_requested.connect(
+                self._show_house_manager
+            )
         self.addDockWidget(
             Qt.DockWidgetArea.LeftDockWidgetArea,
             self.brush_palette_dock,
