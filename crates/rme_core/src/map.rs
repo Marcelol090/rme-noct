@@ -1044,6 +1044,8 @@ mod tests {
         assert_eq!(stats.waypoint_count, 1);
         assert_eq!(stats.house_count, 1);
         assert_eq!(stats.total_house_sqm, 14);
+        model.add_town(Town::new(1, "Thais", MapPosition::new(1, 1, 7)));
+        let stats = model.collect_statistics();
         assert_eq!(stats.town_count, 1);
     }
 }
