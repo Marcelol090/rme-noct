@@ -2,17 +2,14 @@
 
 from __future__ import annotations
 
-import sys
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
-
-if sys.version_info >= (3, 11):  # noqa: UP036
+try:
     from enum import StrEnum
-else:  # pragma: no cover - Python <3.11 local fallback.
+except ImportError:
     from enum import Enum
-
-    class StrEnum(str, Enum):  # noqa: UP042
+    class StrEnum(str, Enum):
         pass
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
