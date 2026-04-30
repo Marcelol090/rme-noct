@@ -214,7 +214,6 @@ impl EditorShellState {
         ))
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn add_spawn_creature(
         &mut self,
         spawn_index: usize,
@@ -234,7 +233,6 @@ impl EditorShellState {
             .map_err(PyValueError::new_err)
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn add_house(
         &mut self,
         houseid: u32,
@@ -266,25 +264,13 @@ impl EditorShellState {
         self.map
             .towns()
             .iter()
-            .map(|t| {
-                (
-                    t.id(),
-                    t.name().to_string(),
-                    t.temple_position().x(),
-                    t.temple_position().y(),
-                    t.temple_position().z(),
-                )
-            })
+            .map(|t| (t.id(), t.name().to_string(), t.temple_position().x(), t.temple_position().y(), t.temple_position().z()))
             .collect()
     }
 
     /// Adds a town.
     fn add_town(&mut self, id: u32, name: String, x: u16, y: u16, z: u8) {
-        self.map.add_town(Town::new(
-            id,
-            name,
-            MapPosition::new(x as i32, y as i32, z as i32),
-        ));
+        self.map.add_town(Town::new(id, name, MapPosition::new(x as i32, y as i32, z as i32)));
     }
 
     /// Removes a town by ID. Returns true if removed.
