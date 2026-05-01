@@ -8,12 +8,13 @@
   <img src="https://img.shields.io/badge/License-GPL--3.0-red?style=for-the-badge" />
 </p>
 
-> A high-performance rewrite of **Remere's Map Editor (RME)** featuring a Rust-powered core and a modern, glassmorphic Python/PyQt6 shell.
+> **Noct** is the spiritual successor to [Remere's Map Editor: Redux](https://github.com/karolak6612/remeres-map-editor-redux). It reimagines the "Redux" vision using a Rust-powered core and a premium, glassmorphic Python/PyQt6 shell.
 
 ---
 
 ## 📖 Table of Contents
 - [Overview](#-overview)
+- [Legacy Ground Truth](#-legacy-ground-truth)
 - [Architecture](#-architecture)
 - [Key Features](#-key-features)
 - [Development Stack](#-development-stack)
@@ -26,17 +27,25 @@
 
 ## ✨ Overview
 
-Noct is designed for performance and aesthetics. It bridges the gap between the legacy power of RME and modern software architecture.
+Noct is designed for extreme performance and visual excellence. It continues the mission of the C++ Redux project—modernizing the OT community's gold standard—but pivots to a safer, more concurrent memory model (Rust) and a highly extensible UI framework (PyQt6).
 
 - **Rust-First Core**: All map data, binary I/O (OTBM/OTB), and heavy computations live in Rust.
-- **Python Visual Shell**: The UI is built with PyQt6, following the **Obsidian Cartographer** design system (glassmorphism, no-line rule).
+- **Python Visual Shell**: The UI is built with PyQt6, following the **Obsidian Cartographer** design system.
 - **GPU Rendering**: Leverages `wgpu` for hardware-accelerated map display.
 
 ---
 
-## 🏗️ Architecture
+## 🏛️ Legacy Ground Truth
 
-Noct uses a decoupled architecture to separate UI concerns from performance-critical operations.
+Noct treats **[Remere's Map Editor: Redux](https://github.com/karolak6612/remeres-map-editor-redux)** (C++) as the authoritative reference for behavior contracts.
+
+- **Parity Goal**: Every feature implemented in Noct must match or exceed the technical standard set by the C++ Redux implementation.
+- **Logic Sync**: When in doubt regarding OTBM parsing, brush resolution, or similarity-finder algorithms, we consult the legacy C++ source.
+- **Divergence**: While we aim for parity, Noct introduces modern UX patterns (Glassmorphism, Async UI) that go beyond the legacy WxWidgets interface.
+
+---
+
+## 🏗️ Architecture
 
 ```mermaid
 graph TD
@@ -65,14 +74,10 @@ graph TD
 ## 🛠️ Key Features
 
 - [x] **Glassmorphic UI**: Premium theme with deep amethyst accents and translucent backgrounds.
-- [x] **Tier 2 UI Parity**:
-    - `Preferences`: Dashboard for General, Graphics, and Interface settings.
-    - `About`: Project branding and metadata.
-    - `Town Manager`: Full integration with backend town state.
-    - `House Manager`: Complete house management system.
-- [x] **OTBM Persistence**: Robust read/write for v0-v3 OTBM files and XML sidecars (spawns, houses).
-- [/] **wgpu Renderer**: Real-time tile primitive rendering (Ground/Walls/Items).
-- [ ] **Brush Engine**: (In Progress) Autobordering, terrain, and object brushes.
+- [x] **Tier 2 UI Parity**: (Preferences, About, Town/House Managers).
+- [x] **OTBM Persistence**: Robust read/write for v0-v3 OTBM files.
+- [/] **wgpu Renderer**: Real-time tile primitive rendering (Async sprite loading batching).
+- [ ] **Brush Engine**: (In Progress) Porting legacy C++ autoborder and terrain resolution.
 
 ---
 
@@ -106,10 +111,10 @@ python -m pyrme
 
 ## 🤝 Contributing & Community
 
-Noct uses an **Agentic Development Workflow**. All contributions must follow the [AGENTS.md](AGENTS.md) contract.
+Noct uses an **Agentic Development Workflow**. All contributions must follow the [AGENTS.md](AGENTS.md) contract and respect the legacy reference logic.
 
 - **TDD First**: Every feature must have associated Python/Rust tests.
-- **Design Consistency**: Respect the "No-Line Rule" and theme tokens in `pyrme/ui/theme.py`.
+- **Legacy Parity**: Verify logic against the `remeres-map-editor-redux` source before implementation.
 - **GSD Workflow**: Use `.gsd/` for planning and milestone tracking.
 
 ---
@@ -121,13 +126,8 @@ We use a structured tagging system to manage the migration and development lifec
 ### Issue Labels
 - `feat/ui`: UI components or design system updates.
 - `feat/core`: Rust backend functionality or I/O.
-- `bug/parity`: Deviations from legacy RME behavior.
+- `bug/parity`: Deviations from legacy RME Redux behavior.
 - `task/gsd`: Internal workflow or infrastructure tasks.
-
-### Tag Lifecycle
-- `v0.x`: Alpha phases (Core I/O, Basic Canvas).
-- `v1.0-alpha`: Full legacy menu parity.
-- `v1.0-beta`: Functional brush engine and toolset.
 
 ---
 
@@ -137,5 +137,5 @@ Distributed under the **GNU GPL v3 License**. See `LICENSE` for more information
 
 ---
 <p align="center">
-  <i>Built with 💜 by the Noct Community</i>
+  <i>Inspired by the work of karolak6612 and the RME community.</i>
 </p>
