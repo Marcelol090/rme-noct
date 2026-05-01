@@ -66,6 +66,13 @@ pub enum BrushDefinition {
     Wall(WallBrushDefinition),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BrushPlacementCommand {
+    Noop,
+    SetGround { item_id: u16 },
+    AddWall { item_id: u16 },
+}
+
 impl BrushDefinition {
     pub const fn kind(&self) -> BrushKind {
         match self {
@@ -113,6 +120,26 @@ impl BrushDefinition {
         match self {
             Self::Ground(definition) => definition.ground_items.clone(),
             Self::Wall(definition) => definition.wall_items.clone(),
+        }
+    }
+
+    pub fn placement_command(&self, variation_index: Option<usize>) -> BrushPlacementCommand {
+        match self {
+            Self::Ground(definition) => {
+                let Some(first) = definition.ground_items.first().copied() else {
+                    return BrushPlacementCommand::Noop;
+                };
+                let item_id = variation_index
+                    .and_then(|index| definition.ground_items.get(index).copied())
+                    .unwrap_or(first);
+                BrushPlacementCommand::SetGround { item_id }
+            }
+            Self::Wall(definition) => definition
+                .wall_items
+                .first()
+                .copied()
+                .map(|item_id| BrushPlacementCommand::AddWall { item_id })
+                .unwrap_or(BrushPlacementCommand::Noop),
         }
     }
 }
@@ -195,6 +222,26 @@ impl BrushCatalog {
             .get(&id)
             .and_then(|index| self.brushes.get(*index))
     }
+
+    pub fn placement_command_by_name(
+        &self,
+        name: &str,
+        variation_index: Option<usize>,
+    ) -> BrushPlacementCommand {
+        self.get_by_name(name)
+            .map(|definition| definition.placement_command(variation_index))
+            .unwrap_or(BrushPlacementCommand::Noop)
+    }
+
+    pub fn placement_command_by_id(
+        &self,
+        id: u32,
+        variation_index: Option<usize>,
+    ) -> BrushPlacementCommand {
+        self.get_by_id(id)
+            .map(|definition| definition.placement_command(variation_index))
+            .unwrap_or(BrushPlacementCommand::Noop)
+    }
 }
 
 #[cfg(test)]
@@ -272,6 +319,54 @@ mod tests {
         assert_eq!(
             catalog.get_by_name("stone wall").unwrap().related_items(),
             vec![3361, 3362]
+        );
+    }
+
+    #[test]
+    fn ground_brush_resolves_deterministic_placement() {
+        let catalog =
+            BrushCatalog::from_definitions(vec![ground("grass", 10, &[4526, 4527])]).unwrap();
+
+        assert_eq!(
+            catalog.placement_command_by_name("grass", Some(1)),
+            BrushPlacementCommand::SetGround { item_id: 4527 }
+        );
+        assert_eq!(
+            catalog.placement_command_by_name("grass", Some(99)),
+            BrushPlacementCommand::SetGround { item_id: 4526 }
+        );
+    }
+
+    #[test]
+    fn empty_ground_brush_resolves_noop() {
+        let catalog =
+            BrushCatalog::from_definitions(vec![ground("empty ground", 10, &[])]).unwrap();
+
+        assert_eq!(
+            catalog.placement_command_by_name("empty ground", None),
+            BrushPlacementCommand::Noop
+        );
+    }
+
+    #[test]
+    fn wall_brush_resolves_first_wall_item() {
+        let catalog =
+            BrushCatalog::from_definitions(vec![wall("stone wall", 20, &[3361, 3362])]).unwrap();
+
+        assert_eq!(
+            catalog.placement_command_by_name("stone wall", None),
+            BrushPlacementCommand::AddWall { item_id: 3361 }
+        );
+    }
+
+    #[test]
+    fn missing_brush_resolves_noop() {
+        let catalog =
+            BrushCatalog::from_definitions(vec![wall("stone wall", 20, &[3361])]).unwrap();
+
+        assert_eq!(
+            catalog.placement_command_by_name("missing", None),
+            BrushPlacementCommand::Noop
         );
     }
 }
