@@ -1,19 +1,18 @@
 # GSD State
 
-**Active Milestone:** M027-sidecar-ui-bridge
-**Active Slice:** S01
-**Active Task:** T01
-**Phase:** review
-**Next Action:** Caveman-review diff, then decide commit/push/PR for `gsd/M027/S01-sidecar-ui-bridge`.
-**Last Updated:** 2026-05-01T15:51:42-03:00
-**Requirements Status:** 0 active · 23 validated · 0 deferred · 3 out of scope
+**Active Milestone:** none
+**Active Slice:** none
+**Active Task:** none
+**Phase:** discovery
+**Next Action:** Plan next GSD milestone (e.g. M025-map-statistics or M019).
+**Last Updated:** 2026-05-01T16:29:42-03:00
+**Requirements Status:** 0 active · 24 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
 - `M018-otbm-xml-serialization` is complete: Python `save_otbm` now writes `.otbm` plus waypoint, spawn, and house XML sidecars through `rme_core`.
-- `M026-xml-sidecar-readback` has a green draft PR (#67): native `load_otbm` now loads waypoint, spawn, creature, and house XML sidecars.
-- `M027-sidecar-ui-bridge` starts from the approved A route: connect existing waypoint and house UI workflows to editor-core sidecar state.
-- `M027-sidecar-ui-bridge/S01/T01` is implemented locally: waypoint and house UI workflows now bridge to editor-core sidecar state with targeted Rust/Python tests passing.
+- `M026-xml-sidecar-readback` is complete: native `load_otbm` now loads waypoint, spawn, creature, and house XML sidecars.
+- `M027-sidecar-ui-bridge` is complete: waypoint and house UI workflows now bridge to editor-core sidecar state with targeted Rust/Python tests passing. PR #69 is merged.
 - OTBM XML sidecars intentionally use legacy RME tag and attribute names from `source/io/map_xml_io.cpp`; M026 covers native readback, while M027 covers UI/domain workflows that populate those collections.
 - `remeres-map-editor-redux/data/menubar.xml` is the source of truth for legacy menu order, labels, and shortcuts.
 - `LEGACY-00-CONTRACT` is treated as completed foundation work: top-level menu tree, action metadata, and contract tests exist in the current shell.
