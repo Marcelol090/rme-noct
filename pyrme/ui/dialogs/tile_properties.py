@@ -6,31 +6,30 @@ from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
+    QComboBox,
     QDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
     QListWidget,
     QListWidgetItem,
-    QVBoxLayout,
-    QWidget,
+    QPushButton,
+    QSpinBox,
     QSplitter,
     QStackedWidget,
-    QLineEdit,
-    QComboBox,
-    QSpinBox,
-    QPushButton,
     QTextEdit,
+    QVBoxLayout,
+    QWidget,
 )
 
 from pyrme.ui.styles.contracts import (
     dialog_base_qss,
+    dropdown_qss,
     ghost_button_qss,
+    input_field_qss,
     item_view_qss,
     primary_button_qss,
     section_heading_qss,
-    input_field_qss,
-    dropdown_qss,
 )
 from pyrme.ui.theme import THEME
 
@@ -62,17 +61,17 @@ class ItemPropertyPanel(BasePropertyPanel):
 
     def __init__(self, bridge: EditorShellCoreBridge, parent: QWidget | None = None):
         super().__init__(bridge, parent)
-        
+
         # Action ID
         action_label = QLabel("ACTION ID")
         action_label.setStyleSheet(section_heading_qss())
         self.action_spin = self._create_spin_box(0, 65535)
-        
+
         # Unique ID
         unique_label = QLabel("UNIQUE ID")
         unique_label.setStyleSheet(section_heading_qss())
         self.unique_spin = self._create_spin_box(0, 65535)
-        
+
         self.layout.addWidget(action_label)
         self.layout.addWidget(self.action_spin)
         self.layout.addWidget(unique_label)
@@ -89,16 +88,16 @@ class DepotPropertyPanel(ItemPropertyPanel):
 
     def __init__(self, bridge: EditorShellCoreBridge, parent: QWidget | None = None):
         super().__init__(bridge, parent)
-        
+
         # Remove stretch from parent
         self.layout.takeAt(self.layout.count() - 1)
-        
+
         # Town ID
         town_label = QLabel("TOWN")
         town_label.setStyleSheet(section_heading_qss())
         self.town_combo = QComboBox()
         self.town_combo.setStyleSheet(dropdown_qss())
-        
+
         self.layout.addWidget(town_label)
         self.layout.addWidget(self.town_combo)
         self.layout.addStretch()
@@ -109,7 +108,7 @@ class DepotPropertyPanel(ItemPropertyPanel):
         towns = self.bridge.towns()
         for t in towns:
             self.town_combo.addItem(t[1], t[0])
-            
+
         town_id = item_data.get("town_id", 0)
         index = self.town_combo.findData(town_id)
         if index >= 0:
@@ -121,15 +120,15 @@ class DoorPropertyPanel(ItemPropertyPanel):
 
     def __init__(self, bridge: EditorShellCoreBridge, parent: QWidget | None = None):
         super().__init__(bridge, parent)
-        
+
         # Remove stretch from parent
         self.layout.takeAt(self.layout.count() - 1)
-        
+
         # Door ID
         door_label = QLabel("DOOR ID")
         door_label.setStyleSheet(section_heading_qss())
         self.door_spin = self._create_spin_box(0, 255)
-        
+
         self.layout.addWidget(door_label)
         self.layout.addWidget(self.door_spin)
         self.layout.addStretch()
@@ -144,25 +143,25 @@ class TeleportPropertyPanel(ItemPropertyPanel):
 
     def __init__(self, bridge: EditorShellCoreBridge, parent: QWidget | None = None):
         super().__init__(bridge, parent)
-        
+
         # Remove stretch from parent
         self.layout.takeAt(self.layout.count() - 1)
-        
+
         # Destination
         dest_label = QLabel("DESTINATION POSITION")
         dest_label.setStyleSheet(section_heading_qss())
         self.layout.addWidget(dest_label)
-        
+
         pos_layout = QHBoxLayout()
         self.x_spin = self._create_spin_box(0, 65535, "X")
         self.y_spin = self._create_spin_box(0, 65535, "Y")
         self.z_spin = self._create_spin_box(0, 15, "Z")
-        
+
         pos_layout.addWidget(self.x_spin)
         pos_layout.addWidget(self.y_spin)
         pos_layout.addWidget(self.z_spin)
         self.layout.addLayout(pos_layout)
-        
+
         self.layout.addStretch()
 
     def set_data(self, item_data: dict[str, Any]) -> None:
@@ -177,15 +176,15 @@ class WritablePropertyPanel(ItemPropertyPanel):
 
     def __init__(self, bridge: EditorShellCoreBridge, parent: QWidget | None = None):
         super().__init__(bridge, parent)
-        
+
         # Remove stretch from parent
         self.layout.takeAt(self.layout.count() - 1)
-        
+
         # Text
         text_label = QLabel("TEXT DESCRIPTION")
         text_label.setStyleSheet(section_heading_qss())
         self.layout.addWidget(text_label)
-        
+
         self.text_edit = QTextEdit()
         self.text_edit.setStyleSheet(input_field_qss("QTextEdit"))
         self.layout.addWidget(self.text_edit, 1) # Give it stretch
@@ -204,7 +203,7 @@ class TilePropertiesDialog(QDialog):
         self.tile_x = x
         self.tile_y = y
         self.tile_z = z
-        
+
         self.setWindowTitle(f"Tile Properties (X: {x}, Y: {y}, Z: {z})")
         self.setMinimumSize(700, 500)
         self.setStyleSheet(dialog_base_qss())
@@ -230,7 +229,7 @@ class TilePropertiesDialog(QDialog):
         left_panel = QWidget()
         left_layout = QVBoxLayout(left_panel)
         left_layout.setContentsMargins(16, 16, 8, 16)
-        
+
         stack_label = QLabel("OBJECT STACK")
         stack_label.setStyleSheet(section_heading_qss())
         left_layout.addWidget(stack_label)
@@ -239,21 +238,21 @@ class TilePropertiesDialog(QDialog):
         self.item_list.setStyleSheet(item_view_qss("QListWidget"))
         self.item_list.currentRowChanged.connect(self._on_item_selected)
         left_layout.addWidget(self.item_list)
-        
+
         self.splitter.addWidget(left_panel)
 
         # Right Panel: Properties Editor
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(8, 16, 16, 16)
-        
+
         self.details_label = QLabel("PROPERTIES")
         self.details_label.setStyleSheet(section_heading_qss())
         right_layout.addWidget(self.details_label)
 
         # We will use a QStackedWidget to swap between different property panels (Depot, Teleport, etc.)
         self.properties_stack = QStackedWidget()
-        
+
         # Placeholder panel when nothing is selected
         self.placeholder_panel = QWidget()
         placeholder_layout = QVBoxLayout(self.placeholder_panel)
@@ -262,14 +261,14 @@ class TilePropertiesDialog(QDialog):
         placeholder_text.setStyleSheet(f"color: {THEME.ash_lavender.name()};")
         placeholder_layout.addWidget(placeholder_text)
         self.properties_stack.addWidget(self.placeholder_panel)
-        
+
         # Add property panels
         self.item_panel = ItemPropertyPanel(self.bridge)
         self.depot_panel = DepotPropertyPanel(self.bridge)
         self.door_panel = DoorPropertyPanel(self.bridge)
         self.teleport_panel = TeleportPropertyPanel(self.bridge)
         self.writable_panel = WritablePropertyPanel(self.bridge)
-        
+
         self.properties_stack.addWidget(self.item_panel)
         self.properties_stack.addWidget(self.depot_panel)
         self.properties_stack.addWidget(self.door_panel)
@@ -277,7 +276,7 @@ class TilePropertiesDialog(QDialog):
         self.properties_stack.addWidget(self.writable_panel)
 
         right_layout.addWidget(self.properties_stack)
-        
+
         self.splitter.addWidget(right_panel)
         self.splitter.setSizes([250, 450])
         main_layout.addWidget(self.splitter)
@@ -314,12 +313,12 @@ class TilePropertiesDialog(QDialog):
             {"id": 1387, "name": "Teleport", "type": "teleport", "dest_x": 1024, "dest_y": 1024, "dest_z": 7},
             {"id": 1948, "name": "Parchment", "type": "writable", "text": "A mysterious scroll."},
         ]
-        
+
         for item_data in mock_items:
             item = QListWidgetItem(f"{item_data['name']} (ID: {item_data['id']})")
             item.setData(Qt.ItemDataRole.UserRole, item_data)
             self.item_list.addItem(item)
-            
+
         if self.item_list.count() > 0:
             self.item_list.setCurrentRow(0)
 
@@ -328,12 +327,12 @@ class TilePropertiesDialog(QDialog):
             self.properties_stack.setCurrentWidget(self.placeholder_panel)
             self.details_label.setText("PROPERTIES")
             return
-            
+
         item = self.item_list.item(row)
         item_data = item.data(Qt.ItemDataRole.UserRole)
-        
+
         self.details_label.setText(f"{item_data['name'].upper()} PROPERTIES")
-        
+
         item_type = item_data.get("type", "")
         if item_type == "depot":
             self.depot_panel.set_data(item_data)
