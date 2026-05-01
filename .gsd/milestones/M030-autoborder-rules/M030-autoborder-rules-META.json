@@ -1,0 +1,9 @@
+{
+  "milestone": "M030-autoborder-rules",
+  "issue": 72,
+  "branch": "gsd/M030/S01",
+  "worktree": ".worktrees/m030-autoborder-rules-20260501",
+  "status": "planning",
+  "approved_by_user": "2026-05-01",
+  "scope": "Pure autoborder rule engine and deterministic placement plan in rme_core"
+}

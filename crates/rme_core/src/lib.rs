@@ -8,6 +8,7 @@
 
 use pyo3::prelude::*;
 
+pub mod autoborder;
 pub mod brushes;
 pub mod editor;
 pub mod io;
