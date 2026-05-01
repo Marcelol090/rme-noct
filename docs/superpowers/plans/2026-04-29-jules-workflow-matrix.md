@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add UI/UX, test, and system Jules workflow routes with tested GitHub Actions contracts.
+**Goal:** Add tested Jules focus routing plus weekly scheduled area coverage for Python, Rust, bridge, review, test, utility, system, UI/UX, and maintenance lanes.
 
-**Architecture:** Keep `.github/workflows/jules-invoke.yml` as the shared runner. Add focused `.jules/newagents/*` contracts plus thin wrapper workflows and docs.
+**Architecture:** Keep `.github/workflows/jules-invoke.yml` as the shared runner. Add focused `.jules/newagents/*` contracts, thin manual wrapper workflows, and one central scheduled workflow that maps `github.event.schedule` to area focus values.
 
-**Tech Stack:** GitHub Actions YAML, `actions/github-script`, `google-labs-code/jules-invoke@v1.0.0`, Python pytest contract tests with PyYAML.
+**Tech Stack:** GitHub Actions YAML, `actions/github-script`, `google-labs-code/jules-invoke@v1`, Python pytest contract tests with PyYAML.
 
 ---
 
@@ -94,10 +94,12 @@ Expected: FAIL because `test_jules_workflows.py` or new workflows/agents are mis
 - Modify: `.github/workflows/jules-dispatch.yml`
 - Create: `.jules/newagents/uiux.md`
 - Create: `.jules/newagents/system.md`
+- Create: `.jules/newagents/maintenance.md`
+- Create: `.jules/newagents/ci.md`
 
 - [ ] **Step 1: Add focuses to workflow choices**
 
-Add `uiux` and `system` to focus option lists in both workflows. Keep existing `test` choice.
+Add `uiux` and `system` to focus option lists in both workflows. Keep existing `test`, `maintenance`, and `ci` choices.
 
 - [ ] **Step 2: Add prompt routing**
 
@@ -106,11 +108,13 @@ Add these cases in `jules-invoke.yml`:
 ```bash
 uiux) prompt_file='.jules/newagents/uiux.md' ;;
 system) prompt_file='.jules/newagents/system.md' ;;
+maintenance) prompt_file='.jules/newagents/maintenance.md' ;;
+ci) prompt_file='.jules/newagents/ci.md' ;;
 ```
 
 - [ ] **Step 3: Add focused agent docs**
 
-Create `.jules/newagents/uiux.md` and `.jules/newagents/system.md` with autonomous process, rules, verification, and PR contract sections.
+Create `.jules/newagents/uiux.md`, `.jules/newagents/system.md`, `.jules/newagents/maintenance.md`, and `.jules/newagents/ci.md` with autonomous process, rules, verification, and PR contract sections.
 
 ### Task 3: Add Wrapper Workflows
 
@@ -118,6 +122,8 @@ Create `.jules/newagents/uiux.md` and `.jules/newagents/system.md` with autonomo
 - Create: `.github/workflows/jules-uiux.yml`
 - Create: `.github/workflows/jules-test.yml`
 - Create: `.github/workflows/jules-system.yml`
+- Create: `.github/workflows/jules-schedule.yml`
+- Modify: `.github/workflows/jules-maintenance.yml`
 
 - [ ] **Step 1: Create reusable wrappers**
 
@@ -125,7 +131,7 @@ Each workflow calls `./.github/workflows/jules-invoke.yml`, passes `secrets: inh
 
 - [ ] **Step 2: Add schedules**
 
-Schedule only test and system workflows. UI/UX remains manual because visual/design work needs intent.
+Schedule all periodic area lanes in `jules-schedule.yml` with the first five hourly lanes followed by a five-hour pause. Keep focused wrapper workflows manual-only so schedule runs are not duplicated.
 
 ### Task 4: Docs and Verification
 

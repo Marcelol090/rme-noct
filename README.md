@@ -126,7 +126,7 @@ This repo uses a multi-agent operating model:
 - **GSD 2** provides the worktree and verification layer through `.gsd/preferences.md`, `git.isolation: worktree`, and `verification_commands`.
 - **Repository contract** lives in root `AGENTS.md` and is validated by `npm run preflight` / `python3 -m pyrme stack`.
 - **Context7** is the required documentation source for third-party tools, libraries, and agent terminology; it can be exposed either as a Codex MCP tool or as a local command.
-- **Jules** handles branch and PR automation through `.jules/agents/` and `.github/workflows/jules-*.yml`; set `JULES_API_KEY` in GitHub Secrets and use trusted `@jules /python`, `/rust`, `/bridge`, `/maintenance`, or `/ci` triggers.
+- **Jules** handles branch and PR automation through `.jules/agents/` and `.github/workflows/jules-*.yml`; set `JULES_API_KEY` in GitHub Secrets and use trusted `@jules /python`, `/rust`, `/bridge`, `/review`, `/test`, `/utility`, `/uiux`, `/system`, `/maintenance`, or `/ci` triggers. `Jules Area Schedule` runs weekly area lanes with a five-hour pause after the first five schedules.
 
 The repo-wide contract and end-to-end example live in [docs/superpowers/workflows/2026-04-06-codex-first-superpowers-gsd.md](docs/superpowers/workflows/2026-04-06-codex-first-superpowers-gsd.md).
 
