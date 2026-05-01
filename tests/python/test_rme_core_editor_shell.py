@@ -37,14 +37,14 @@ def test_native_rme_core_save_otbm(tmp_path) -> None:
         pytest.skip("pyrme.rme_core binary was not rebuilt with save_otbm")
 
     shell = rme_core.EditorShellState()
-    
+
     # Place a tile and save it
     shell.set_tile_ground(100, 100, 7, 4526)
     assert shell.tile_count() == 1
-    
+
     out_file = tmp_path / "test_save.otbm"
     shell.save_otbm(str(out_file))
-    
+
     assert out_file.exists()
     assert out_file.stat().st_size > 0
     assert not shell.map_is_dirty()
@@ -91,3 +91,28 @@ def test_native_rme_core_save_otbm_writes_xml_sidecars(tmp_path) -> None:
         'entryz="7" rent="500" guildhall="true" townid="3" size="14" />\n'
         "</houses>\n"
     )
+
+
+def test_native_rme_core_load_otbm_reads_xml_sidecars(tmp_path) -> None:
+    rme_core = pytest.importorskip(
+        "pyrme.rme_core",
+        reason="pyrme.rme_core is not built in this environment",
+    )
+    if not hasattr(rme_core.EditorShellState, "load_otbm"):
+        pytest.skip("pyrme.rme_core binary was not rebuilt with load_otbm")
+    if not hasattr(rme_core.EditorShellState, "sidecar_counts"):
+        pytest.skip("pyrme.rme_core binary was not rebuilt with sidecar_counts")
+
+    writer = rme_core.EditorShellState()
+    writer.add_waypoint("Temple", 100, 200, 7)
+    spawn_index = writer.add_spawn(101, 201, 7, 5)
+    writer.add_spawn_creature(spawn_index, "Rat", 1, -1, 60, False, 2)
+    writer.add_house(12, "Depot", 102, 202, 7, 500, 3, True, 14)
+
+    out_file = tmp_path / "roundtrip.otbm"
+    writer.save_otbm(str(out_file))
+
+    reader = rme_core.EditorShellState()
+    assert reader.load_otbm(str(out_file)) == (0, 0, 0)
+    assert tuple(reader.sidecar_counts()) == (1, 1, 1, 1)
+    assert reader.map_is_dirty() is False
