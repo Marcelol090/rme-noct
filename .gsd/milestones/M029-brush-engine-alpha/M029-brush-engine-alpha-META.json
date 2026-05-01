@@ -1,0 +1,9 @@
+{
+  "milestone": "M029-brush-engine-alpha",
+  "issue": 72,
+  "branch": "gsd/M029/S01",
+  "worktree": ".worktrees/m029-brush-engine-alpha",
+  "status": "planning",
+  "approved_by_user": "2026-05-01",
+  "scope": "Rust brush engine foundation for ground and wall placement contracts"
+}

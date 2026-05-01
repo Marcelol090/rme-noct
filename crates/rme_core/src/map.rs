@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 use pyo3::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::item::Item;
+use crate::{brushes::BrushPlacementCommand, item::Item};
 
 pub const DEFAULT_X: u16 = 32_000;
 pub const DEFAULT_Y: u16 = 32_000;
@@ -22,6 +22,56 @@ pub struct MapPosition {
     x: u16,
     y: u16,
     z: u8,
+}
+
+#[cfg(test)]
+mod brush_command_tests {
+    use super::*;
+    use crate::brushes::BrushPlacementCommand;
+
+    #[test]
+    fn apply_brush_command_sets_ground() {
+        let mut map = MapModel::new();
+        let pos = MapPosition::new(100, 200, 7);
+
+        assert!(map.apply_brush_command(pos, BrushPlacementCommand::SetGround { item_id: 4526 }));
+        let tile = map.get_tile(&pos).unwrap();
+        assert_eq!(tile.ground().map(Item::id), Some(4526));
+        assert!(tile.items().is_empty());
+        assert!(tile.is_modified());
+    }
+
+    #[test]
+    fn apply_brush_command_same_ground_is_noop() {
+        let mut map = MapModel::new();
+        let pos = MapPosition::new(100, 200, 7);
+
+        assert!(map.apply_brush_command(pos, BrushPlacementCommand::SetGround { item_id: 4526 }));
+        assert!(!map.apply_brush_command(pos, BrushPlacementCommand::SetGround { item_id: 4526 }));
+    }
+
+    #[test]
+    fn apply_brush_command_adds_wall_item() {
+        let mut map = MapModel::new();
+        let pos = MapPosition::new(100, 200, 7);
+
+        assert!(map.apply_brush_command(pos, BrushPlacementCommand::AddWall { item_id: 3361 }));
+        let tile = map.get_tile(&pos).unwrap();
+        assert_eq!(
+            tile.items().iter().map(Item::id).collect::<Vec<_>>(),
+            vec![3361]
+        );
+        assert!(tile.is_modified());
+    }
+
+    #[test]
+    fn apply_brush_command_noop_does_not_create_tile() {
+        let mut map = MapModel::new();
+        let pos = MapPosition::new(100, 200, 7);
+
+        assert!(!map.apply_brush_command(pos, BrushPlacementCommand::Noop));
+        assert!(map.get_tile(&pos).is_none());
+    }
 }
 
 impl MapPosition {
@@ -510,6 +560,40 @@ impl MapModel {
             self.generation += 1;
             Tile::new(pos)
         })
+    }
+
+    pub fn apply_brush_command(
+        &mut self,
+        position: MapPosition,
+        command: BrushPlacementCommand,
+    ) -> bool {
+        match command {
+            BrushPlacementCommand::Noop => false,
+            BrushPlacementCommand::SetGround { item_id } => {
+                let tile = self
+                    .tiles
+                    .entry(position)
+                    .or_insert_with(|| Tile::new(position));
+                if tile.ground().map(Item::id) == Some(item_id) {
+                    return false;
+                }
+
+                tile.set_ground(Some(Item::new(item_id)));
+                tile.mark_modified();
+                self.generation += 1;
+                true
+            }
+            BrushPlacementCommand::AddWall { item_id } => {
+                let tile = self
+                    .tiles
+                    .entry(position)
+                    .or_insert_with(|| Tile::new(position));
+                tile.add_item(Item::new(item_id));
+                tile.mark_modified();
+                self.generation += 1;
+                true
+            }
+        }
     }
 
     /// Inserts or replaces a tile. Returns the previous tile if any.
