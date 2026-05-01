@@ -6,7 +6,7 @@ Aligned with Obsidian Cartographer design system.
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtCore import QSize
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -14,12 +14,11 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QListWidget,
-    QListWidgetItem,
     QPushButton,
+    QSpinBox,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
-    QSpinBox,
 )
 
 from pyrme.ui.styles.contracts import (
@@ -32,7 +31,7 @@ from pyrme.ui.styles.contracts import (
     qss_color,
     section_heading_qss,
 )
-from pyrme.ui.theme import THEME, TYPOGRAPHY
+from pyrme.ui.theme import THEME
 
 
 class PreferencesDialog(QDialog):
@@ -87,12 +86,12 @@ class PreferencesDialog(QDialog):
             }}
             """
         )
-        
+
         self.pages.addWidget(self._build_general_page())
         self.pages.addWidget(self._build_graphics_page())
         self.pages.addWidget(self._build_interface_page())
         self.pages.addWidget(self._build_client_page())
-        
+
         content.addWidget(self.pages, stretch=1)
         root.addLayout(content, stretch=1)
 
@@ -111,7 +110,7 @@ class PreferencesDialog(QDialog):
         footer.addWidget(save_btn)
 
         root.addLayout(footer)
-        
+
         self.sidebar.setCurrentRow(0)
 
     def _build_general_page(self) -> QWidget:
