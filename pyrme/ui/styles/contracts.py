@@ -30,7 +30,6 @@ def _join_qss(*blocks: str) -> str:
 
 def dialog_base_qss(control_selectors: str | None = None) -> str:
     """Return the shared Tier 2 dialog chrome and optional form control styles."""
-    input_surface = "rgba(255, 255, 255, 15)"
     blocks = [
         f"""
         QDialog {{
@@ -46,24 +45,64 @@ def dialog_base_qss(control_selectors: str | None = None) -> str:
         """,
     ]
     if control_selectors:
-        blocks.append(
-            f"""
-            {control_selectors} {{
-                background-color: {input_surface};
-                border: 1px solid {qss_color(THEME.ghost_border)};
-                border-radius: 4px;
-                color: {qss_color(THEME.moonstone_white)};
-                padding: 4px 8px;
-                font-family: 'Inter', sans-serif;
-                font-size: 12px;
-            }}
-            {control_selectors}:focus {{
-                border: 1px solid {qss_color(THEME.focus_border)};
-                background-color: {qss_color(THEME.lifted_glass)};
-            }}
-            """
-        )
+        blocks.append(input_field_qss(control_selectors))
     return _join_qss(*blocks)
+
+
+def input_field_qss(widget_selector: str = "QLineEdit") -> str:
+    """Return the shared input field styling."""
+    input_surface = "rgba(255, 255, 255, 15)"
+    return _join_qss(
+        f"""
+        {widget_selector} {{
+            background-color: {input_surface};
+            border: 1px solid {qss_color(THEME.ghost_border)};
+            border-radius: 4px;
+            color: {qss_color(THEME.moonstone_white)};
+            padding: 4px 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+        }}
+        {widget_selector}:focus {{
+            border: 1px solid {qss_color(THEME.focus_border)};
+            background-color: {qss_color(THEME.lifted_glass)};
+        }}
+        """
+    )
+
+
+def dropdown_qss(widget_selector: str = "QComboBox") -> str:
+    """Return the shared dropdown (QComboBox) styling."""
+    input_surface = "rgba(255, 255, 255, 15)"
+    return _join_qss(
+        f"""
+        {widget_selector} {{
+            background-color: {input_surface};
+            border: 1px solid {qss_color(THEME.ghost_border)};
+            border-radius: 4px;
+            color: {qss_color(THEME.moonstone_white)};
+            padding: 4px 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+        }}
+        {widget_selector}:focus {{
+            border: 1px solid {qss_color(THEME.focus_border)};
+            background-color: {qss_color(THEME.lifted_glass)};
+        }}
+        {widget_selector}::drop-down {{
+            border: none;
+            width: 20px;
+        }}
+        {widget_selector} QAbstractItemView {{
+            background-color: {qss_color(THEME.obsidian_glass)};
+            border: 1px solid {qss_color(THEME.ghost_border)};
+            color: {qss_color(THEME.moonstone_white)};
+            selection-background-color: {qss_color(THEME.lifted_glass)};
+            selection-color: {qss_color(THEME.moonstone_white)};
+            outline: none;
+        }}
+        """
+    )
 
 
 def section_heading_qss() -> str:

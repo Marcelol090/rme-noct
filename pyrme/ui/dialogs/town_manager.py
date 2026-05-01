@@ -111,7 +111,7 @@ class TownManagerDialog(QDialog):
 
         # Bottom Bar: Actions
         actions_frame = QFrame()
-        actions_frame.setStyleSheet(f"background-color: {THEME.surface_container_low.name()};")
+        actions_frame.setStyleSheet(f"background-color: {THEME.void_black.name()};")
         actions_layout = QHBoxLayout(actions_frame)
         actions_layout.setContentsMargins(16, 12, 16, 12)
 
@@ -145,7 +145,14 @@ class TownManagerDialog(QDialog):
     def _load_towns(self) -> None:
         self.town_list.clear()
         towns = self.bridge.towns()
-        for town in towns:
+        for t in towns:
+            town = {
+                "id": t[0],
+                "name": t[1],
+                "temple_x": t[2],
+                "temple_y": t[3],
+                "temple_z": t[4]
+            }
             item = QListWidgetItem(town["name"])
             item.setData(Qt.ItemDataRole.UserRole, town)
             self.town_list.addItem(item)

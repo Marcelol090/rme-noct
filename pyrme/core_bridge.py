@@ -61,6 +61,7 @@ class _FallbackEditorShellState:
     _houses: list[tuple[int, str, int, int, bool, int, int, int]] = field(
         default_factory=list
     )
+    _towns: list[tuple[int, str, int, int, int]] = field(default_factory=list)
 
     def position(self) -> tuple[int, int, int]:
         return self._position
@@ -152,12 +153,21 @@ class _FallbackEditorShellState:
         return None
 
     def towns(self) -> list[tuple[int, str, int, int, int]]:
-        return []
+        return list(self._towns)
 
     def add_town(self, id: int, name: str, x: int, y: int, z: int) -> None:
-        pass
+        # Simple upsert
+        for index, existing in enumerate(self._towns):
+            if existing[0] == id:
+                self._towns[index] = (id, name, x, y, z)
+                return
+        self._towns.append((id, name, x, y, z))
 
     def remove_town(self, id: int) -> bool:
+        for index, existing in enumerate(self._towns):
+            if existing[0] == id:
+                self._towns.pop(index)
+                return True
         return False
 
     def get_waypoints(self) -> list[tuple[str, int, int, int]]:
