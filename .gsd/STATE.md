@@ -10,6 +10,8 @@
 
 ## Recent Decisions
 
+- `M025-map-statistics/S01` is locally complete: `Map -> Statistics` now opens a real read-only PyQt dialog backed by Rust `MapModel::collect_statistics()` through `EditorShellState`.
+- `M025-map-statistics/S01` is intentionally stacked on `gsd/M018/S01` because `origin/main` does not yet expose the map sidecar domains needed by the statistics slice.
 - `M018-otbm-xml-serialization` is complete: Python `save_otbm` now writes `.otbm` plus waypoint, spawn, and house XML sidecars through `rme_core`.
 - OTBM XML sidecars intentionally use legacy RME tag and attribute names from `source/io/map_xml_io.cpp`; readback remains future scope.
 - `remeres-map-editor-redux/data/menubar.xml` is the source of truth for legacy menu order, labels, and shortcuts.

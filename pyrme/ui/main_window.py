@@ -41,6 +41,7 @@ from pyrme.ui.dialogs import (
     FindItemDialog,
     GotoPositionDialog,
     MapPropertiesDialog,
+    MapStatisticsDialog,
 )
 from pyrme.ui.docks import BrushPaletteDock, MinimapDock, PropertiesDock, WaypointsDock
 from pyrme.ui.editor_context import EditorContext, EditorViewRecord, ShellStateSnapshot
@@ -113,6 +114,7 @@ class MainWindow(QMainWindow):
         jump_to_item_dialog_factory=None,
         find_item_dialog_factory=None,
         map_properties_dialog_factory: DialogFactory | None = None,
+        map_statistics_dialog_factory=None,
         canvas_factory: CanvasFactory | None = None,
         enable_docks: bool | None = None,
     ) -> None:
@@ -128,6 +130,9 @@ class MainWindow(QMainWindow):
         self._find_item_dialog_factory = find_item_dialog_factory or FindItemDialog
         self._map_properties_dialog_factory = (
             map_properties_dialog_factory or MapPropertiesDialog
+        )
+        self._map_statistics_dialog_factory = (
+            map_statistics_dialog_factory or MapStatisticsDialog
         )
         self._canvas_factory = canvas_factory or RendererHostCanvasWidget
         self._enable_docks = True if enable_docks is None else enable_docks
@@ -1138,7 +1143,9 @@ class MainWindow(QMainWindow):
         self._status_bar().showMessage("Replace Items is not available yet.", 3000)
 
     def _show_map_statistics(self) -> None:
-        self._status_bar().showMessage("Map Statistics is not available yet.", 3000)
+        shell_state = getattr(self._canvas, "_shell_core", None)
+        dialog = self._map_statistics_dialog_factory(self, shell_state=shell_state)
+        dialog.exec()
 
     def _show_goto_position(self) -> None:
         dialog = self._goto_dialog_factory(self)
