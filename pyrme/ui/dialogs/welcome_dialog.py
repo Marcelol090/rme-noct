@@ -102,6 +102,7 @@ class WelcomeDialog(QDialog):
     load_requested = pyqtSignal(object)  # StartupLoadRequest
     new_map_requested = pyqtSignal()
     browse_map_requested = pyqtSignal()
+    preferences_requested = pyqtSignal()
 
     def __init__(
         self,
@@ -255,6 +256,7 @@ class WelcomeDialog(QDialog):
             }}
             """
         )
+        self._preferences_button.clicked.connect(self.preferences_requested.emit)
         layout.addWidget(self._preferences_button)
 
         return panel

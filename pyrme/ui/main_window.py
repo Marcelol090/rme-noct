@@ -37,11 +37,15 @@ from pyrme.ui.canvas_host import (
 )
 from pyrme.ui.components.glass import GlassDockWidget
 from pyrme.ui.dialogs import (
+    AboutDialog,
     FindBrushDialog,
     FindItemDialog,
     GotoPositionDialog,
     HouseManagerDialog,
     MapPropertiesDialog,
+    MapStatisticsDialog,
+    PreferencesDialog,
+    TownManagerDialog,
 )
 from pyrme.ui.dialogs.welcome_dialog import WelcomeDialog
 from pyrme.ui.docks import BrushPaletteDock, MinimapDock, PropertiesDock, WaypointsDock
@@ -193,6 +197,7 @@ class MainWindow(QMainWindow):
                 self._on_welcome_browse_map
             )
             self._welcome_dialog.load_requested.connect(self._on_welcome_load_map)
+            self._welcome_dialog.preferences_requested.connect(self._show_preferences)
             self._welcome_dialog.rejected.connect(self._on_welcome_rejected)
         self._welcome_dialog.show()
 
@@ -329,7 +334,7 @@ class MainWindow(QMainWindow):
         recent_menu = menu.addMenu("Recent Files")
         assert recent_menu is not None
         self.file_preferences_action = self._action_from_spec(
-            "file_preferences", lambda: self._show_unavailable("Preferences")
+            "file_preferences", self._show_preferences
         )
         self.file_exit_action = self._action_from_spec(
             "file_exit", lambda: self._show_unavailable("Exit")
@@ -785,7 +790,7 @@ class MainWindow(QMainWindow):
             )
         )
         about.addAction(
-            self._action_from_spec("about", lambda: self._show_unavailable("About"))
+            self._action_from_spec("about", self._show_about)
         )
 
     def _setup_toolbars(self) -> None:
@@ -1204,8 +1209,17 @@ class MainWindow(QMainWindow):
     def _show_replace_items(self) -> None:
         self._status_bar().showMessage("Replace Items is not available yet.", 3000)
 
+    def _show_preferences(self) -> None:
+        dialog = PreferencesDialog(self)
+        dialog.exec()
+
+    def _show_about(self) -> None:
+        dialog = AboutDialog(self)
+        dialog.exec()
+
     def _show_map_statistics(self) -> None:
-        self._status_bar().showMessage("Map Statistics is not available yet.", 3000)
+        dialog = MapStatisticsDialog(self)
+        dialog.exec()
 
     def _show_goto_position(self) -> None:
         dialog = self._goto_dialog_factory(self)
