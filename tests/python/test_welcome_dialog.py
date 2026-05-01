@@ -8,16 +8,11 @@ T12: Button events.
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
-
 import pytest
-from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 
 from pyrme.ui.models.startup_models import (
-    StartupCompatibilityStatus,
     StartupConfiguredClientEntry,
-    StartupLoadRequest,
     StartupMapPeekResult,
     StartupRecentMapEntry,
 )
