@@ -1,11 +1,11 @@
 # GSD State
 
-**Active Milestone:** M025-map-statistics
+**Active Milestone:** M026-xml-sidecar-readback
 **Active Slice:** S01
 **Active Task:** complete
 **Phase:** review
-**Next Action:** Decide PR/stack integration for branch based on `gsd/M018/S01`.
-**Last Updated:** 2026-04-29T20:16:47-03:00
+**Next Action:** Commit M026/S01 and run development-branch closeout.
+**Last Updated:** 2026-04-30T00:00:00-03:00
 **Requirements Status:** 0 active · 23 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
