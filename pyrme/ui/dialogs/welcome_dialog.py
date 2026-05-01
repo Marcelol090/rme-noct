@@ -8,11 +8,10 @@ Design: Obsidian Cartographer tokens from .stitch/DESIGN.md.
 
 from __future__ import annotations
 
-from typing import Optional
+import os
 
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QPixmap
-import os
 from PyQt6.QtWidgets import (
     QCheckBox,
     QDialog,
@@ -207,7 +206,10 @@ class WelcomeDialog(QDialog):
         logo_path = os.path.join(os.path.dirname(__file__), "..", "assets", "logo.png")
         if os.path.exists(logo_path):
             pixmap = QPixmap(logo_path).scaled(
-                40, 40, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+                40,
+                40,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
             )
             self._logo_label.setPixmap(pixmap)
         else:

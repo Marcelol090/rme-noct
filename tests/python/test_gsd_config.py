@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -15,13 +17,17 @@ def _write_skill(root: Path, name: str) -> None:
     )
 
 
-def test_gsd_config_user_skills_dir_falls_back_to_cwd(monkeypatch, tmp_path: Path) -> None:
+
+@pytest.mark.parametrize("error", [RuntimeError("no home"), OSError("mock os error")])
+def test_gsd_config_user_skills_dir_falls_back_to_cwd(
+    monkeypatch, tmp_path: Path, error: Exception
+) -> None:
     from pyrme.devtools.gsd.config import GSDConfig
 
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(
         "pyrme.devtools.gsd.config.Path.home",
-        lambda: (_ for _ in ()).throw(RuntimeError("no home")),
+        lambda: (_ for _ in ()).throw(error),
     )
 
     config = GSDConfig(project_root=tmp_path / "repo")

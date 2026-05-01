@@ -7,8 +7,7 @@ use crate::map::{Creature, House, MapModel, Spawn, Waypoint};
 
 pub fn save_waypoints(map: &MapModel) -> String {
     let mut waypoints: Vec<&Waypoint> = map.waypoints().iter().collect();
-    #[allow(clippy::unnecessary_sort_by)]
-    waypoints.sort_by(|left, right| left.name().to_lowercase().cmp(&right.name().to_lowercase()));
+    waypoints.sort_by_key(|waypoint| waypoint.name().to_lowercase());
 
     let mut xml = xml_header("waypoints", waypoints.is_empty());
     if waypoints.is_empty() {
@@ -16,10 +15,9 @@ pub fn save_waypoints(map: &MapModel) -> String {
     }
     for waypoint in waypoints {
         let position = waypoint.position();
-        #[allow(clippy::write_with_newline)]
-        write!(
+        writeln!(
             xml,
-            "\t<waypoint name=\"{}\" x=\"{}\" y=\"{}\" z=\"{}\" />\n",
+            "\t<waypoint name=\"{}\" x=\"{}\" y=\"{}\" z=\"{}\" />",
             escape_attr(waypoint.name()),
             position.x(),
             position.y(),
@@ -44,7 +42,6 @@ pub fn save_spawns(map: &MapModel) -> String {
     }
     for spawn in spawns {
         let center = spawn.center();
-        #[allow(clippy::write_with_newline)]
         write!(
             xml,
             "\t<spawn centerx=\"{}\" centery=\"{}\" centerz=\"{}\" radius=\"{}\"",
@@ -75,8 +72,7 @@ pub fn save_spawns(map: &MapModel) -> String {
         xml.push_str(">\n");
         for creature in creatures {
             let tag = if creature.is_npc() { "npc" } else { "monster" };
-            #[allow(clippy::write_with_newline)]
-        write!(
+            write!(
                 xml,
                 "\t\t<{tag} name=\"{}\" x=\"{}\" y=\"{}\" spawntime=\"{}\"",
                 escape_attr(creature.name()),
@@ -86,8 +82,7 @@ pub fn save_spawns(map: &MapModel) -> String {
             )
             .expect("writing XML into String cannot fail");
             if creature.direction() != 0 {
-                #[allow(clippy::write_with_newline)]
-        write!(xml, " direction=\"{}\"", creature.direction())
+                write!(xml, " direction=\"{}\"", creature.direction())
                     .expect("writing XML into String cannot fail");
             }
             xml.push_str(" />\n");
@@ -108,7 +103,6 @@ pub fn save_houses(map: &MapModel) -> String {
     }
     for house in houses {
         let entry = house.entry();
-        #[allow(clippy::write_with_newline)]
         write!(
             xml,
             "\t<house name=\"{}\" houseid=\"{}\" entryx=\"{}\" entryy=\"{}\" \
@@ -124,10 +118,9 @@ pub fn save_houses(map: &MapModel) -> String {
         if house.guildhall() {
             xml.push_str(" guildhall=\"true\"");
         }
-        #[allow(clippy::write_with_newline)]
-        write!(
+        writeln!(
             xml,
-            " townid=\"{}\" size=\"{}\" />\n",
+            " townid=\"{}\" size=\"{}\" />",
             house.townid(),
             house.size()
         )

@@ -111,10 +111,8 @@ pub fn write_header(map: &MapModel) -> OtbNode {
     let mut writer = PayloadWriter::new();
     writer.write_u8(0); // type byte inside payload is 0 for root
     writer.write_u32(2); // version = OTBM v2
-    #[allow(clippy::unnecessary_cast)]
-    writer.write_u16(map.width() as u16);
-    #[allow(clippy::unnecessary_cast)]
-    writer.write_u16(map.height() as u16);
+    writer.write_u16(map.width());
+    writer.write_u16(map.height());
     writer.write_u32(1); // items_major
     writer.write_u32(0); // items_minor
 
@@ -382,7 +380,11 @@ pub fn write_tile(tile: &Tile, base_x: u16, base_y: u16) -> OtbNode {
     let offset_x = (pos.x() - base_x) as u8;
     let offset_y = (pos.y() - base_y) as u8;
 
-    let node_type = if tile.is_house_tile() { OTBM_HOUSETILE } else { OTBM_TILE };
+    let node_type = if tile.is_house_tile() {
+        OTBM_HOUSETILE
+    } else {
+        OTBM_TILE
+    };
     w.write_u8(node_type);
     w.write_u8(offset_x);
     w.write_u8(offset_y);
@@ -425,7 +427,10 @@ pub fn write_tile_areas(map: &MapModel, map_data_node: &mut OtbNode) {
         let base_y = pos.y() & 0xFF00;
         let base_z = pos.z();
 
-        areas.entry((base_x, base_y, base_z)).or_default().push(tile);
+        areas
+            .entry((base_x, base_y, base_z))
+            .or_default()
+            .push(tile);
     }
 
     for ((base_x, base_y, base_z), tiles) in areas {
@@ -569,8 +574,7 @@ mod tests {
                 buf.push(OTBM_TILE);
                 buf.push(ox as u8); // offset_x
                 buf.push(oy as u8); // offset_y
-                // Inline ground item
-                buf.push(OTBM_ATTR_ITEM);
+                buf.push(OTBM_ATTR_ITEM); // Inline ground item
                 push_u16_le(&mut buf, ground_id);
                 buf.push(NODE_END); // end tile
             }
@@ -708,7 +712,7 @@ mod tests {
         let mut t1 = Tile::new(MapPosition::new(1005, 1003, 7));
         t1.set_ground(Some(Item::new(4526)));
         t1.set_mapflags(42);
-        
+
         let mut item1 = Item::new(100);
         item1.set_count(5);
         t1.add_item(item1);
@@ -717,7 +721,7 @@ mod tests {
         item2.set_action_id(1234);
         item2.set_unique_id(5678);
         t1.add_item(item2);
-        
+
         original_map.set_tile(t1);
 
         let mut t2 = Tile::new(MapPosition::new(1006, 1003, 7));
@@ -745,7 +749,9 @@ mod tests {
         assert_eq!(loaded_map.height(), original_map.height());
         assert_eq!(loaded_map.tile_count(), original_map.tile_count());
 
-        let t1_loaded = loaded_map.get_tile(&MapPosition::new(1005, 1003, 7)).unwrap();
+        let t1_loaded = loaded_map
+            .get_tile(&MapPosition::new(1005, 1003, 7))
+            .unwrap();
         assert_eq!(t1_loaded.ground().unwrap().id(), 4526);
         assert_eq!(t1_loaded.mapflags(), 42);
         assert_eq!(t1_loaded.item_count(), 2);
@@ -755,7 +761,9 @@ mod tests {
         assert_eq!(t1_loaded.items()[1].action_id(), 1234);
         assert_eq!(t1_loaded.items()[1].unique_id(), 5678);
 
-        let t2_loaded = loaded_map.get_tile(&MapPosition::new(1006, 1003, 7)).unwrap();
+        let t2_loaded = loaded_map
+            .get_tile(&MapPosition::new(1006, 1003, 7))
+            .unwrap();
         assert_eq!(t2_loaded.ground().unwrap().id(), 4527);
         assert_eq!(t2_loaded.house_id(), 99);
     }
