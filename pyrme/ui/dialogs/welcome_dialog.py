@@ -25,6 +25,7 @@ from PyQt6.QtWidgets import (
 )
 
 from pyrme.ui.models.startup_logic import (
+    build_client_info_fields,
     build_compatibility_message,
     build_map_info_fields,
     compute_compatibility_status,
@@ -174,6 +175,10 @@ class WelcomeDialog(QDialog):
         self._client_list.setStyleSheet(item_view_qss("QListWidget"))
         self._client_list.currentRowChanged.connect(self._on_client_selected)
         client_panel.layout().addWidget(self._client_list)
+
+        self._client_info_panel = StartupInfoPanel()
+        client_panel.layout().addWidget(self._client_info_panel)
+
         content.addWidget(client_panel, stretch=18)
 
         content_widget = QWidget()
@@ -448,10 +453,9 @@ class WelcomeDialog(QDialog):
         self._map_info_panel.set_fields(fields)
 
     def _refresh_client_info(self) -> None:
-        pass
-        # Reuse map_info_panel pattern — create a client info panel
-        # For now, just update tooltip on client list
-        # TODO: Add dedicated client info panel
+        client = self._get_selected_client()
+        fields = build_client_info_fields(client)
+        self._client_info_panel.set_fields(fields)
 
     def _refresh_footer_state(self) -> None:
         peek = self._get_selected_map_info()
