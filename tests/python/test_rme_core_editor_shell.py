@@ -116,3 +116,43 @@ def test_native_rme_core_load_otbm_reads_xml_sidecars(tmp_path) -> None:
     assert reader.load_otbm(str(out_file)) == (0, 0, 0)
     assert tuple(reader.sidecar_counts()) == (1, 1, 1, 1)
     assert reader.map_is_dirty() is False
+
+
+def test_native_rme_core_bridge_edits_save_xml_sidecars(tmp_path) -> None:
+    rme_core = pytest.importorskip(
+        "pyrme.rme_core",
+        reason="pyrme.rme_core is not built in this environment",
+    )
+    required_methods = (
+        "get_waypoints",
+        "update_waypoint",
+        "remove_waypoint",
+        "get_houses",
+        "update_house",
+        "remove_house",
+        "save_otbm",
+    )
+    missing = [
+        name for name in required_methods if not hasattr(rme_core.EditorShellState, name)
+    ]
+    if missing:
+        pytest.skip(f"pyrme.rme_core missing M027 methods: {missing}")
+
+    shell = rme_core.EditorShellState()
+    assert shell.add_waypoint("Temple", 100, 200, 7) is True
+    assert shell.update_waypoint(0, "Depot", 101, 201, 8) is True
+    assert shell.get_waypoints() == [("Depot", 101, 201, 8)]
+
+    assert shell.add_house(12, "Depot", 102, 202, 7, 500, 3, True, 14) is True
+    assert shell.update_house(12, "Depot North", 4, 700, False, 103, 203, 8) is True
+    assert shell.get_houses() == [(12, "Depot North", 4, 700, False, 103, 203, 8)]
+
+    out_file = tmp_path / "bridge_edits.otbm"
+    shell.save_otbm(str(out_file))
+
+    waypoint_xml = (tmp_path / "bridge_edits-waypoint.xml").read_text(encoding="utf-8")
+    house_xml = (tmp_path / "bridge_edits-house.xml").read_text(encoding="utf-8")
+    assert '<waypoint name="Depot" x="101" y="201" z="8" />' in waypoint_xml
+    assert 'name="Depot North"' in house_xml
+    assert 'townid="4"' in house_xml
+    assert 'size="14"' in house_xml

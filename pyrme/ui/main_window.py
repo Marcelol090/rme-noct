@@ -939,7 +939,10 @@ class MainWindow(QMainWindow):
             self.ingame_preview_dock,
         )
 
-        self.waypoints_dock = WaypointsDock(self)
+        self.waypoints_dock = WaypointsDock(
+            self,
+            editor=self._editor_context.session.editor,
+        )
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.waypoints_dock)
 
     def _setup_status_bar(self) -> None:

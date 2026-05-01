@@ -212,6 +212,31 @@ impl EditorShellState {
         true
     }
 
+    fn get_waypoints(&self) -> Vec<(String, u16, u16, u8)> {
+        self.map
+            .waypoints()
+            .iter()
+            .map(|waypoint| {
+                let position = waypoint.position();
+                (
+                    waypoint.name().to_string(),
+                    position.x(),
+                    position.y(),
+                    position.z(),
+                )
+            })
+            .collect()
+    }
+
+    fn update_waypoint(&mut self, index: usize, name: &str, x: i32, y: i32, z: i32) -> bool {
+        self.map
+            .update_waypoint(index, Waypoint::new(name, MapPosition::new(x, y, z)))
+    }
+
+    fn remove_waypoint(&mut self, index: usize) -> bool {
+        self.map.remove_waypoint(index)
+    }
+
     fn add_spawn(&mut self, centerx: i32, centery: i32, centerz: i32, radius: i32) -> usize {
         self.map.add_spawn(Spawn::new(
             MapPosition::new(centerx, centery, centerz),
@@ -262,6 +287,60 @@ impl EditorShellState {
             size,
         ));
         true
+    }
+
+    fn get_houses(&self) -> Vec<(u32, String, u32, u32, bool, u16, u16, u8)> {
+        self.map
+            .houses()
+            .iter()
+            .map(|house| {
+                let entry = house.entry();
+                (
+                    house.id(),
+                    house.name().to_string(),
+                    house.townid(),
+                    house.rent(),
+                    house.guildhall(),
+                    entry.x(),
+                    entry.y(),
+                    entry.z(),
+                )
+            })
+            .collect()
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn update_house(
+        &mut self,
+        houseid: u32,
+        name: &str,
+        townid: u32,
+        rent: u32,
+        guildhall: bool,
+        entryx: i32,
+        entryy: i32,
+        entryz: i32,
+    ) -> bool {
+        let size = self
+            .map
+            .houses()
+            .iter()
+            .find(|house| house.id() == houseid)
+            .map(House::size)
+            .unwrap_or(0);
+        self.map.update_house(House::new(
+            houseid,
+            name,
+            MapPosition::new(entryx, entryy, entryz),
+            rent,
+            townid,
+            guildhall,
+            size,
+        ))
+    }
+
+    fn remove_house(&mut self, houseid: u32) -> bool {
+        self.map.remove_house(houseid)
     }
 
     // --- Town management bridge ---
@@ -405,6 +484,44 @@ mod tests {
             .add_spawn_creature(spawn_index, "Rat", 1, -1, 60, false, 2)
             .unwrap());
         assert!(shell.add_house(12, "Depot", 102, 202, 7, 500, 3, true, 14));
+    }
+
+    #[test]
+    fn editor_bridge_lists_updates_and_removes_waypoints() {
+        let mut shell = EditorShellState::default();
+
+        assert!(shell.add_waypoint("Temple", 100, 200, 7));
+        assert_eq!(
+            shell.get_waypoints(),
+            vec![("Temple".to_string(), 100, 200, 7)]
+        );
+        assert!(shell.update_waypoint(0, "Depot", 101, 201, 8));
+        assert_eq!(
+            shell.get_waypoints(),
+            vec![("Depot".to_string(), 101, 201, 8)]
+        );
+        assert!(shell.remove_waypoint(0));
+        assert!(shell.get_waypoints().is_empty());
+        assert!(!shell.remove_waypoint(0));
+    }
+
+    #[test]
+    fn editor_bridge_lists_adds_updates_and_removes_houses_for_dialog() {
+        let mut shell = EditorShellState::default();
+
+        assert!(shell.add_house(12, "Depot", 102, 202, 7, 500, 3, true, 14));
+        assert_eq!(
+            shell.get_houses(),
+            vec![(12, "Depot".to_string(), 3, 500, true, 102, 202, 7)]
+        );
+        assert!(shell.update_house(12, "Depot North", 4, 700, false, 103, 203, 8));
+        assert_eq!(
+            shell.get_houses(),
+            vec![(12, "Depot North".to_string(), 4, 700, false, 103, 203, 8)]
+        );
+        assert!(shell.remove_house(12));
+        assert!(shell.get_houses().is_empty());
+        assert!(!shell.update_house(12, "Missing", 0, 0, false, 0, 0, 0));
     }
 
     #[test]
