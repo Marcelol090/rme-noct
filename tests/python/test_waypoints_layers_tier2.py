@@ -8,6 +8,30 @@ from pyrme.ui.docks.waypoints import WaypointEntry, WaypointsDock
 from pyrme.ui.main_window import MainWindow
 
 
+class _WaypointEditor:
+    def __init__(self) -> None:
+        self.rows: list[tuple[str, int, int, int]] = [("Temple", 32000, 32000, 7)]
+        self.current_position = (32100, 32200, 8)
+
+    def position(self) -> tuple[int, int, int]:
+        return self.current_position
+
+    def get_waypoints(self) -> list[tuple[str, int, int, int]]:
+        return list(self.rows)
+
+    def add_waypoint(self, name: str, x: int, y: int, z: int) -> bool:
+        self.rows.append((name, x, y, z))
+        return True
+
+    def update_waypoint(self, index: int, name: str, x: int, y: int, z: int) -> bool:
+        self.rows[index] = (name, x, y, z)
+        return True
+
+    def remove_waypoint(self, index: int) -> bool:
+        self.rows.pop(index)
+        return True
+
+
 def test_waypoints_dock_supports_local_model_roundtrip(qtbot) -> None:
     dock = WaypointsDock()
     qtbot.addWidget(dock)
@@ -50,6 +74,26 @@ def test_waypoints_dock_supports_local_model_roundtrip(qtbot) -> None:
     removed = dock.remove_waypoint(1)
     assert removed == depot
     assert dock.waypoints() == [WaypointEntry("Temple Updated", 32000, 32000, 7, "temple_spawn")]
+
+
+def test_waypoints_dock_syncs_with_editor_bridge(qtbot) -> None:
+    editor = _WaypointEditor()
+    dock = WaypointsDock(editor=editor)
+    qtbot.addWidget(dock)
+
+    assert dock.waypoints() == [WaypointEntry("Temple", 32000, 32000, 7)]
+
+    added = dock.add_waypoint()
+    assert added == WaypointEntry("Waypoint 2", 32100, 32200, 8)
+    assert editor.rows[-1] == ("Waypoint 2", 32100, 32200, 8)
+
+    renamed = dock.rename_waypoint(1, "Depot")
+    assert renamed == WaypointEntry("Depot", 32100, 32200, 8)
+    assert editor.rows[1] == ("Depot", 32100, 32200, 8)
+
+    removed = dock.remove_waypoint(0)
+    assert removed == WaypointEntry("Temple", 32000, 32000, 7)
+    assert dock.waypoints() == [WaypointEntry("Depot", 32100, 32200, 8)]
 
 
 def test_layers_toolbar_exposes_stable_actions_and_defaults(qtbot) -> None:

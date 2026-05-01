@@ -57,6 +57,10 @@ class _FallbackEditorShellState:
     _show_flags: dict[str, bool] = field(
         default_factory=lambda: dict(SHOW_FLAG_DEFAULTS)
     )
+    _waypoints: list[tuple[str, int, int, int]] = field(default_factory=list)
+    _houses: list[tuple[int, str, int, int, bool, int, int, int]] = field(
+        default_factory=list
+    )
 
     def position(self) -> tuple[int, int, int]:
         return self._position
@@ -156,6 +160,80 @@ class _FallbackEditorShellState:
     def remove_town(self, id: int) -> bool:
         return False
 
+    def get_waypoints(self) -> list[tuple[str, int, int, int]]:
+        return list(self._waypoints)
+
+    def add_waypoint(self, name: str, x: int, y: int, z: int) -> bool:
+        self._waypoints.append((name, *self._clamp_position(x, y, z)))
+        return True
+
+    def update_waypoint(self, index: int, name: str, x: int, y: int, z: int) -> bool:
+        if index < 0 or index >= len(self._waypoints):
+            return False
+        self._waypoints[index] = (name, *self._clamp_position(x, y, z))
+        return True
+
+    def remove_waypoint(self, index: int) -> bool:
+        if index < 0 or index >= len(self._waypoints):
+            return False
+        self._waypoints.pop(index)
+        return True
+
+    def get_houses(self) -> list[tuple[int, str, int, int, bool, int, int, int]]:
+        return list(self._houses)
+
+    def add_house(
+        self,
+        houseid: int,
+        name: str,
+        entryx: int,
+        entryy: int,
+        entryz: int,
+        rent: int,
+        townid: int,
+        guildhall: bool,
+        size: int,
+    ) -> bool:
+        del size
+        if any(existing[0] == houseid for existing in self._houses):
+            return False
+        x, y, z = self._clamp_position(entryx, entryy, entryz)
+        self._houses.append((houseid, name, townid, rent, guildhall, x, y, z))
+        return True
+
+    def update_house(
+        self,
+        houseid: int,
+        name: str,
+        townid: int,
+        rent: int,
+        guildhall: bool,
+        entryx: int,
+        entryy: int,
+        entryz: int,
+    ) -> bool:
+        for index, existing in enumerate(self._houses):
+            if existing[0] == houseid:
+                x, y, z = self._clamp_position(entryx, entryy, entryz)
+                self._houses[index] = (houseid, name, townid, rent, guildhall, x, y, z)
+                return True
+        return False
+
+    def remove_house(self, houseid: int) -> bool:
+        for index, existing in enumerate(self._houses):
+            if existing[0] == houseid:
+                self._houses.pop(index)
+                return True
+        return False
+
+    @staticmethod
+    def _clamp_position(x: int, y: int, z: int) -> tuple[int, int, int]:
+        return (
+            max(0, min(65000, int(x))),
+            max(0, min(65000, int(y))),
+            max(0, min(15, int(z))),
+        )
+
 
 class EditorShellCoreBridge:
     """Stable Python-facing adapter over the optional native extension."""
@@ -244,6 +322,102 @@ class EditorShellCoreBridge:
     def remove_town(self, id: int) -> bool:
         if hasattr(self._inner, "remove_town"):
             return bool(self._inner.remove_town(id))
+        return False
+
+    def get_towns(self) -> list[tuple[int, str, int, int, int]]:
+        return self.towns()
+
+    def get_waypoints(self) -> list[tuple[str, int, int, int]]:
+        if hasattr(self._inner, "get_waypoints"):
+            return [
+                (str(name), int(x), int(y), int(z))
+                for name, x, y, z in self._inner.get_waypoints()
+            ]
+        return []
+
+    def add_waypoint(self, name: str, x: int, y: int, z: int) -> bool:
+        if hasattr(self._inner, "add_waypoint"):
+            return bool(self._inner.add_waypoint(name, x, y, z))
+        return False
+
+    def update_waypoint(self, index: int, name: str, x: int, y: int, z: int) -> bool:
+        if hasattr(self._inner, "update_waypoint"):
+            return bool(self._inner.update_waypoint(index, name, x, y, z))
+        return False
+
+    def remove_waypoint(self, index: int) -> bool:
+        if hasattr(self._inner, "remove_waypoint"):
+            return bool(self._inner.remove_waypoint(index))
+        return False
+
+    def get_houses(self) -> list[tuple[int, str, int, int, bool, int, int, int]]:
+        if hasattr(self._inner, "get_houses"):
+            return [
+                (
+                    int(houseid),
+                    str(name),
+                    int(townid),
+                    int(rent),
+                    bool(guildhall),
+                    int(entryx),
+                    int(entryy),
+                    int(entryz),
+                )
+                for (
+                    houseid,
+                    name,
+                    townid,
+                    rent,
+                    guildhall,
+                    entryx,
+                    entryy,
+                    entryz,
+                ) in self._inner.get_houses()
+            ]
+        return []
+
+    def add_house(
+        self,
+        houseid: int,
+        name: str,
+        townid: int,
+        entryx: int = 32000,
+        entryy: int = 32000,
+        entryz: int = 7,
+        rent: int = 0,
+        guildhall: bool = False,
+        size: int = 0,
+    ) -> bool:
+        if hasattr(self._inner, "add_house"):
+            return bool(
+                self._inner.add_house(
+                    houseid, name, entryx, entryy, entryz, rent, townid, guildhall, size
+                )
+            )
+        return False
+
+    def update_house(
+        self,
+        houseid: int,
+        name: str,
+        townid: int,
+        rent: int,
+        guildhall: bool,
+        entryx: int,
+        entryy: int,
+        entryz: int,
+    ) -> bool:
+        if hasattr(self._inner, "update_house"):
+            return bool(
+                self._inner.update_house(
+                    houseid, name, townid, rent, guildhall, entryx, entryy, entryz
+                )
+            )
+        return False
+
+    def remove_house(self, houseid: int) -> bool:
+        if hasattr(self._inner, "remove_house"):
+            return bool(self._inner.remove_house(houseid))
         return False
 
 

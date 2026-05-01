@@ -8,6 +8,7 @@ connected to map/editor state later without changing the UI contract.
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from typing import Any
 
 from PyQt6.QtWidgets import (
     QAbstractItemView,
@@ -45,11 +46,13 @@ class WaypointEntry:
 class WaypointsDock(GlassDockWidget):
     """Dock widget to manage waypoints."""
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, parent: QWidget | None = None, *, editor: Any = None) -> None:
         super().__init__("Waypoints", parent)
         self.setObjectName("WaypointsDock")
+        self._editor = editor
         self._waypoints: list[WaypointEntry] = []
         self._setup_ui()
+        self._refresh_from_editor()
 
     def _setup_ui(self) -> None:
         """Build the dock UI within the glass container."""
@@ -116,13 +119,18 @@ class WaypointsDock(GlassDockWidget):
 
     def add_waypoint(self, waypoint: WaypointEntry | None = None) -> WaypointEntry:
         """Append a waypoint to the local model and return a copy of it."""
+        x, y, z = self._default_position()
         entry = waypoint or WaypointEntry(
             name=f"{DEFAULT_WAYPOINT_NAME} {len(self._waypoints) + 1}",
-            x=DEFAULT_WAYPOINT_X,
-            y=DEFAULT_WAYPOINT_Y,
-            z=DEFAULT_WAYPOINT_Z,
+            x=x,
+            y=y,
+            z=z,
             linked_spawn=None,
         )
+        if self._has_editor_waypoint_methods():
+            self._editor.add_waypoint(entry.name, entry.x, entry.y, entry.z)
+            self._refresh_from_editor(selected_index=len(self._waypoints))
+            return replace(self._waypoints[-1])
         self._waypoints.append(replace(entry))
         self._refresh_tree(selected_index=len(self._waypoints) - 1)
         return replace(self._waypoints[-1])
@@ -131,6 +139,10 @@ class WaypointsDock(GlassDockWidget):
         """Rename a waypoint in the local model."""
         self._validate_index(index)
         current = self._waypoints[index]
+        if self._has_editor_waypoint_methods():
+            self._editor.update_waypoint(index, name, current.x, current.y, current.z)
+            self._refresh_from_editor(selected_index=index)
+            return replace(self._waypoints[index])
         self._waypoints[index] = replace(current, name=name)
         self._refresh_tree(selected_index=index)
         return replace(self._waypoints[index])
@@ -138,6 +150,16 @@ class WaypointsDock(GlassDockWidget):
     def remove_waypoint(self, index: int) -> WaypointEntry:
         """Remove a waypoint from the local model and return it."""
         self._validate_index(index)
+        if self._has_editor_waypoint_methods():
+            entry = replace(self._waypoints[index])
+            self._editor.remove_waypoint(index)
+            selected_index = (
+                min(index, len(self._waypoints) - 2)
+                if len(self._waypoints) > 1
+                else None
+            )
+            self._refresh_from_editor(selected_index=selected_index)
+            return entry
         entry = self._waypoints.pop(index)
         selected_index = min(index, len(self._waypoints) - 1) if self._waypoints else None
         self._refresh_tree(selected_index=selected_index)
@@ -234,6 +256,33 @@ class WaypointsDock(GlassDockWidget):
         has_selection = self._selected_index() is not None
         self.btn_rename.setEnabled(has_selection)
         self.btn_remove.setEnabled(has_selection)
+
+    def _refresh_from_editor(self, selected_index: int | None = None) -> None:
+        if not self._has_editor_waypoint_methods():
+            return
+        self._waypoints = [
+            WaypointEntry(str(name), int(x), int(y), int(z))
+            for name, x, y, z in self._editor.get_waypoints()
+        ]
+        self._refresh_tree(selected_index=selected_index)
+
+    def _has_editor_waypoint_methods(self) -> bool:
+        return all(
+            callable(getattr(self._editor, name, None))
+            for name in (
+                "get_waypoints",
+                "add_waypoint",
+                "update_waypoint",
+                "remove_waypoint",
+            )
+        )
+
+    def _default_position(self) -> tuple[int, int, int]:
+        position = getattr(self._editor, "position", None)
+        if callable(position):
+            x, y, z = position()
+            return int(x), int(y), int(z)
+        return DEFAULT_WAYPOINT_X, DEFAULT_WAYPOINT_Y, DEFAULT_WAYPOINT_Z
 
     @staticmethod
     def _format_coordinates(entry: WaypointEntry) -> str:

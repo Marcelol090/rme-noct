@@ -644,6 +644,24 @@ impl MapModel {
         self.is_dirty = true;
     }
 
+    pub fn update_waypoint(&mut self, index: usize, waypoint: Waypoint) -> bool {
+        let Some(slot) = self.waypoints.get_mut(index) else {
+            return false;
+        };
+        *slot = waypoint;
+        self.is_dirty = true;
+        true
+    }
+
+    pub fn remove_waypoint(&mut self, index: usize) -> bool {
+        if index >= self.waypoints.len() {
+            return false;
+        }
+        self.waypoints.remove(index);
+        self.is_dirty = true;
+        true
+    }
+
     pub fn add_spawn(&mut self, spawn: Spawn) -> usize {
         self.spawns.push(spawn);
         self.is_dirty = true;
@@ -667,6 +685,29 @@ impl MapModel {
     pub fn add_house(&mut self, house: House) {
         self.houses.push(house);
         self.is_dirty = true;
+    }
+
+    pub fn update_house(&mut self, house: House) -> bool {
+        let Some(slot) = self
+            .houses
+            .iter_mut()
+            .find(|existing| existing.id() == house.id())
+        else {
+            return false;
+        };
+        *slot = house;
+        self.is_dirty = true;
+        true
+    }
+
+    pub fn remove_house(&mut self, house_id: u32) -> bool {
+        let len_before = self.houses.len();
+        self.houses.retain(|house| house.id() != house_id);
+        let removed = self.houses.len() < len_before;
+        if removed {
+            self.is_dirty = true;
+        }
+        removed
     }
 
     pub fn sidecar_counts(&self) -> (usize, usize, usize, usize) {
