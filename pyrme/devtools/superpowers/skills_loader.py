@@ -95,6 +95,17 @@ def _extract_frontmatter(text: str) -> dict[str, str]:
     return result
 
 
+@dataclass
+class SkillsLoaderConfig:
+    """Configuration for SkillsLoader directories."""
+
+    project_root: Path | None = None
+    repo_skills_dir: Path | None = None
+    user_skills_dir: Path | None = None
+    codex_skills_dir: Path | None = None
+    superpowers_dir: Path | None = None
+    personal_dir: Path | None = None
+
 
 @dataclass
 class _ScanContext:
@@ -103,6 +114,7 @@ class _ScanContext:
     source_type: str
     max_depth: int
     results: list[Skill]
+
 
 class SkillsLoader:
     """Discovers and loads Superpowers skills."""
@@ -115,15 +127,27 @@ class SkillsLoader:
         codex_skills_dir: Path | None = None,
         superpowers_dir: Path | None = None,
         personal_dir: Path | None = None,
+        config: SkillsLoaderConfig | None = None,
     ) -> None:
-        self.project_root = project_root or Path.cwd()
+        config = config or SkillsLoaderConfig()
+        self.project_root = project_root or config.project_root or Path.cwd()
         home_dir = _safe_home(self.project_root)
-        self.repo_skills_dir = repo_skills_dir or personal_dir or (
-            self.project_root / ".pi" / "agent" / "skills"
+        self.repo_skills_dir = (
+            repo_skills_dir
+            or config.repo_skills_dir
+            or personal_dir
+            or config.personal_dir
+            or (self.project_root / ".pi" / "agent" / "skills")
         )
-        self.user_skills_dir = user_skills_dir or (home_dir / ".gsd" / "agent" / "skills")
-        self.codex_skills_dir = codex_skills_dir or (home_dir / ".codex" / "skills")
-        self.superpowers_dir = superpowers_dir or (home_dir / ".codex" / "superpowers" / "skills")
+        self.user_skills_dir = user_skills_dir or config.user_skills_dir or (
+            home_dir / ".gsd" / "agent" / "skills"
+        )
+        self.codex_skills_dir = codex_skills_dir or config.codex_skills_dir or (
+            home_dir / ".codex" / "skills"
+        )
+        self.superpowers_dir = superpowers_dir or config.superpowers_dir or (
+            home_dir / ".codex" / "superpowers" / "skills"
+        )
 
     def find_skills(self, max_depth: int = 3) -> list[Skill]:
         """Find all available skills in precedence order."""

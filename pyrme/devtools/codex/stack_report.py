@@ -11,7 +11,7 @@ from typing import Any
 
 from pyrme.devtools.codex.agents import CodexAgentStack
 from pyrme.devtools.gsd.config import GSDConfig
-from pyrme.devtools.superpowers.skills_loader import SkillsLoader
+from pyrme.devtools.superpowers.skills_loader import SkillsLoader, SkillsLoaderConfig
 
 
 @dataclass(frozen=True)
@@ -230,10 +230,12 @@ def build_stack_report(
 
     gsd_config = GSDConfig(project_root=project_root)
     skills_loader = SkillsLoader(
-        project_root=project_root,
-        user_skills_dir=home_dir / ".gsd" / "agent" / "skills",
-        codex_skills_dir=home_dir / ".codex" / "skills",
-        superpowers_dir=home_dir / ".codex" / "superpowers" / "skills",
+        config=SkillsLoaderConfig(
+            project_root=project_root,
+            user_skills_dir=home_dir / ".gsd" / "agent" / "skills",
+            codex_skills_dir=home_dir / ".codex" / "skills",
+            superpowers_dir=home_dir / ".codex" / "superpowers" / "skills",
+        )
     )
     codex_stack = CodexAgentStack(agent_dir=home_dir / ".codex" / "agents")
 
