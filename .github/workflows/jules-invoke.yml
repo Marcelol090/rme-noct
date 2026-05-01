@@ -23,6 +23,9 @@ on:
         type: boolean
         required: false
         default: false
+    secrets:
+      JULES_API_KEY:
+        required: true
   workflow_dispatch:
     inputs:
       focus:
