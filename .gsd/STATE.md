@@ -1,17 +1,19 @@
 # GSD State
 
-**Active Milestone:** M026-xml-sidecar-readback
-**Active Slice:** S01
-**Active Task:** complete
-**Phase:** review
-**Next Action:** Commit M026/S01 and run development-branch closeout.
-**Last Updated:** 2026-04-30T00:00:00-03:00
+**Active Milestone:** none
+**Active Slice:** none
+**Active Task:** none
+**Phase:** complete
+**Next Action:** Commit 'Edit Houses' menubar.xml contract fix on main. Plan M027 sidecar UI bridge or next persistence slice.
+**Last Updated:** 2026-05-01T16:15:00-03:00
 **Requirements Status:** 0 active · 23 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
+- `M026-xml-sidecar-readback` is complete: Rust XML sidecar readback for waypoints, spawns, and houses integrated into `load_otbm`, PR #67 merged.
+- `Edit Houses` added to `menubar.xml` Map menu contract to match MainWindow shell wiring; 6/6 map menu parity tests pass.
 - `M018-otbm-xml-serialization` is complete: Python `save_otbm` now writes `.otbm` plus waypoint, spawn, and house XML sidecars through `rme_core`.
-- OTBM XML sidecars intentionally use legacy RME tag and attribute names from `source/io/map_xml_io.cpp`; readback remains future scope.
+- OTBM XML sidecars intentionally use legacy RME tag and attribute names from `source/io/map_xml_io.cpp`; readback now implemented in M026.
 - `remeres-map-editor-redux/data/menubar.xml` is the source of truth for legacy menu order, labels, and shortcuts.
 - `LEGACY-00-CONTRACT` is treated as completed foundation work: top-level menu tree, action metadata, and contract tests exist in the current shell.
 - `M5-SHELL-NAVIGATION` remains reusable shell-state infrastructure, but it is not counted as full legacy parity.
