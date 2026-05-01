@@ -289,6 +289,7 @@ impl EditorShellState {
         true
     }
 
+    #[allow(clippy::type_complexity)]
     fn get_houses(&self) -> Vec<(u32, String, u32, u32, bool, u16, u16, u8)> {
         self.map
             .houses()
