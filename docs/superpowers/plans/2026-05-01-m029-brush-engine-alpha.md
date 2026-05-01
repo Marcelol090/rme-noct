@@ -611,7 +611,8 @@ Expected: PASS.
 Run:
 
 ```bash
-cargo test -p rme_core map::tests editor::tests --quiet
+cargo test -p rme_core map::tests --quiet
+cargo test -p rme_core editor::tests --quiet
 ```
 
 Expected: PASS.
