@@ -10,7 +10,8 @@ use pyo3::prelude::*;
 
 use crate::item::Item;
 use crate::map::{
-    Creature, House, MapModel, MapPosition, Spawn, Waypoint, DEFAULT_X, DEFAULT_Y, DEFAULT_Z,
+    Creature, House, MapModel, MapPosition, MapStatistics, Spawn, Waypoint, DEFAULT_X, DEFAULT_Y,
+    DEFAULT_Z,
 };
 use crate::rendering::{RenderBudget, RenderState};
 
@@ -133,6 +134,10 @@ impl EditorShellState {
 
     fn render_summary(&self) -> String {
         self.render.render_summary(self.budget)
+    }
+
+    fn collect_statistics(&self) -> MapStatistics {
+        self.map.collect_statistics()
     }
 
     fn reset_defaults(&mut self) -> (u16, u16, u8) {
