@@ -640,7 +640,7 @@ Run:
 cargo test -p rme_core brushes --quiet
 cargo test -p rme_core brush_command_tests --quiet
 cargo test -p rme_core editor::tests --quiet
-QT_QPA_PLATFORM=offscreen python3 -m pytest tests/python/test_editor_activation_backend.py tests/python/test_rme_core_editor_shell.py -q --tb=short
+QT_QPA_PLATFORM=offscreen .venv/bin/python -m pytest tests/python/test_editor_activation_backend.py tests/python/test_rme_core_editor_shell.py -q --tb=short
 npm run preflight
 ```
 
@@ -731,7 +731,7 @@ Run:
 cargo test -p rme_core brushes --quiet
 cargo test -p rme_core brush_command_tests --quiet
 cargo test -p rme_core editor::tests --quiet
-QT_QPA_PLATFORM=offscreen python3 -m pytest tests/python/test_editor_activation_backend.py tests/python/test_rme_core_editor_shell.py -q --tb=short
+QT_QPA_PLATFORM=offscreen .venv/bin/python -m pytest tests/python/test_editor_activation_backend.py tests/python/test_rme_core_editor_shell.py -q --tb=short
 npm run preflight
 git status --short --branch --untracked-files=no
 ```
