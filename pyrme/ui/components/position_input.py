@@ -6,6 +6,8 @@ Composite widget with X, Y, Z coordinate fields.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -45,6 +47,17 @@ MAP_MAX_LAYER = 15
 GROUND_LAYER = 7
 
 
+@dataclass
+class PositionConfig:
+    """Configuration for PositionInput component."""
+
+    x: int = 32000
+    y: int = 32000
+    z: int = GROUND_LAYER
+    max_x: int = MAP_MAX_WIDTH
+    max_y: int = MAP_MAX_HEIGHT
+
+
 class PositionInput(QWidget):
     """Composite coordinate input: X, Y (QSpinBox) + Z (QComboBox).
 
@@ -66,11 +79,10 @@ class PositionInput(QWidget):
         max_y: int = MAP_MAX_HEIGHT,
     ) -> None:
         super().__init__(parent)
-        self._build_ui(x, y, z, max_x, max_y)
+        config = PositionConfig(x=x, y=y, z=z, max_x=max_x, max_y=max_y)
+        self._build_ui(config)
 
-    def _build_ui(
-        self, x: int, y: int, z: int, max_x: int, max_y: int
-    ) -> None:
+    def _build_ui(self, config: PositionConfig) -> None:
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
@@ -122,8 +134,8 @@ class PositionInput(QWidget):
         layout.addWidget(lbl_x)
 
         self.x_spin = QSpinBox()
-        self.x_spin.setRange(0, max_x)
-        self.x_spin.setValue(x)
+        self.x_spin.setRange(0, config.max_x)
+        self.x_spin.setValue(config.x)
         self.x_spin.setFont(coord_font)
         self.x_spin.setStyleSheet(spinbox_style)
         self.x_spin.setToolTip("X coordinate (0–65000)")
@@ -136,8 +148,8 @@ class PositionInput(QWidget):
         layout.addWidget(lbl_y)
 
         self.y_spin = QSpinBox()
-        self.y_spin.setRange(0, max_y)
-        self.y_spin.setValue(y)
+        self.y_spin.setRange(0, config.max_y)
+        self.y_spin.setValue(config.y)
         self.y_spin.setFont(coord_font)
         self.y_spin.setStyleSheet(spinbox_style)
         self.y_spin.setToolTip("Y coordinate (0–65000)")
@@ -151,7 +163,7 @@ class PositionInput(QWidget):
 
         self.z_combo = QComboBox()
         self.z_combo.addItems(_FLOOR_LABELS)
-        self.z_combo.setCurrentIndex(z)
+        self.z_combo.setCurrentIndex(config.z)
         self.z_combo.setFont(coord_font)
         self.z_combo.setStyleSheet(combo_style)
         self.z_combo.setToolTip("Floor level (0=Roof, 7=Ground, 15=Deep)")

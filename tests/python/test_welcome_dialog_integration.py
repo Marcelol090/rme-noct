@@ -8,10 +8,8 @@ Verify WelcomeDialog launches on startup, and its signals
 from __future__ import annotations
 
 import pytest
-from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 
-from pyrme.ui.dialogs.welcome_dialog import WelcomeDialog
 from pyrme.ui.main_window import MainWindow
 from pyrme.ui.models.startup_models import StartupLoadRequest
 

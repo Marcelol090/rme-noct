@@ -63,6 +63,9 @@ def _extract_frontmatter(text: str) -> str:
     return parts[1]
 
 
+_PROVIDER_PATTERN = re.compile(r"\b([a-z0-9_-]+)/[A-Za-z0-9_.:-]+")
+
+
 def _extract_model_providers(preferences_text: str) -> set[str]:
     frontmatter = _extract_frontmatter(preferences_text)
     if not frontmatter:
@@ -85,14 +88,14 @@ def _extract_model_providers(preferences_text: str) -> set[str]:
         if not line.startswith(" "):
             break
 
-        for match in re.finditer(r"\b([a-z0-9_-]+)/[A-Za-z0-9_.:-]+", stripped):
+        for match in _PROVIDER_PATTERN.finditer(stripped):
             providers.add(match.group(1))
 
     return providers
 
 
-
 def _build_report_lines(
+    *,
     project_root: Path,
     gsd_config: GSDConfig,
     codex_stack: CodexAgentStack,
@@ -168,6 +171,7 @@ def _build_report_lines(
 
 
 def _build_report_data(
+    *,
     project_root: Path,
     gsd_config: GSDConfig,
     codex_stack: CodexAgentStack,
@@ -216,6 +220,7 @@ def _build_report_data(
         "validation": {"issues": issues},
     }
 
+
 def build_stack_report(
     project_root: Path | None = None,
     home_dir: Path | None = None,
@@ -234,9 +239,10 @@ def build_stack_report(
 
     agents = codex_stack.by_name()
     issues = codex_stack.validate_required_agents()
-    codex_skills = [skill for skill in skills_loader.find_skills() if skill.source_type == "codex"]
+    all_skills = skills_loader.find_skills()
+    codex_skills = [skill for skill in all_skills if skill.source_type == "codex"]
     superpowers_skills = [
-        skill for skill in skills_loader.find_skills() if skill.source_type == "superpowers"
+        skill for skill in all_skills if skill.source_type == "superpowers"
     ]
     caveman_skill = home_dir / ".agents" / "skills" / "caveman"
     ui_system_skill = home_dir / ".codex" / "skills" / "ui-system-discipline"
@@ -258,36 +264,35 @@ def build_stack_report(
         )
 
     lines = _build_report_lines(
-        project_root,
-        gsd_config,
-        codex_stack,
-        skills_loader,
-        agents,
-        codex_skills,
-        superpowers_skills,
-        caveman_skill,
-        repo_agents,
-        context7_command,
-        ollama_command,
-        issues,
+        project_root=project_root,
+        gsd_config=gsd_config,
+        codex_stack=codex_stack,
+        skills_loader=skills_loader,
+        agents=agents,
+        codex_skills=codex_skills,
+        superpowers_skills=superpowers_skills,
+        caveman_skill=caveman_skill,
+        repo_agents=repo_agents,
+        context7_command=context7_command,
+        ollama_command=ollama_command,
+        issues=issues,
     )
-
     data = _build_report_data(
-        project_root,
-        gsd_config,
-        codex_stack,
-        skills_loader,
-        agents,
-        codex_skills,
-        superpowers_skills,
-        caveman_skill,
-        ui_system_skill,
-        premium_ui_skill,
-        repo_agents,
-        context7_command,
-        ollama_command,
-        configured_model_providers,
-        issues,
+        project_root=project_root,
+        gsd_config=gsd_config,
+        codex_stack=codex_stack,
+        skills_loader=skills_loader,
+        agents=agents,
+        codex_skills=codex_skills,
+        superpowers_skills=superpowers_skills,
+        caveman_skill=caveman_skill,
+        ui_system_skill=ui_system_skill,
+        premium_ui_skill=premium_ui_skill,
+        repo_agents=repo_agents,
+        context7_command=context7_command,
+        ollama_command=ollama_command,
+        configured_model_providers=configured_model_providers,
+        issues=issues,
     )
 
     return StackReport(data=data, lines=lines)
