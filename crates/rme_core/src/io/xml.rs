@@ -7,7 +7,7 @@ use crate::map::{Creature, House, MapModel, Spawn, Waypoint};
 
 pub fn save_waypoints(map: &MapModel) -> String {
     let mut waypoints: Vec<&Waypoint> = map.waypoints().iter().collect();
-    waypoints.sort_by(|left, right| left.name().to_lowercase().cmp(&right.name().to_lowercase()));
+    waypoints.sort_by_key(|waypoint| waypoint.name().to_lowercase());
 
     let mut xml = xml_header("waypoints", waypoints.is_empty());
     if waypoints.is_empty() {
@@ -15,9 +15,9 @@ pub fn save_waypoints(map: &MapModel) -> String {
     }
     for waypoint in waypoints {
         let position = waypoint.position();
-        write!(
+        writeln!(
             xml,
-            "\t<waypoint name=\"{}\" x=\"{}\" y=\"{}\" z=\"{}\" />\n",
+            "\t<waypoint name=\"{}\" x=\"{}\" y=\"{}\" z=\"{}\" />",
             escape_attr(waypoint.name()),
             position.x(),
             position.y(),
@@ -118,9 +118,9 @@ pub fn save_houses(map: &MapModel) -> String {
         if house.guildhall() {
             xml.push_str(" guildhall=\"true\"");
         }
-        write!(
+        writeln!(
             xml,
-            " townid=\"{}\" size=\"{}\" />\n",
+            " townid=\"{}\" size=\"{}\" />",
             house.townid(),
             house.size()
         )

@@ -1,8 +1,6 @@
 //! SPR format parser (Tibia.spr).
 
-use memmap2::Mmap;
 use pyo3::prelude::*;
-use std::fs::File;
 
 pub const SPRITE_SIZE: usize = 32;
 pub const SPRITE_PIXELS: usize = SPRITE_SIZE * SPRITE_SIZE; // 1024
@@ -23,7 +21,7 @@ impl From<std::io::Error> for SprError {
 
 #[pyclass]
 pub struct SprDatabase {
-    mmap: Mmap,
+    data: Vec<u8>,
     _is_extended: bool,
     sprite_count: u32,
     offsets: Vec<u32>,
@@ -31,23 +29,22 @@ pub struct SprDatabase {
 
 impl SprDatabase {
     pub fn open(path: &str) -> Result<Self, SprError> {
-        let file = File::open(path)?;
-        let mmap = unsafe { Mmap::map(&file)? };
+        let data = std::fs::read(path)?;
 
-        if mmap.len() < 6 {
+        if data.len() < 6 {
             return Err(SprError::InvalidFormat("File too small for header"));
         }
 
-        let _signature = u32::from_le_bytes(mmap[0..4].try_into().unwrap());
+        let _signature = u32::from_le_bytes(data[0..4].try_into().unwrap());
 
         // In legacy RME, it checks for extended format based on signature or hint.
         // For now, let's assume legacy 16-bit count, but we can detect it.
         // Actually, many 10.x clients use 32-bit count.
         // Let's check if the file size matches a 16-bit count or 32-bit count for the table.
         let is_extended = false;
-        let count16 = u16::from_le_bytes(mmap[4..6].try_into().unwrap()) as u32;
+        let count16 = u16::from_le_bytes(data[4..6].try_into().unwrap()) as u32;
 
-        // Heuristic: if count16 * 4 + 6 > mmap.len(), it's likely not 16-bit count or corrupted.
+        // Heuristic: if count16 * 4 + 6 > data.len(), it's likely not 16-bit count or corrupted.
         // If it's a very large file, it might be 32-bit.
         // For now, let's follow the user's requirement for 8.60-10.98.
         // Legacy (<= 9.6) uses 16-bit. Extended (> 9.6) uses 32-bit.
@@ -66,15 +63,15 @@ impl SprDatabase {
 
         for i in 0..sprite_count {
             let pos = table_start + (i as usize * 4);
-            if pos + 4 > mmap.len() {
+            if pos + 4 > data.len() {
                 break;
             }
-            let off = u32::from_le_bytes(mmap[pos..pos + 4].try_into().unwrap());
+            let off = u32::from_le_bytes(data[pos..pos + 4].try_into().unwrap());
             offsets.push(off);
         }
 
         Ok(Self {
-            mmap,
+            data,
             _is_extended: is_extended,
             sprite_count,
             offsets,
@@ -94,19 +91,19 @@ impl SprDatabase {
         // According to sprite_archive.cpp, data starts at offset + 3 (skips color key?)
         // Then 2 bytes of compressed size.
         let data_pos = (offset + 3) as usize;
-        if data_pos + 2 > self.mmap.len() {
+        if data_pos + 2 > self.data.len() {
             return Err(SprError::InvalidFormat("Offset out of bounds"));
         }
 
         let compressed_size =
-            u16::from_le_bytes(self.mmap[data_pos..data_pos + 2].try_into().unwrap()) as usize;
+            u16::from_le_bytes(self.data[data_pos..data_pos + 2].try_into().unwrap()) as usize;
         let rle_start = data_pos + 2;
 
-        if rle_start + compressed_size > self.mmap.len() {
+        if rle_start + compressed_size > self.data.len() {
             return Err(SprError::InvalidFormat("RLE data truncated"));
         }
 
-        let rle_data = &self.mmap[rle_start..rle_start + compressed_size];
+        let rle_data = &self.data[rle_start..rle_start + compressed_size];
 
         let mut pixels = vec![0u8; SPRITE_PIXELS * CHANNELS];
         let mut read_idx = 0;
