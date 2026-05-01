@@ -8,10 +8,11 @@ Design: Obsidian Cartographer tokens from .stitch/DESIGN.md.
 
 from __future__ import annotations
 
-import os
+from typing import Optional
 
 from PyQt6.QtCore import QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QPixmap
+import os
 from PyQt6.QtWidgets import (
     QCheckBox,
     QDialog,
@@ -25,6 +26,7 @@ from PyQt6.QtWidgets import (
 )
 
 from pyrme.ui.models.startup_logic import (
+    build_client_info_fields,
     build_compatibility_message,
     build_map_info_fields,
     compute_compatibility_status,
@@ -201,10 +203,7 @@ class WelcomeDialog(QDialog):
         logo_path = os.path.join(os.path.dirname(__file__), "..", "assets", "logo.png")
         if os.path.exists(logo_path):
             pixmap = QPixmap(logo_path).scaled(
-                40,
-                40,
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
+                40, 40, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
             )
             self._logo_label.setPixmap(pixmap)
         else:
@@ -448,7 +447,8 @@ class WelcomeDialog(QDialog):
         self._map_info_panel.set_fields(fields)
 
     def _refresh_client_info(self) -> None:
-        pass
+        client = self._get_selected_client()
+        fields = build_client_info_fields(client)
         # Reuse map_info_panel pattern — create a client info panel
         # For now, just update tooltip on client list
         # TODO: Add dedicated client info panel
