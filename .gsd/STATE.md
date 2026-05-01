@@ -4,12 +4,14 @@
 **Active Slice:** none
 **Active Task:** none
 **Phase:** discovery
-**Next Action:** Review M029/S01 PR and plan M030-autoborder-rules after merge.
-**Last Updated:** 2026-05-01T19:01:48-03:00
+**Next Action:** Review M030/S01 result and decide whether to add a follow-up slice for map/UI consumption.
+**Last Updated:** 2026-05-01T20:20:39-03:00
 **Requirements Status:** 0 active · 24 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
+- `M030-autoborder-rules` is complete: pure autoborder rules now live in `rme_core`, and later slices can consume `AutoborderPlan` without reinterpreting legacy edge rules.
+- `M030-autoborder-rules` is the next slice: pure autoborder rules only, no Qt, no preview, no map mutation.
 - `M029-brush-engine-alpha` is complete: Rust `BrushCatalog` now validates ground/wall brush definitions and `MapModel` applies deterministic brush placement commands while autoborder remains deferred to M030.
 - `M029-brush-engine-alpha` is approved for planning from GitHub Issue #72: Rust core should define ground/wall brush metadata, validation, and deterministic placement commands before M030 autoborder or UI tool palette work.
 - `M018-otbm-xml-serialization` is complete: Python `save_otbm` now writes `.otbm` plus waypoint, spawn, and house XML sidecars through `rme_core`.
