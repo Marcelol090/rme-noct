@@ -97,3 +97,19 @@ def test_loader_defaults_use_project_pi_and_user_gsd_skills(monkeypatch) -> None
         )
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
+
+
+def test_loader_still_accepts_legacy_kwargs() -> None:
+    from pyrme.devtools.superpowers.skills_loader import SkillsLoader
+
+    temp_root = _make_workspace("loader-legacy-kwargs")
+    try:
+        project_root = temp_root / "repo"
+        repo_skills = project_root / "skills"
+
+        loader = SkillsLoader(project_root=project_root, repo_skills_dir=repo_skills)
+
+        assert loader.project_root == project_root
+        assert loader.repo_skills_dir == repo_skills
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)

@@ -66,6 +66,7 @@ class BrushPaletteDock(GlassDockWidget):
     """Legacy-style brush palette dock with a real model/view Item tab."""
 
     item_selected = pyqtSignal(ItemEntry)
+    manage_houses_requested = pyqtSignal()
 
     _PALETTE_NAMES = ("Terrain", "Doodads", "Item", "Creature", "RAW")
 

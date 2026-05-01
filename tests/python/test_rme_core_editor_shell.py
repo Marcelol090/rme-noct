@@ -37,14 +37,14 @@ def test_native_rme_core_save_otbm(tmp_path) -> None:
         pytest.skip("pyrme.rme_core binary was not rebuilt with save_otbm")
 
     shell = rme_core.EditorShellState()
-
+    
     # Place a tile and save it
     shell.set_tile_ground(100, 100, 7, 4526)
     assert shell.tile_count() == 1
-
+    
     out_file = tmp_path / "test_save.otbm"
     shell.save_otbm(str(out_file))
-
+    
     assert out_file.exists()
     assert out_file.stat().st_size > 0
     assert not shell.map_is_dirty()

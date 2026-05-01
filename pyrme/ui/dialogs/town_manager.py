@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QDialog,
-    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -17,6 +16,7 @@ from PyQt6.QtWidgets import (
     QSpinBox,
     QVBoxLayout,
     QWidget,
+    QFrame,
 )
 
 from pyrme.ui.styles.contracts import (
@@ -97,7 +97,7 @@ class TownManagerDialog(QDialog):
         self.x_spin = self._create_spin_box(0, 65535, "X")
         self.y_spin = self._create_spin_box(0, 65535, "Y")
         self.z_spin = self._create_spin_box(0, 15, "Z")
-
+        
         pos_layout.addWidget(self.x_spin)
         pos_layout.addWidget(self.y_spin)
         pos_layout.addWidget(self.z_spin)
@@ -149,7 +149,7 @@ class TownManagerDialog(QDialog):
             item = QListWidgetItem(town["name"])
             item.setData(Qt.ItemDataRole.UserRole, town)
             self.town_list.addItem(item)
-
+        
         if self.town_list.count() > 0:
             self.town_list.setCurrentRow(0)
         else:
@@ -159,7 +159,7 @@ class TownManagerDialog(QDialog):
         if row < 0:
             self._update_form(None)
             return
-
+        
         item = self.town_list.item(row)
         town = item.data(Qt.ItemDataRole.UserRole)
         self._update_form(town)
@@ -203,16 +203,16 @@ class TownManagerDialog(QDialog):
 
         item = self.town_list.item(row)
         town = item.data(Qt.ItemDataRole.UserRole)
-
+        
         # Update local data and UI list item
         new_name = self.name_edit.text()
         town["name"] = new_name
         town["temple_x"] = self.x_spin.value()
         town["temple_y"] = self.y_spin.value()
         town["temple_z"] = self.z_spin.value()
-
+        
         item.setText(new_name)
-
+        
         # Push to backend (add_town overwrites if ID exists)
         self.bridge.add_town(
             town["id"],
@@ -224,10 +224,10 @@ class TownManagerDialog(QDialog):
 
     def _add_town(self) -> None:
         # Generate a new unique ID
-        existing_ids = [self.town_list.item(i).data(Qt.ItemDataRole.UserRole)["id"]
+        existing_ids = [self.town_list.item(i).data(Qt.ItemDataRole.UserRole)["id"] 
                        for i in range(self.town_list.count())]
         new_id = max(existing_ids) + 1 if existing_ids else 1
-
+        
         new_town = {
             "id": new_id,
             "name": f"New Town {new_id}",
@@ -235,7 +235,7 @@ class TownManagerDialog(QDialog):
             "temple_y": 1000,
             "temple_z": 7,
         }
-
+        
         self.bridge.add_town(
             new_town["id"],
             new_town["name"],
@@ -244,7 +244,7 @@ class TownManagerDialog(QDialog):
             new_town["temple_z"],
         )
         self._load_towns()
-
+        
         # Select the new town
         for i in range(self.town_list.count()):
             if self.town_list.item(i).data(Qt.ItemDataRole.UserRole)["id"] == new_id:
@@ -255,9 +255,9 @@ class TownManagerDialog(QDialog):
         row = self.town_list.currentRow()
         if row < 0:
             return
-
+            
         item = self.town_list.item(row)
         town = item.data(Qt.ItemDataRole.UserRole)
-
+        
         self.bridge.remove_town(town["id"])
         self._load_towns()

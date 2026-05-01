@@ -23,7 +23,7 @@ from typing import Any
 from pyrme.devtools.codex.agents import CodexAgentStack
 from pyrme.devtools.gsd.config import GSDConfig
 from pyrme.devtools.gsd.runtime import build_gsd_env
-from pyrme.devtools.superpowers.skills_loader import Skill, SkillsLoader, SkillsLoaderConfig
+from pyrme.devtools.superpowers.skills_loader import Skill, SkillsLoader
 
 
 class AIAssistant:
@@ -32,7 +32,7 @@ class AIAssistant:
     def __init__(self, project_root: Path | None = None) -> None:
         self.project_root = project_root or Path.cwd()
         self.gsd_config = GSDConfig(project_root=self.project_root)
-        self.skills_loader = SkillsLoader(config=SkillsLoaderConfig(project_root=self.project_root))
+        self.skills_loader = SkillsLoader(project_root=self.project_root)
         self.codex_agent_stack = CodexAgentStack()
 
     # GSD 2 integration

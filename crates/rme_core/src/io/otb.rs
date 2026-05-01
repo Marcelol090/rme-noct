@@ -103,7 +103,10 @@ impl OtbDatabase {
         let mut items = HashMap::new();
 
         for child in root.children {
-            let mut fr = OtbItem { group: child.node_type, ..Default::default() };
+            let mut fr = OtbItem {
+                group: child.node_type,
+                ..Default::default()
+            };
 
             let mut pl = PayloadReader::new(&child.data);
             if let Some(flags) = pl.read_u32() {
@@ -123,10 +126,16 @@ impl OtbDatabase {
                             fr.server_id = id;
                         }
                     }
+                    ITEM_ATTR_SERVERID => {
+                        pl.skip(length);
+                    }
                     ITEM_ATTR_CLIENTID if length == 2 => {
                         if let Some(id) = pl.read_u16() {
                             fr.client_id = id;
                         }
+                    }
+                    ITEM_ATTR_CLIENTID => {
+                        pl.skip(length);
                     }
                     ITEM_ATTR_NAME => {
                         if let Some(bytes) = pl.read_bytes(length) {
@@ -143,12 +152,15 @@ impl OtbDatabase {
                             fr.speed = v;
                         }
                     }
+                    ITEM_ATTR_SPEED => {
+                        pl.skip(length);
+                    }
                     ITEM_ATTR_MAXITEMS if length == 2 => {
                         if let Some(v) = pl.read_u16() {
                             fr.volume = v;
                         }
                     }
-                    ITEM_ATTR_SERVERID | ITEM_ATTR_CLIENTID | ITEM_ATTR_SPEED | ITEM_ATTR_MAXITEMS => {
+                    ITEM_ATTR_MAXITEMS => {
                         pl.skip(length);
                     }
                     // weight is stored as 8-byte double? Wait, or what is it?

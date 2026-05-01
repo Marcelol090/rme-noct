@@ -21,6 +21,7 @@ from pyrme.ui.models.startup_models import (
     StartupMapPeekResult,
 )
 
+
 # ── Fixtures ──────────────────────────────────────────────────────────
 
 @pytest.fixture

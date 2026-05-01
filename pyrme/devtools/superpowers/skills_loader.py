@@ -107,19 +107,45 @@ class SkillsLoaderConfig:
     personal_dir: Path | None = None
 
 
+@dataclass
+class _ScanContext:
+    """Context for recursive skill scanning."""
+
+    source_type: str
+    max_depth: int
+    results: list[Skill]
+
+
 class SkillsLoader:
     """Discovers and loads Superpowers skills."""
 
-    def __init__(self, config: SkillsLoaderConfig | None = None) -> None:
+    def __init__(
+        self,
+        project_root: Path | None = None,
+        repo_skills_dir: Path | None = None,
+        user_skills_dir: Path | None = None,
+        codex_skills_dir: Path | None = None,
+        superpowers_dir: Path | None = None,
+        personal_dir: Path | None = None,
+        config: SkillsLoaderConfig | None = None,
+    ) -> None:
         config = config or SkillsLoaderConfig()
-        self.project_root = config.project_root or Path.cwd()
+        self.project_root = project_root or config.project_root or Path.cwd()
         home_dir = _safe_home(self.project_root)
-        self.repo_skills_dir = config.repo_skills_dir or config.personal_dir or (
-            self.project_root / ".pi" / "agent" / "skills"
+        self.repo_skills_dir = (
+            repo_skills_dir
+            or config.repo_skills_dir
+            or personal_dir
+            or config.personal_dir
+            or (self.project_root / ".pi" / "agent" / "skills")
         )
-        self.user_skills_dir = config.user_skills_dir or (home_dir / ".gsd" / "agent" / "skills")
-        self.codex_skills_dir = config.codex_skills_dir or (home_dir / ".codex" / "skills")
-        self.superpowers_dir = config.superpowers_dir or (
+        self.user_skills_dir = user_skills_dir or config.user_skills_dir or (
+            home_dir / ".gsd" / "agent" / "skills"
+        )
+        self.codex_skills_dir = codex_skills_dir or config.codex_skills_dir or (
+            home_dir / ".codex" / "skills"
+        )
+        self.superpowers_dir = superpowers_dir or config.superpowers_dir or (
             home_dir / ".codex" / "superpowers" / "skills"
         )
 
@@ -179,29 +205,28 @@ class SkillsLoader:
         if not directory.exists():
             return skills
 
-        self._scan_recursive(directory, source_type, 0, max_depth, skills)
+        context = _ScanContext(source_type=source_type, max_depth=max_depth, results=skills)
+        self._scan_recursive(directory, 0, context)
         return skills
 
     def _scan_recursive(
         self,
         directory: Path,
-        source_type: str,
         depth: int,
-        max_depth: int,
-        results: list[Skill],
+        context: _ScanContext,
     ) -> None:
-        """Recursively scan for SKILL.md files up to max_depth."""
-        if depth > max_depth:
+        """Recursively scan for SKILL.md files up to context.max_depth."""
+        if depth > context.max_depth:
             return
 
         for item in directory.iterdir():
             if item.is_dir():
                 if (item / "SKILL.md").exists():
-                    skill = self._load_skill(item, source_type)
+                    skill = self._load_skill(item, context.source_type)
                     if skill:
-                        results.append(skill)
+                        context.results.append(skill)
                 else:
-                    self._scan_recursive(item, source_type, depth + 1, max_depth, results)
+                    self._scan_recursive(item, depth + 1, context)
 
     def _load_skill(self, path: Path, source_type: str) -> Skill | None:
         """Load a single skill from its directory."""

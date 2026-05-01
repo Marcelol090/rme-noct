@@ -12,8 +12,10 @@ try:
     from enum import StrEnum
 except ImportError:
     from enum import Enum
+
     class StrEnum(str, Enum):
         pass
+
 
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtWidgets import (
@@ -63,6 +65,18 @@ class FindItemResult:
     sprite_hash: str
     kind: str
     flags: set[str] = field(default_factory=set)
+    search_haystack: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.search_haystack:
+            self.search_haystack = " ".join(
+                [
+                    self.name.lower(),
+                    str(self.server_id),
+                    str(self.client_id),
+                    self.sprite_hash.lower(),
+                ]
+            )
 
 
 @dataclass(slots=True)
@@ -145,9 +159,7 @@ class FindItemDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(window_title)
         self.setFixedSize(self.DIALOG_SIZE)
-        self.setWindowFlags(
-            self.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint
-        )
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint)
 
         self._catalog = [replace(result) for result in (catalog or DEFAULT_CATALOG)]
         self._query = self._clone_query(query or self._default_query())
@@ -185,6 +197,14 @@ class FindItemDialog(QDialog):
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setHandleWidth(4)
 
+        splitter.addWidget(self._build_left_panel())
+        splitter.addWidget(self._build_right_panel())
+        splitter.setSizes([180, 320])
+
+        layout.addWidget(splitter, 1)
+        layout.addLayout(self._build_footer())
+
+    def _build_left_panel(self) -> QWidget:
         left_panel = QWidget()
         left_layout = QVBoxLayout(left_panel)
         left_layout.setContentsMargins(0, 0, 8, 0)
@@ -192,12 +212,17 @@ class FindItemDialog(QDialog):
 
         self.search_field = QLineEdit()
         self.search_field.setPlaceholderText("Search items...")
-        self.search_field.setToolTip(
-            "Type to filter items, raw items, and creatures."
-        )
+        self.search_field.setToolTip("Type to filter items, raw items, and creatures.")
         self.search_field.textChanged.connect(self._refresh_results)
         left_layout.addWidget(self.search_field)
 
+        left_layout.addWidget(self._build_type_group())
+        left_layout.addWidget(self._build_prop_group())
+
+        left_layout.addStretch()
+        return left_panel
+
+    def _build_type_group(self) -> QGroupBox:
         type_group = QGroupBox("TYPE")
         type_layout = QVBoxLayout(type_group)
         type_layout.setSpacing(4)
@@ -212,8 +237,9 @@ class FindItemDialog(QDialog):
         type_layout.addWidget(self.chk_items)
         type_layout.addWidget(self.chk_raw)
         type_layout.addWidget(self.chk_creatures)
-        left_layout.addWidget(type_group)
+        return type_group
 
+    def _build_prop_group(self) -> QGroupBox:
         prop_group = QGroupBox("PROPERTIES")
         prop_layout = QVBoxLayout(prop_group)
         prop_layout.setSpacing(4)
@@ -240,11 +266,9 @@ class FindItemDialog(QDialog):
         prop_layout.addWidget(self.chk_pickupable)
         prop_layout.addWidget(self.chk_stackable)
         prop_layout.addWidget(self.chk_writable)
-        left_layout.addWidget(prop_group)
+        return prop_group
 
-        left_layout.addStretch()
-        splitter.addWidget(left_panel)
-
+    def _build_right_panel(self) -> QWidget:
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(8, 0, 0, 0)
@@ -264,12 +288,8 @@ class FindItemDialog(QDialog):
         self.btn_grid_mode.setCheckable(True)
         self.btn_list_mode.setObjectName("find_item_list_mode")
         self.btn_grid_mode.setObjectName("find_item_grid_mode")
-        self.btn_list_mode.clicked.connect(
-            lambda: self.set_result_mode(FindItemResultMode.LIST)
-        )
-        self.btn_grid_mode.clicked.connect(
-            lambda: self.set_result_mode(FindItemResultMode.GRID)
-        )
+        self.btn_list_mode.clicked.connect(lambda: self.set_result_mode(FindItemResultMode.LIST))
+        self.btn_grid_mode.clicked.connect(lambda: self.set_result_mode(FindItemResultMode.GRID))
         self._mode_buttons = QButtonGroup(self)
         self._mode_buttons.setExclusive(True)
         self._mode_buttons.addButton(self.btn_list_mode)
@@ -289,11 +309,9 @@ class FindItemDialog(QDialog):
         self.item_list.itemSelectionChanged.connect(self._sync_selected_result)
         self.item_list.itemDoubleClicked.connect(lambda *_: self.accept())
         right_layout.addWidget(self.item_list, 1)
-        splitter.addWidget(right_panel)
-        splitter.setSizes([180, 320])
+        return right_panel
 
-        layout.addWidget(splitter, 1)
-
+    def _build_footer(self) -> QHBoxLayout:
         footer = QHBoxLayout()
         footer.setSpacing(8)
 
@@ -313,8 +331,7 @@ class FindItemDialog(QDialog):
         self.btn_ok.setStyleSheet(primary_button_qss())
         self.btn_ok.clicked.connect(self.accept)
         footer.addWidget(self.btn_ok)
-
-        layout.addLayout(footer)
+        return footer
 
     def current_query(self) -> FindItemQuery:
         """Return the current search query derived from the widgets."""
@@ -497,9 +514,7 @@ class FindItemDialog(QDialog):
 
     def _current_result_mode(self) -> FindItemResultMode:
         return (
-            FindItemResultMode.GRID
-            if self.btn_grid_mode.isChecked()
-            else FindItemResultMode.LIST
+            FindItemResultMode.GRID if self.btn_grid_mode.isChecked() else FindItemResultMode.LIST
         )
 
     def _matches_query(
@@ -508,17 +523,8 @@ class FindItemDialog(QDialog):
         query: FindItemQuery,
     ) -> bool:
         search = query.search_text.strip().lower()
-        if search:
-            haystack = " ".join(
-                [
-                    result.name.lower(),
-                    str(result.server_id),
-                    str(result.client_id),
-                    result.sprite_hash.lower(),
-                ]
-            )
-            if search not in haystack:
-                return False
+        if search and search not in result.search_haystack:
+            return False
 
         if query.type_filters and result.kind not in query.type_filters:
             return False
