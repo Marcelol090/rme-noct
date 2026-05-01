@@ -11,9 +11,12 @@ from pyrme.ui.dialogs.goto_position import GotoPositionDialog
 from pyrme.ui.dialogs.house_manager import HouseManagerDialog
 from pyrme.ui.dialogs.map_properties import MapPropertiesDialog, MapPropertiesState
 from pyrme.ui.dialogs.map_statistics import MapStatisticsDialog
+from pyrme.ui.dialogs.about import AboutDialog
+from pyrme.ui.dialogs.preferences import PreferencesDialog
 from pyrme.ui.dialogs.town_manager import TownManagerDialog
 
 __all__ = [
+    "AboutDialog",
     "FindBrushDialog",
     "FindBrushResult",
     "FindItemDialog",
@@ -25,5 +28,6 @@ __all__ = [
     "MapPropertiesDialog",
     "MapPropertiesState",
     "MapStatisticsDialog",
+    "PreferencesDialog",
     "TownManagerDialog",
 ]

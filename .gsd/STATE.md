@@ -24,7 +24,9 @@
 - `LEGACY-10-FILE` now matches the covered legacy `File` menu surface, including `Import`, `Export`, `Reload`, and an empty `Recent Files` submenu, while file-system work remains explicit safe gaps.
 - `LEGACY-110-EXPERIMENTAL`, `LEGACY-120-SCRIPTS`, and `LEGACY-130-ABOUT` are fully wired to the menu system.
 - `LEGACY-140-FINAL-AUDIT` is complete: XML-backed parity tests and the local Python suite pass in WSL.
-- Tier 3 UI Dialogs (`Town Manager`, `Preferences`, `About`, `Goto Position`, `Find Item`, `Map Properties`) are fully implemented and integrated with the Noct design system.
+- Tier 2 UI Dialogs (`Preferences`, `About`, `Town Manager`, `Map Statistics`, `House Manager`, `Tile Properties`, `Goto Position`, `Find Item`, `Map Properties`) are fully implemented, integrated with the Noct design system, and verified against the legacy menu contract.
+- `PreferencesDialog` includes sidebar-based dashboard navigation and connections to the `WelcomeDialog` gear icon.
+- `AboutDialog` features the "Noct Wolf" branding and project metadata in a glass modal.
 - `CANVAS-10-RENDERER-HOST` is complete: the production default canvas is now `RendererHostCanvasWidget`, a real `QOpenGLWidget` host with an honest diagnostic overlay and preserved shell seams.
 - `PlaceholderCanvasWidget` remains available only as an explicit fallback/test injection path; it is no longer the production default surface.
 - `CANVAS-20-VIEWPORT-MODEL` is complete: each editor view owns an independent `EditorViewport` with center, scroll origin, floor, zoom, previous-position history, and snapshot/restore behavior.
