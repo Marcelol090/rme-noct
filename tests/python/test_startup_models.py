@@ -5,8 +5,6 @@ TDD: RED phase — all tests written before implementation.
 
 from __future__ import annotations
 
-import pytest
-
 from pyrme.ui.models.startup_models import (
     StartupCompatibilityStatus,
     StartupConfiguredClientEntry,
@@ -15,7 +13,6 @@ from pyrme.ui.models.startup_models import (
     StartupMapPeekResult,
     StartupRecentMapEntry,
 )
-
 
 # ── T07: Data Models ──────────────────────────────────────────────────
 

@@ -29,7 +29,6 @@ tempfile = "3.8"
 
 [features]
 default = []
-extension-module = ["pyo3/extension-module"]
 
 [[bench]]
 name = "io_bench"
