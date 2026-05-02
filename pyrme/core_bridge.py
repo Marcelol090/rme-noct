@@ -155,7 +155,7 @@ class _FallbackEditorShellState:
     def towns(self) -> list[tuple[int, str, int, int, int]]:
         return list(self._towns)
 
-    def add_town(self, id: int, name: str, x: int, y: int, z: int) -> None:
+    def add_town(self, id: int, name: str, x: int, y: int, z: int) -> None:  # noqa: A002
         # Simple upsert
         for index, existing in enumerate(self._towns):
             if existing[0] == id:
@@ -163,7 +163,7 @@ class _FallbackEditorShellState:
                 return
         self._towns.append((id, name, x, y, z))
 
-    def remove_town(self, id: int) -> bool:
+    def remove_town(self, id: int) -> bool:  # noqa: A002
         for index, existing in enumerate(self._towns):
             if existing[0] == id:
                 self._towns.pop(index)
@@ -325,11 +325,11 @@ class EditorShellCoreBridge:
             return list(self._inner.towns())
         return []
 
-    def add_town(self, id: int, name: str, x: int, y: int, z: int) -> None:
+    def add_town(self, id: int, name: str, x: int, y: int, z: int) -> None:  # noqa: A002
         if hasattr(self._inner, "add_town"):
             self._inner.add_town(id, name, x, y, z)
 
-    def remove_town(self, id: int) -> bool:
+    def remove_town(self, id: int) -> bool:  # noqa: A002
         if hasattr(self._inner, "remove_town"):
             return bool(self._inner.remove_town(id))
         return False
@@ -429,6 +429,24 @@ class EditorShellCoreBridge:
         if hasattr(self._inner, "remove_house"):
             return bool(self._inner.remove_house(houseid))
         return False
+
+    def load_otbm(self, path: str) -> bool:
+        if not hasattr(self._inner, "load_otbm"):
+            return False
+        try:
+            self._inner.load_otbm(path)
+        except Exception:
+            return False
+        return True
+
+    def save_otbm(self, path: str) -> bool:
+        if not hasattr(self._inner, "save_otbm"):
+            return False
+        try:
+            self._inner.save_otbm(path)
+        except Exception:
+            return False
+        return True
 
 
 def create_editor_shell_state() -> EditorShellCoreBridge:

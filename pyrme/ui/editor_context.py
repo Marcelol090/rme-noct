@@ -14,6 +14,8 @@ if TYPE_CHECKING:
 @dataclass(slots=True)
 class MapDocumentState:
     editor: EditorModel = field(default_factory=EditorModel)
+    path: str | None = None
+    persistence_handle: object | None = None
 
     @property
     def map_model(self) -> MapModel:

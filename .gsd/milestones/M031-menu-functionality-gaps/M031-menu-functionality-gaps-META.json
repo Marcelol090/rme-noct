@@ -1,0 +1,9 @@
+{
+  "milestone": "M031-menu-functionality-gaps",
+  "issue": null,
+  "branch": "gsd/M031/S01",
+  "worktree": ".worktrees/m031-menu-functionality-gaps-20260501",
+  "status": "planning",
+  "approved_by_user": null,
+  "scope": "Close File/Edit/Selection/Map menu behavior gaps currently represented by safe unavailable actions"
+}

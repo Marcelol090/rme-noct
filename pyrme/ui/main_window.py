@@ -5,15 +5,19 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from functools import partial
-from typing import TYPE_CHECKING, cast
+from pathlib import Path
+from typing import TYPE_CHECKING, Literal, Protocol, cast
 
 from PyQt6.QtCore import QSettings, QSize, Qt
 from PyQt6.QtGui import QAction, QActionGroup, QCloseEvent
 from PyQt6.QtWidgets import (
+    QApplication,
     QDialog,
+    QFileDialog,
     QLabel,
     QMainWindow,
     QMenu,
+    QMessageBox,
     QStatusBar,
     QTabWidget,
     QToolBar,
@@ -22,6 +26,7 @@ from PyQt6.QtWidgets import (
 )
 
 from pyrme import __app_name__, __version__
+from pyrme.core_bridge import create_editor_shell_state
 from pyrme.editor import MapPosition
 from pyrme.ui.canvas_host import (
     CanvasWidgetProtocol,
@@ -45,7 +50,6 @@ from pyrme.ui.dialogs import (
     MapPropertiesDialog,
     MapStatisticsDialog,
     PreferencesDialog,
-    TownManagerDialog,
 )
 from pyrme.ui.dialogs.welcome_dialog import WelcomeDialog
 from pyrme.ui.docks import BrushPaletteDock, MinimapDock, PropertiesDock, WaypointsDock
@@ -69,10 +73,106 @@ logger = logging.getLogger(__name__)
 
 CanvasFactory = Callable[[QWidget | None], QWidget]
 DialogFactory = Callable[[QWidget | None], QDialog]
+CloseDirtyDecision = Literal["save", "discard", "cancel"]
 
 QSETTINGS_BORDER_AUTOMAGIC = "editor/border_automagic"
 QSETTINGS_SELECTION_MODE = "editor/selection_mode"
 QSETTINGS_SELECTION_COMPENSATE = "editor/selection_compensate"
+QSETTINGS_RECENT_FILES = "file/recent_files"
+MAX_RECENT_FILES = 10
+
+
+class FileLifecycleService(Protocol):
+    def choose_open_map_path(self, parent: QWidget) -> str | None: ...
+
+    def choose_save_map_path(
+        self,
+        parent: QWidget,
+        current_path: str | None = None,
+    ) -> str | None: ...
+
+    def confirm_close_dirty_document(
+        self,
+        parent: QWidget,
+        document_name: str,
+    ) -> CloseDirtyDecision: ...
+
+    def load_map(
+        self,
+        path: str,
+        current_context: EditorContext,
+    ) -> EditorContext | None: ...
+
+    def save_map(self, path: str, current_context: EditorContext) -> bool: ...
+
+
+class QtFileLifecycleService:
+    def choose_open_map_path(self, parent: QWidget) -> str | None:
+        if QApplication.platformName() == "offscreen":
+            return None
+        path, _selected_filter = QFileDialog.getOpenFileName(
+            parent,
+            "Open Map",
+            "",
+            "OTBM Maps (*.otbm);;All Files (*)",
+        )
+        return path or None
+
+    def choose_save_map_path(
+        self,
+        parent: QWidget,
+        current_path: str | None = None,
+    ) -> str | None:
+        if QApplication.platformName() == "offscreen":
+            return None
+        path, _selected_filter = QFileDialog.getSaveFileName(
+            parent,
+            "Save Map As",
+            current_path or "",
+            "OTBM Maps (*.otbm);;All Files (*)",
+        )
+        return path or None
+
+    def confirm_close_dirty_document(
+        self,
+        parent: QWidget,
+        document_name: str,
+    ) -> CloseDirtyDecision:
+        result = QMessageBox.question(
+            parent,
+            "Unsaved Changes",
+            f"Save changes to {document_name} before closing?",
+            QMessageBox.StandardButton.Save
+            | QMessageBox.StandardButton.Discard
+            | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Save,
+        )
+        if result == QMessageBox.StandardButton.Save:
+            return "save"
+        if result == QMessageBox.StandardButton.Discard:
+            return "discard"
+        return "cancel"
+
+    def load_map(
+        self,
+        path: str,
+        current_context: EditorContext,
+    ) -> EditorContext | None:
+        del current_context
+        bridge = create_editor_shell_state()
+        if not bridge.load_otbm(path):
+            return None
+        context = EditorContext()
+        context.session.document.persistence_handle = bridge
+        return context
+
+    def save_map(self, path: str, current_context: EditorContext) -> bool:
+        handle = current_context.session.document.persistence_handle
+        bridge = handle if hasattr(handle, "save_otbm") else create_editor_shell_state()
+        if not bridge.save_otbm(path):
+            return False
+        current_context.session.document.persistence_handle = bridge
+        return True
 
 
 class TownManagerDialog(QDialog):
@@ -121,6 +221,7 @@ class MainWindow(QMainWindow):
         find_item_dialog_factory=None,
         map_properties_dialog_factory: DialogFactory | None = None,
         house_manager_dialog_factory: DialogFactory | None = None,
+        file_lifecycle_service: FileLifecycleService | None = None,
         canvas_factory: CanvasFactory | None = None,
         enable_docks: bool | None = None,
     ) -> None:
@@ -139,6 +240,9 @@ class MainWindow(QMainWindow):
         )
         self._house_manager_dialog_factory = (
             house_manager_dialog_factory or HouseManagerDialog
+        )
+        self._file_lifecycle_service = (
+            file_lifecycle_service or QtFileLifecycleService()
         )
         self._canvas_factory = canvas_factory or RendererHostCanvasWidget
         self._enable_docks = True if enable_docks is None else enable_docks
@@ -220,7 +324,23 @@ class MainWindow(QMainWindow):
         pass
 
     def _open_map_file(self, path: str) -> None:
-        self._show_unavailable(f"Open map: {path}")
+        try:
+            loaded_context = self._file_lifecycle_service.load_map(
+                path,
+                self._editor_context,
+            )
+        except Exception:
+            logger.exception("Failed to load map %s", path)
+            loaded_context = None
+        if loaded_context is None:
+            self._status_bar().showMessage("Open is not available yet.", 3000)
+            return
+        self._replace_editor_context(loaded_context)
+        self._set_current_document_path(path)
+        self._editor_context.session.document.is_dirty = False
+        self._add_recent_file(path)
+        self._refresh_dirty_chrome()
+        self._status_bar().showMessage(f"Opened map: {path}", 3000)
 
     def _setup_menu_bar(self) -> None:
         """Create the main menu bar."""
@@ -263,24 +383,16 @@ class MainWindow(QMainWindow):
 
     def _setup_file_menu(self) -> None:
         menu = self._menus["File"]
-        self.file_new_action = self._action_from_spec(
-            "file_new", lambda: self._show_unavailable("New")
-        )
-        self.file_open_action = self._action_from_spec(
-            "file_open", lambda: self._show_unavailable("Open")
-        )
-        self.file_save_action = self._action_from_spec(
-            "file_save", lambda: self._show_unavailable("Save")
-        )
+        self.file_new_action = self._action_from_spec("file_new", self._new_map)
+        self.file_open_action = self._action_from_spec("file_open", self._open_map)
+        self.file_save_action = self._action_from_spec("file_save", self._save_map)
         self.file_save_as_action = self._action_from_spec(
-            "file_save_as", lambda: self._show_unavailable("Save As")
+            "file_save_as", self._save_map_as
         )
         self.file_generate_map_action = self._action_from_spec(
             "file_generate_map", lambda: self._show_unavailable("Generate Map")
         )
-        self.file_close_action = self._action_from_spec(
-            "file_close", lambda: self._show_unavailable("Close")
-        )
+        self.file_close_action = self._action_from_spec("file_close", self._close_map)
         menu.addActions(
             [
                 self.file_new_action,
@@ -331,14 +443,13 @@ class MainWindow(QMainWindow):
         )
         menu.addAction(self.file_missing_items_report_action)
         menu.addSeparator()
-        recent_menu = menu.addMenu("Recent Files")
-        assert recent_menu is not None
+        self.recent_files_menu = menu.addMenu("Recent Files")
+        assert self.recent_files_menu is not None
+        self._rebuild_recent_files_menu()
         self.file_preferences_action = self._action_from_spec(
             "file_preferences", self._show_preferences
         )
-        self.file_exit_action = self._action_from_spec(
-            "file_exit", lambda: self._show_unavailable("Exit")
-        )
+        self.file_exit_action = self._action_from_spec("file_exit", self._exit)
         menu.addAction(self.file_preferences_action)
         menu.addAction(self.file_exit_action)
 
@@ -1032,6 +1143,122 @@ class MainWindow(QMainWindow):
     def _restore_bool(self, key: str, default: bool) -> bool:
         return self._coerce_bool(self._settings.value(key, default), default)
 
+    def _new_map(self) -> None:
+        self._replace_editor_context(EditorContext())
+        self._refresh_dirty_chrome()
+        self._status_bar().showMessage("Created new map.", 3000)
+
+    def _open_map(self) -> None:
+        path = self._file_lifecycle_service.choose_open_map_path(self)
+        if path is None:
+            return
+        self._open_map_file(path)
+
+    def _save_map(self) -> bool:
+        path = self._editor_context.session.document.path
+        if path is None:
+            return self._save_map_as()
+        return self._save_map_to_path(path)
+
+    def _save_map_as(self) -> bool:
+        path = self._file_lifecycle_service.choose_save_map_path(
+            self,
+            self._editor_context.session.document.path,
+        )
+        if path is None:
+            return False
+        return self._save_map_to_path(path)
+
+    def _save_map_to_path(self, path: str) -> bool:
+        try:
+            saved = self._file_lifecycle_service.save_map(path, self._editor_context)
+        except Exception:
+            logger.exception("Failed to save map %s", path)
+            saved = False
+        if not saved:
+            self._status_bar().showMessage("Save is not available yet.", 3000)
+            return False
+        self._set_current_document_path(path)
+        self._editor_context.session.document.is_dirty = False
+        self._add_recent_file(path)
+        self._refresh_dirty_chrome()
+        self._status_bar().showMessage(f"Saved map: {path}", 3000)
+        return True
+
+    def _close_map(self) -> bool:
+        if not self._confirm_close_current_document():
+            return False
+        self._replace_editor_context(EditorContext())
+        self._refresh_dirty_chrome()
+        self._status_bar().showMessage("Closed map.", 3000)
+        return True
+
+    def _exit(self) -> None:
+        if self._close_map():
+            self.close()
+
+    def _confirm_close_current_document(self) -> bool:
+        document = self._editor_context.session.document
+        if not document.is_dirty:
+            return True
+        decision = self._file_lifecycle_service.confirm_close_dirty_document(
+            self,
+            document.name,
+        )
+        if decision == "cancel":
+            self._status_bar().showMessage("Close cancelled.", 3000)
+            return False
+        if decision == "save":
+            return self._save_map()
+        return True
+
+    def _replace_editor_context(self, context: EditorContext) -> None:
+        self._editor_context = context
+        for index, view in enumerate(self._views):
+            view.editor_context = context
+            view.canvas.bind_editor_context(context)
+            if hasattr(self, "_view_tabs"):
+                self._view_tabs.setTabText(index, context.session.document.name)
+        self._sync_canvas_shell_state()
+        self._refresh_selection_action_state()
+
+    def _set_current_document_path(self, path: str) -> None:
+        document = self._editor_context.session.document
+        document.path = path
+        document.name = Path(path).name or "Untitled"
+
+    def _recent_files(self) -> list[str]:
+        raw = self._settings.value(QSETTINGS_RECENT_FILES, [])
+        if isinstance(raw, str):
+            values = [raw] if raw else []
+        elif isinstance(raw, (list, tuple)):
+            values = [str(value) for value in raw if str(value)]
+        else:
+            values = []
+        deduped: list[str] = []
+        for value in values:
+            if value not in deduped:
+                deduped.append(value)
+        return deduped[:MAX_RECENT_FILES]
+
+    def _add_recent_file(self, path: str) -> None:
+        recents = [path, *(item for item in self._recent_files() if item != path)]
+        self._settings.setValue(QSETTINGS_RECENT_FILES, recents[:MAX_RECENT_FILES])
+        self._settings.sync()
+        self._rebuild_recent_files_menu()
+
+    def _rebuild_recent_files_menu(self) -> None:
+        menu = getattr(self, "recent_files_menu", None)
+        if menu is None:
+            return
+        menu.clear()
+        for path in self._recent_files():
+            action = self._action(path)
+            action.triggered.connect(
+                lambda _checked=False, value=path: self._open_map_file(value)
+            )
+            menu.addAction(action)
+
     def _show_unavailable(self, label: str) -> None:
         self._status_bar().showMessage(f"{label} is not available yet.", 3000)
 
@@ -1602,8 +1829,8 @@ class MainWindow(QMainWindow):
         self._refresh_selection_actions()
 
     def _refresh_dirty_chrome(self) -> None:
-        dirty = self._editor_context.session.document.is_dirty
-        label = "Untitled*" if dirty else "Untitled"
+        document = self._editor_context.session.document
+        label = f"{document.name}*" if document.is_dirty else document.name
         for index in range(self._view_tabs.count()):
             if self._view_tabs.tabText(index) != label:
                 self._view_tabs.setTabText(index, label)
@@ -1714,6 +1941,10 @@ class MainWindow(QMainWindow):
         return default
 
     def closeEvent(self, event: QCloseEvent | None) -> None:  # noqa: N802
+        if not self._confirm_close_current_document():
+            if event is not None:
+                event.ignore()
+            return
         self._settings.setValue("main_window/geometry", self.saveGeometry())
         self._settings.setValue("main_window/state", self.saveState())
         self._settings.setValue("main_window/current_x", self._current_x)

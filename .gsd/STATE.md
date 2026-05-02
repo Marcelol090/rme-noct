@@ -1,15 +1,16 @@
 # GSD State
 
-**Active Milestone:** none
-**Active Slice:** none
+**Active Milestone:** M031-menu-functionality-gaps
+**Active Slice:** S01-FILE-LIFECYCLE-RECENTS
 **Active Task:** none
-**Phase:** discovery
-**Next Action:** Review M030/S01 result and decide whether to add a follow-up slice for map/UI consumption.
-**Last Updated:** 2026-05-01T20:20:39-03:00
+**Phase:** complete
+**Next Action:** Await explicit approval to start M031/S02-FILE-IMPORT-EXPORT-DATA-REPORTS.
+**Last Updated:** 2026-05-02T01:48:37-03:00
 **Requirements Status:** 0 active · 24 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
+- `M031/S01-FILE-LIFECYCLE-RECENTS` is complete: File New/Open/Save/Save As/Close/Exit/Recent Files now route through an active document lifecycle seam with failure-safe persistence behavior and targeted tests passing.
 - `M030-autoborder-rules` is complete: pure autoborder rules now live in `rme_core`, and later slices can consume `AutoborderPlan` without reinterpreting legacy edge rules.
 - `M030-autoborder-rules` is the next slice: pure autoborder rules only, no Qt, no preview, no map mutation.
 - `M029-brush-engine-alpha` is complete: Rust `BrushCatalog` now validates ground/wall brush definitions and `MapModel` applies deterministic brush placement commands while autoborder remains deferred to M030.
