@@ -11,11 +11,11 @@ Plan source: `docs/superpowers/plans/2026-05-01-m031-menu-functionality-gaps.md`
 
 ## Tasks
 
-- [ ] T01: failing tests for undo/redo stack and clipboard action state.
-- [ ] T02: add minimal command history to `EditorModel`.
-- [ ] T03: add minimal copy buffer operations for selected positions.
-- [ ] T04: wire Edit actions in `MainWindow`.
-- [ ] T05: closeout summary and state update.
+- [x] T01: failing tests for undo/redo stack and clipboard action state.
+- [x] T02: add minimal command history to `EditorModel`.
+- [x] T03: add minimal copy buffer operations for selected positions.
+- [x] T04: wire Edit actions in `MainWindow`.
+- [x] T05: closeout summary and state update.
 
 ## Files
 

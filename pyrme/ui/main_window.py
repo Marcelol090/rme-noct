@@ -586,12 +586,8 @@ class MainWindow(QMainWindow):
     def _setup_edit_menu(self) -> None:
         menu = self._menus["Edit"]
         self.edit_menu_actions: dict[str, QAction] = {}
-        self.edit_undo_action = self._action_from_spec(
-            "edit_undo", lambda: self._show_unavailable("Undo")
-        )
-        self.edit_redo_action = self._action_from_spec(
-            "edit_redo", lambda: self._show_unavailable("Redo")
-        )
+        self.edit_undo_action = self._action_from_spec("edit_undo", self._undo_edit)
+        self.edit_redo_action = self._action_from_spec("edit_redo", self._redo_edit)
         self.replace_items_action = self._action_from_spec(
             "replace_items", self._show_replace_items
         )
@@ -638,14 +634,10 @@ class MainWindow(QMainWindow):
             other_menu.addAction(self.edit_menu_actions[key])
 
         menu.addSeparator()
-        self.edit_cut_action = self._action_from_spec(
-            "edit_cut", lambda: self._show_unavailable("Cut")
-        )
-        self.edit_copy_action = self._action_from_spec(
-            "edit_copy", lambda: self._show_unavailable("Copy")
-        )
+        self.edit_cut_action = self._action_from_spec("edit_cut", self._cut_selection)
+        self.edit_copy_action = self._action_from_spec("edit_copy", self._copy_selection)
         self.edit_paste_action = self._action_from_spec(
-            "edit_paste", lambda: self._show_unavailable("Paste")
+            "edit_paste", self._paste_clipboard
         )
         menu.addActions([self.edit_cut_action, self.edit_copy_action, self.edit_paste_action])
         self.edit_menu_actions.update(
@@ -657,6 +649,7 @@ class MainWindow(QMainWindow):
                 "edit_paste": self.edit_paste_action,
             }
         )
+        self._refresh_edit_action_state()
 
     def _setup_editor_menu(self) -> None:
         menu = self._menus["Editor"]
@@ -1597,6 +1590,60 @@ class MainWindow(QMainWindow):
     def _show_replace_items(self) -> None:
         self._status_bar().showMessage("Replace Items is not available yet.", 3000)
 
+    def _undo_edit(self) -> None:
+        editor = self._editor_context.session.editor
+        if not editor.undo():
+            self._status_bar().showMessage("Undo is not available yet.", 3000)
+            return
+        self._refresh_edit_action_state()
+        self._refresh_dirty_chrome()
+        self._status_bar().showMessage("Undid last edit.", 3000)
+
+    def _redo_edit(self) -> None:
+        editor = self._editor_context.session.editor
+        if not editor.redo():
+            self._status_bar().showMessage("Redo is not available yet.", 3000)
+            return
+        self._refresh_edit_action_state()
+        self._refresh_dirty_chrome()
+        self._status_bar().showMessage("Redid last edit.", 3000)
+
+    def _copy_selection(self) -> None:
+        editor = self._editor_context.session.editor
+        if not editor.copy_selection():
+            self._status_bar().showMessage("Copy is not available yet.", 3000)
+            return
+        self._refresh_edit_action_state()
+        self._status_bar().showMessage(
+            f"Copied {editor.clipboard_tile_count()} tile.",
+            3000,
+        )
+
+    def _cut_selection(self) -> None:
+        editor = self._editor_context.session.editor
+        if not editor.cut_selection():
+            self._status_bar().showMessage("Cut is not available yet.", 3000)
+            return
+        self._refresh_selection_action_state()
+        self._refresh_dirty_chrome()
+        self._status_bar().showMessage(
+            f"Cut {editor.clipboard_tile_count()} tile.",
+            3000,
+        )
+
+    def _paste_clipboard(self) -> None:
+        editor = self._editor_context.session.editor
+        position = MapPosition(self._current_x, self._current_y, self._current_z)
+        if not editor.paste_clipboard_at(position):
+            self._status_bar().showMessage("Paste is not available yet.", 3000)
+            return
+        self._refresh_edit_action_state()
+        self._refresh_dirty_chrome()
+        self._status_bar().showMessage(
+            f"Pasted {editor.clipboard_tile_count()} tile.",
+            3000,
+        )
+
     def _show_preferences(self) -> None:
         dialog = PreferencesDialog(self)
         dialog.exec()
@@ -1985,9 +2032,20 @@ class MainWindow(QMainWindow):
             self.selection_menu_actions[key].setEnabled(enabled)
         self.edit_menu_actions["borderize_selection"].setEnabled(enabled)
         self.edit_menu_actions["randomize_selection"].setEnabled(enabled)
+        self._refresh_edit_action_state()
 
     def _refresh_selection_action_state(self) -> None:
         self._refresh_selection_actions()
+
+    def _refresh_edit_action_state(self) -> None:
+        if not hasattr(self, "edit_menu_actions"):
+            return
+        editor = self._editor_context.session.editor
+        self.edit_undo_action.setEnabled(editor.can_undo())
+        self.edit_redo_action.setEnabled(editor.can_redo())
+        self.edit_cut_action.setEnabled(editor.has_selection())
+        self.edit_copy_action.setEnabled(editor.has_selection())
+        self.edit_paste_action.setEnabled(editor.has_clipboard())
 
     def _refresh_dirty_chrome(self) -> None:
         document = self._editor_context.session.document
