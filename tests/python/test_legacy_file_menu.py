@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QSettings
@@ -67,6 +68,81 @@ class _FakeFileLifecycleService:
         if self.save_error is not None:
             raise self.save_error
         return self.save_ok
+
+
+@dataclass(frozen=True, slots=True)
+class _FakeFileDataResult:
+    status: str
+    message: str
+
+
+class _FakeFileDataService:
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+        self.results: dict[str, _FakeFileDataResult] = {
+            "import_map": _FakeFileDataResult("success", "Imported map section."),
+            "import_monsters_npc": _FakeFileDataResult(
+                "success",
+                "Imported monsters and NPC data.",
+            ),
+            "export_minimap": _FakeFileDataResult("success", "Exported minimap."),
+            "export_tilesets": _FakeFileDataResult("success", "Exported tilesets."),
+            "reload_data_files": _FakeFileDataResult("success", "Reloaded data files."),
+            "missing_items_report": _FakeFileDataResult(
+                "success",
+                "No missing items found.",
+            ),
+        }
+
+    def import_map(self, parent, current_context: EditorContext) -> _FakeFileDataResult:
+        del parent, current_context
+        self.calls.append("import_map")
+        return self.results["import_map"]
+
+    def import_monsters_npc(
+        self,
+        parent,
+        current_context: EditorContext,
+    ) -> _FakeFileDataResult:
+        del parent, current_context
+        self.calls.append("import_monsters_npc")
+        return self.results["import_monsters_npc"]
+
+    def export_minimap(
+        self,
+        parent,
+        current_context: EditorContext,
+    ) -> _FakeFileDataResult:
+        del parent, current_context
+        self.calls.append("export_minimap")
+        return self.results["export_minimap"]
+
+    def export_tilesets(
+        self,
+        parent,
+        current_context: EditorContext,
+    ) -> _FakeFileDataResult:
+        del parent, current_context
+        self.calls.append("export_tilesets")
+        return self.results["export_tilesets"]
+
+    def reload_data_files(
+        self,
+        parent,
+        current_context: EditorContext,
+    ) -> _FakeFileDataResult:
+        del parent, current_context
+        self.calls.append("reload_data_files")
+        return self.results["reload_data_files"]
+
+    def missing_items_report(
+        self,
+        parent,
+        current_context: EditorContext,
+    ) -> _FakeFileDataResult:
+        del parent, current_context
+        self.calls.append("missing_items_report")
+        return self.results["missing_items_report"]
 
 
 def _build_settings(root: Path, name: str) -> QSettings:
@@ -156,13 +232,150 @@ def test_file_actions_are_safe_until_backend_exists(qtbot, settings_workspace: P
     qtbot.addWidget(window)
 
     window.file_import_map_action.trigger()
-    assert _status_message(window) == "Import Map is not available yet."
+    assert (
+        _status_message(window)
+        == "Import Map deferred: needs core map merge/import offset/house/spawn policy backend."
+    )
 
     window.file_reload_data_action.trigger()
-    assert _status_message(window) == "Reload Data Files is not available yet."
+    assert (
+        _status_message(window)
+        == "Reload Data Files deferred: needs selected client data root before client "
+        "asset discovery can reload data files."
+    )
 
     window.file_missing_items_report_action.trigger()
-    assert _status_message(window) == "Missing Items Report is not available yet."
+    assert (
+        _status_message(window)
+        == "Missing Items Report deferred: needs version-manager missing item report backend."
+    )
+
+
+def test_file_data_actions_call_injected_service_and_show_result_status(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    service = _FakeFileDataService()
+    window = MainWindow(
+        settings=_build_settings(settings_workspace, "file-data-service.ini"),
+        enable_docks=False,
+        file_data_service=service,
+    )
+    qtbot.addWidget(window)
+
+    actions = [
+        ("import_map", window.file_import_map_action, "Imported map section."),
+        (
+            "import_monsters_npc",
+            window.file_import_monsters_action,
+            "Imported monsters and NPC data.",
+        ),
+        ("export_minimap", window.file_export_minimap_action, "Exported minimap."),
+        ("export_tilesets", window.file_export_tilesets_action, "Exported tilesets."),
+        ("reload_data_files", window.file_reload_data_action, "Reloaded data files."),
+        (
+            "missing_items_report",
+            window.file_missing_items_report_action,
+            "No missing items found.",
+        ),
+    ]
+
+    for expected_call, action, expected_status in actions:
+        action.trigger()
+        assert service.calls[-1] == expected_call
+        assert _status_message(window) == expected_status
+
+    assert service.calls == [expected_call for expected_call, _action, _status in actions]
+
+
+def test_file_data_failure_or_deferred_preserves_document_state_and_recents(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    service = _FakeFileDataService()
+    service.results["import_map"] = _FakeFileDataResult(
+        "deferred",
+        "Import Map deferred: needs core map merge/import offset/house/spawn policy backend.",
+    )
+    service.results["export_minimap"] = _FakeFileDataResult(
+        "failure",
+        "Export Minimap failed: renderer export failed.",
+    )
+    settings = _build_settings(settings_workspace, "file-data-failure.ini")
+    window = MainWindow(
+        settings=settings,
+        enable_docks=False,
+        file_lifecycle_service=_FakeFileLifecycleService(),
+        file_data_service=service,
+    )
+    qtbot.addWidget(window)
+    window._editor_context.session.document.path = "/tmp/current.otbm"
+    window._editor_context.session.document.name = "current.otbm"
+    window._editor_context.session.document.is_dirty = True
+
+    window.file_import_map_action.trigger()
+
+    assert window._editor_context.session.document.path == "/tmp/current.otbm"
+    assert window._editor_context.session.document.is_dirty is True
+    assert settings.value("file/recent_files", []) == []
+    assert _menu_sequence(window.recent_files_menu) == ()
+    assert (
+        _status_message(window)
+        == "Import Map deferred: needs core map merge/import offset/house/spawn policy backend."
+    )
+
+    window.file_export_minimap_action.trigger()
+
+    assert window._editor_context.session.document.path == "/tmp/current.otbm"
+    assert window._editor_context.session.document.is_dirty is True
+    assert settings.value("file/recent_files", []) == []
+    assert _menu_sequence(window.recent_files_menu) == ()
+    assert _status_message(window) == "Export Minimap failed: renderer export failed."
+
+
+def test_default_file_data_service_reports_explicit_deferred_reasons(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    window = MainWindow(
+        settings=_build_settings(settings_workspace, "file-data-default.ini"),
+        enable_docks=False,
+    )
+    qtbot.addWidget(window)
+
+    expected = [
+        (
+            window.file_import_map_action,
+            "Import Map deferred: needs core map merge/import offset/house/spawn policy backend.",
+        ),
+        (
+            window.file_import_monsters_action,
+            "Import Monsters/NPC deferred: needs OT monster/NPC XML creature-type "
+            "catalog import backend.",
+        ),
+        (
+            window.file_export_minimap_action,
+            "Export Minimap deferred: needs real minimap image renderer/exporter; "
+            "legacy source is inconsistent.",
+        ),
+        (
+            window.file_export_tilesets_action,
+            "Export Tilesets deferred: needs materials/tileset catalog exporter equivalent.",
+        ),
+        (
+            window.file_reload_data_action,
+            "Reload Data Files deferred: needs selected client data root before client "
+            "asset discovery can reload data files.",
+        ),
+        (
+            window.file_missing_items_report_action,
+            "Missing Items Report deferred: needs version-manager missing item report backend.",
+        ),
+    ]
+
+    for action, expected_status in expected:
+        action.trigger()
+        assert _status_message(window) == expected_status
 
 
 def test_file_new_creates_fresh_clean_editor_context(
