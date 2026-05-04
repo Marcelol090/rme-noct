@@ -813,30 +813,41 @@ class MainWindow(QMainWindow):
     def _setup_selection_menu(self) -> None:
         menu = self._menus["Selection"]
         self.selection_menu_actions = {}
-        for key, label in (
-            ("replace_on_selection_items", "Replace Items on Selection"),
-            ("search_on_selection_item", "Find Item on Selection"),
-            ("remove_on_selection_item", "Remove Item on Selection"),
+        for key, handler in (
+            ("replace_on_selection_items", self._replace_items_on_selection),
+            ("search_on_selection_item", self._find_item_on_selection),
+            ("remove_on_selection_item", self._remove_item_on_selection),
         ):
             self.selection_menu_actions[key] = self._action_from_spec(
-                key, lambda _checked=False, value=label: self._show_unavailable(value)
+                key,
+                handler,
             )
             menu.addAction(self.selection_menu_actions[key])
         menu.addSeparator()
 
         find_menu = menu.addMenu("Find on Selection")
         assert find_menu is not None
-        for key, label in (
-            ("search_on_selection_everything", "Find Everything"),
-            ("search_on_selection_unique", "Find Unique"),
-            ("search_on_selection_action", "Find Action"),
-            ("search_on_selection_container", "Find Container"),
-            ("search_on_selection_writeable", "Find Writeable"),
+        for key, handler in (
+            ("search_on_selection_everything", self._find_everything_on_selection),
+            ("search_on_selection_unique", self._find_unique_on_selection),
+            (
+                "search_on_selection_action",
+                lambda: self._defer_selection_type_filter("Find Action on Selection"),
+            ),
+            (
+                "search_on_selection_container",
+                lambda: self._defer_selection_type_filter("Find Container on Selection"),
+            ),
+            (
+                "search_on_selection_writeable",
+                lambda: self._defer_selection_type_filter("Find Writeable on Selection"),
+            ),
         ):
             if key == "search_on_selection_unique":
                 find_menu.addSeparator()
             self.selection_menu_actions[key] = self._action_from_spec(
-                key, lambda _checked=False, value=label: self._show_unavailable(value)
+                key,
+                handler,
             )
             find_menu.addAction(self.selection_menu_actions[key])
         menu.addSeparator()
@@ -1693,6 +1704,116 @@ class MainWindow(QMainWindow):
         self._refresh_dirty_chrome()
         self._status_bar().showMessage(
             f"Removed {count} item {self._occurrence_label(count)}.",
+            3000,
+        )
+
+    def _replace_items_on_selection(self) -> None:
+        editor = self._editor_context.session.editor
+        item_pair = self._edit_transform_service.choose_replace_items(
+            self,
+            self._editor_context,
+        )
+        if item_pair is None:
+            self._status_bar().showMessage(
+                "Replace Items on Selection deferred: no item selection dialog is mounted.",
+                3000,
+            )
+            return
+        if not self._edit_transform_service.confirm_map_transform(
+            self,
+            "Replace Items on Selection",
+        ):
+            self._status_bar().showMessage("Replace Items on Selection canceled.", 3000)
+            return
+        old_item_id, new_item_id = item_pair
+        count = editor.replace_item_id(
+            old_item_id,
+            new_item_id,
+            editor.selection_positions,
+        )
+        self._refresh_edit_action_state()
+        self._refresh_dirty_chrome()
+        self._status_bar().showMessage(
+            f"Replaced {count} selected item {self._occurrence_label(count)}.",
+            3000,
+        )
+
+    def _remove_item_on_selection(self) -> None:
+        editor = self._editor_context.session.editor
+        item_id = self._edit_transform_service.choose_remove_items_by_id(
+            self,
+            self._editor_context,
+        )
+        if item_id is None:
+            self._status_bar().showMessage(
+                "Remove Item on Selection deferred: no item ID selection dialog is mounted.",
+                3000,
+            )
+            return
+        if not self._edit_transform_service.confirm_map_transform(
+            self,
+            "Remove Item on Selection",
+        ):
+            self._status_bar().showMessage("Remove Item on Selection canceled.", 3000)
+            return
+        count = editor.remove_item_id(item_id, editor.selection_positions)
+        self._refresh_edit_action_state()
+        self._refresh_dirty_chrome()
+        self._status_bar().showMessage(
+            f"Removed {count} selected item {self._occurrence_label(count)}.",
+            3000,
+        )
+
+    def _find_item_on_selection(self) -> None:
+        item_id = self._edit_transform_service.choose_remove_items_by_id(
+            self,
+            self._editor_context,
+        )
+        if item_id is None:
+            self._status_bar().showMessage(
+                "Find Item on Selection deferred: no item ID selection dialog is mounted.",
+                3000,
+            )
+            return
+        count = self._editor_context.session.editor.selection_item_counts().get(
+            item_id,
+            0,
+        )
+        self._status_bar().showMessage(
+            f"Found {count} selected item {self._occurrence_label(count)} "
+            f"for item #{item_id}.",
+            3000,
+        )
+
+    def _find_everything_on_selection(self) -> None:
+        editor = self._editor_context.session.editor
+        item_count = sum(editor.selection_item_counts().values())
+        selected_tile_count = sum(
+            1
+            for position in editor.selection_positions
+            if editor.map_model.get_tile(position) is not None
+        )
+        self._status_bar().showMessage(
+            f"Selection contains {selected_tile_count} tiles and {item_count} "
+            f"item {self._occurrence_label(item_count)}.",
+            3000,
+        )
+
+    def _find_unique_on_selection(self) -> None:
+        item_ids = sorted(self._editor_context.session.editor.selection_item_counts())
+        if not item_ids:
+            self._status_bar().showMessage("Selection has no item IDs.", 3000)
+            return
+        self._status_bar().showMessage(
+            "Selection unique item IDs: "
+            + ", ".join(str(item_id) for item_id in item_ids)
+            + ".",
+            3000,
+        )
+
+    def _defer_selection_type_filter(self, label: str) -> None:
+        self._status_bar().showMessage(
+            f"{label} deferred: TileState has no item type flags.",
             3000,
         )
 

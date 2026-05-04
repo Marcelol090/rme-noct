@@ -11,11 +11,11 @@ Plan source: `docs/superpowers/plans/2026-05-01-m031-menu-functionality-gaps.md`
 
 ## Tasks
 
-- [ ] T01: failing tests for each Selection menu operation.
-- [ ] T02: add selection-scoped item search helpers.
-- [ ] T03: add selection-scoped replace/remove helpers.
-- [ ] T04: wire Selection actions in `MainWindow`.
-- [ ] T05: closeout summary and state update.
+- [x] T01: failing tests for each Selection menu operation.
+- [x] T02: add selection-scoped item search helpers.
+- [x] T03: add selection-scoped replace/remove helpers.
+- [x] T04: wire Selection actions in `MainWindow`.
+- [x] T05: closeout summary and state update.
 
 ## Files
 
