@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QSettings
+from PyQt6.QtWidgets import QWidget
 
 from pyrme.core_bridge import EditorShellCoreBridge
 from pyrme.ui.editor_context import EditorContext
@@ -14,7 +15,7 @@ from pyrme.ui.legacy_menu_contract import (
     LEGACY_FILE_RELOAD_ITEMS,
     PHASE1_ACTIONS,
 )
-from pyrme.ui.main_window import MainWindow
+from pyrme.ui.main_window import MainWindow, QtFileLifecycleService
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -143,6 +144,28 @@ class _FakeFileDataService:
         del parent, current_context
         self.calls.append("missing_items_report")
         return self.results["missing_items_report"]
+
+
+def test_qt_file_lifecycle_service_discards_dirty_close_in_offscreen(
+    qtbot,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(
+        "pyrme.ui.main_window.QApplication.platformName",
+        lambda: "offscreen",
+    )
+
+    def _unexpected_prompt(*_args, **_kwargs) -> None:
+        raise AssertionError("offscreen close prompt should not open")
+
+    monkeypatch.setattr(
+        "pyrme.ui.main_window.QMessageBox.question",
+        _unexpected_prompt,
+    )
+    parent = QWidget()
+    qtbot.addWidget(parent)
+
+    assert QtFileLifecycleService().confirm_close_dirty_document(parent, "Untitled") == "discard"
 
 
 def _build_settings(root: Path, name: str) -> QSettings:

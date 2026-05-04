@@ -140,6 +140,8 @@ class QtFileLifecycleService:
         parent: QWidget,
         document_name: str,
     ) -> CloseDirtyDecision:
+        if QApplication.platformName() == "offscreen":
+            return "discard"
         result = QMessageBox.question(
             parent,
             "Unsaved Changes",
