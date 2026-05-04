@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Protocol, cast
@@ -74,6 +75,7 @@ logger = logging.getLogger(__name__)
 CanvasFactory = Callable[[QWidget | None], QWidget]
 DialogFactory = Callable[[QWidget | None], QDialog]
 CloseDirtyDecision = Literal["save", "discard", "cancel"]
+FileDataResultStatus = Literal["success", "deferred", "failure"]
 
 QSETTINGS_BORDER_AUTOMAGIC = "editor/border_automagic"
 QSETTINGS_SELECTION_MODE = "editor/selection_mode"
@@ -138,6 +140,8 @@ class QtFileLifecycleService:
         parent: QWidget,
         document_name: str,
     ) -> CloseDirtyDecision:
+        if QApplication.platformName() == "offscreen":
+            return "discard"
         result = QMessageBox.question(
             parent,
             "Unsaved Changes",
@@ -173,6 +177,130 @@ class QtFileLifecycleService:
             return False
         current_context.session.document.persistence_handle = bridge
         return True
+
+
+@dataclass(frozen=True, slots=True)
+class FileDataActionResult:
+    status: FileDataResultStatus
+    message: str
+
+    @classmethod
+    def success(cls, message: str) -> FileDataActionResult:
+        return cls(status="success", message=message)
+
+    @classmethod
+    def deferred(cls, message: str) -> FileDataActionResult:
+        return cls(status="deferred", message=message)
+
+    @classmethod
+    def failure(cls, message: str) -> FileDataActionResult:
+        return cls(status="failure", message=message)
+
+
+class FileDataService(Protocol):
+    def import_map(
+        self,
+        parent: QWidget,
+        current_context: EditorContext,
+    ) -> FileDataActionResult: ...
+
+    def import_monsters_npc(
+        self,
+        parent: QWidget,
+        current_context: EditorContext,
+    ) -> FileDataActionResult: ...
+
+    def export_minimap(
+        self,
+        parent: QWidget,
+        current_context: EditorContext,
+    ) -> FileDataActionResult: ...
+
+    def export_tilesets(
+        self,
+        parent: QWidget,
+        current_context: EditorContext,
+    ) -> FileDataActionResult: ...
+
+    def reload_data_files(
+        self,
+        parent: QWidget,
+        current_context: EditorContext,
+    ) -> FileDataActionResult: ...
+
+    def missing_items_report(
+        self,
+        parent: QWidget,
+        current_context: EditorContext,
+    ) -> FileDataActionResult: ...
+
+
+class DeferredFileDataService:
+    def import_map(
+        self,
+        parent: QWidget,
+        current_context: EditorContext,
+    ) -> FileDataActionResult:
+        del parent, current_context
+        return FileDataActionResult.deferred(
+            "Import Map deferred: needs core map merge/import offset/house/spawn "
+            "policy backend.",
+        )
+
+    def import_monsters_npc(
+        self,
+        parent: QWidget,
+        current_context: EditorContext,
+    ) -> FileDataActionResult:
+        del parent, current_context
+        return FileDataActionResult.deferred(
+            "Import Monsters/NPC deferred: needs OT monster/NPC XML creature-type "
+            "catalog import backend.",
+        )
+
+    def export_minimap(
+        self,
+        parent: QWidget,
+        current_context: EditorContext,
+    ) -> FileDataActionResult:
+        del parent, current_context
+        return FileDataActionResult.deferred(
+            "Export Minimap deferred: needs real minimap image renderer/exporter; "
+            "legacy source is inconsistent.",
+        )
+
+    def export_tilesets(
+        self,
+        parent: QWidget,
+        current_context: EditorContext,
+    ) -> FileDataActionResult:
+        del parent, current_context
+        return FileDataActionResult.deferred(
+            "Export Tilesets deferred: needs materials/tileset catalog exporter "
+            "equivalent.",
+        )
+
+    def reload_data_files(
+        self,
+        parent: QWidget,
+        current_context: EditorContext,
+    ) -> FileDataActionResult:
+        del parent, current_context
+        return FileDataActionResult.deferred(
+            "Reload Data Files deferred: needs selected client data root before client "
+            "asset discovery can reload data files.",
+        )
+
+    def missing_items_report(
+        self,
+        parent: QWidget,
+        current_context: EditorContext,
+    ) -> FileDataActionResult:
+        del parent, current_context
+        return FileDataActionResult.deferred(
+            "Missing Items Report deferred: needs version-manager missing item report "
+            "backend.",
+        )
 
 
 class TownManagerDialog(QDialog):
@@ -222,6 +350,7 @@ class MainWindow(QMainWindow):
         map_properties_dialog_factory: DialogFactory | None = None,
         house_manager_dialog_factory: DialogFactory | None = None,
         file_lifecycle_service: FileLifecycleService | None = None,
+        file_data_service: FileDataService | None = None,
         canvas_factory: CanvasFactory | None = None,
         enable_docks: bool | None = None,
     ) -> None:
@@ -244,6 +373,7 @@ class MainWindow(QMainWindow):
         self._file_lifecycle_service = (
             file_lifecycle_service or QtFileLifecycleService()
         )
+        self._file_data_service = file_data_service or DeferredFileDataService()
         self._canvas_factory = canvas_factory or RendererHostCanvasWidget
         self._enable_docks = True if enable_docks is None else enable_docks
         self._editor_context = EditorContext()
@@ -408,11 +538,11 @@ class MainWindow(QMainWindow):
         import_menu = menu.addMenu("Import")
         assert import_menu is not None
         self.file_import_map_action = self._action_from_spec(
-            "file_import_map", lambda: self._show_unavailable("Import Map")
+            "file_import_map", self._import_map
         )
         self.file_import_monsters_action = self._action_from_spec(
             "file_import_monsters",
-            lambda: self._show_unavailable("Import Monsters/NPC"),
+            self._import_monsters_npc,
         )
         import_menu.addActions(
             [self.file_import_map_action, self.file_import_monsters_action]
@@ -421,10 +551,10 @@ class MainWindow(QMainWindow):
         export_menu = menu.addMenu("Export")
         assert export_menu is not None
         self.file_export_minimap_action = self._action_from_spec(
-            "file_export_minimap", lambda: self._show_unavailable("Export Minimap")
+            "file_export_minimap", self._export_minimap
         )
         self.file_export_tilesets_action = self._action_from_spec(
-            "file_export_tilesets", lambda: self._show_unavailable("Export Tilesets")
+            "file_export_tilesets", self._export_tilesets
         )
         export_menu.addActions(
             [self.file_export_minimap_action, self.file_export_tilesets_action]
@@ -433,13 +563,13 @@ class MainWindow(QMainWindow):
         reload_menu = menu.addMenu("Reload")
         assert reload_menu is not None
         self.file_reload_data_action = self._action_from_spec(
-            "file_reload_data", lambda: self._show_unavailable("Reload Data Files")
+            "file_reload_data", self._reload_data_files
         )
         reload_menu.addAction(self.file_reload_data_action)
 
         self.file_missing_items_report_action = self._action_from_spec(
             "file_missing_items_report",
-            lambda: self._show_unavailable("Missing Items Report"),
+            self._missing_items_report,
         )
         menu.addAction(self.file_missing_items_report_action)
         menu.addSeparator()
@@ -1258,6 +1388,37 @@ class MainWindow(QMainWindow):
                 lambda _checked=False, value=path: self._open_map_file(value)
             )
             menu.addAction(action)
+
+    def _import_map(self) -> None:
+        self._run_file_data_action(self._file_data_service.import_map)
+
+    def _import_monsters_npc(self) -> None:
+        self._run_file_data_action(self._file_data_service.import_monsters_npc)
+
+    def _export_minimap(self) -> None:
+        self._run_file_data_action(self._file_data_service.export_minimap)
+
+    def _export_tilesets(self) -> None:
+        self._run_file_data_action(self._file_data_service.export_tilesets)
+
+    def _reload_data_files(self) -> None:
+        self._run_file_data_action(self._file_data_service.reload_data_files)
+
+    def _missing_items_report(self) -> None:
+        self._run_file_data_action(self._file_data_service.missing_items_report)
+
+    def _run_file_data_action(
+        self,
+        operation: Callable[[QWidget, EditorContext], FileDataActionResult],
+    ) -> None:
+        try:
+            result = operation(self, self._editor_context)
+        except Exception:
+            logger.exception("File data action failed")
+            result = FileDataActionResult.failure(
+                "File data action failed: backend raised an exception.",
+            )
+        self._status_bar().showMessage(result.message, 3000)
 
     def _show_unavailable(self, label: str) -> None:
         self._status_bar().showMessage(f"{label} is not available yet.", 3000)

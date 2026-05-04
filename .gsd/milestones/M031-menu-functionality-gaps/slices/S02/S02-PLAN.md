@@ -13,11 +13,11 @@ Plan source: `docs/superpowers/plans/2026-05-01-m031-menu-functionality-gaps.md`
 
 ## Tasks
 
-- [ ] T01: failing tests for each remaining File gap.
-- [ ] T02: define injectable service seams for import/export/reload/report operations.
-- [ ] T03: implement behavior only where repo backend exists.
-- [ ] T04: document any still-deferred backend with exact missing dependency.
-- [ ] T05: closeout summary and state update.
+- [x] T01: failing tests for each remaining File gap.
+- [x] T02: define injectable service seams for import/export/reload/report operations.
+- [x] T03: implement behavior only where repo backend exists.
+- [x] T04: document any still-deferred backend with exact missing dependency.
+- [x] T05: closeout summary and state update.
 
 ## Files
 
