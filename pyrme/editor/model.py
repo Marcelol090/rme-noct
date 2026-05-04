@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 MAX_MAP_COORDINATE = 65535
 FLOOR_COUNT = 16
@@ -253,6 +257,105 @@ class EditorModel:
 
     def clipboard_tile_count(self) -> int:
         return len(self._clipboard)
+
+    def replace_item_id(
+        self,
+        old_item_id: int,
+        new_item_id: int,
+        positions: Iterable[MapPosition] | None = None,
+    ) -> int:
+        changes: list[TileEditChange] = []
+        occurrence_count = 0
+        for tile in self._iter_target_tiles(positions):
+            next_ground = (
+                new_item_id if tile.ground_item_id == old_item_id else tile.ground_item_id
+            )
+            next_items = tuple(
+                new_item_id if item_id == old_item_id else item_id
+                for item_id in tile.item_ids
+            )
+            occurrence_count += int(tile.ground_item_id == old_item_id)
+            occurrence_count += sum(1 for item_id in tile.item_ids if item_id == old_item_id)
+            next_tile = TileState(
+                position=tile.position,
+                ground_item_id=next_ground,
+                item_ids=next_items,
+            )
+            if tile != next_tile:
+                changes.append(
+                    TileEditChange(
+                        position=tile.position,
+                        before=tile,
+                        after=next_tile,
+                    )
+                )
+        if not self._apply_changes(tuple(changes)):
+            return 0
+        return occurrence_count
+
+    def remove_item_id(
+        self,
+        item_id: int,
+        positions: Iterable[MapPosition] | None = None,
+    ) -> int:
+        changes: list[TileEditChange] = []
+        occurrence_count = 0
+        for tile in self._iter_target_tiles(positions):
+            next_ground = None if tile.ground_item_id == item_id else tile.ground_item_id
+            next_items = tuple(
+                stacked_item_id
+                for stacked_item_id in tile.item_ids
+                if stacked_item_id != item_id
+            )
+            occurrence_count += int(tile.ground_item_id == item_id)
+            occurrence_count += sum(
+                1 for stacked_item_id in tile.item_ids if stacked_item_id == item_id
+            )
+            if next_ground is None and not next_items:
+                after = None
+            else:
+                after = TileState(
+                    position=tile.position,
+                    ground_item_id=next_ground,
+                    item_ids=next_items,
+                )
+            if tile != after:
+                changes.append(
+                    TileEditChange(
+                        position=tile.position,
+                        before=tile,
+                        after=after,
+                    )
+                )
+        if not self._apply_changes(tuple(changes)):
+            return 0
+        return occurrence_count
+
+    def clear_modified_state(self) -> bool:
+        was_dirty = self.map_model.is_dirty
+        self.map_model.clear_changed()
+        return was_dirty
+
+    def selection_item_counts(self) -> dict[int, int]:
+        counts: dict[int, int] = {}
+        for tile in self._iter_target_tiles(self.selection_positions):
+            if tile.ground_item_id is not None:
+                counts[tile.ground_item_id] = counts.get(tile.ground_item_id, 0) + 1
+            for item_id in tile.item_ids:
+                counts[item_id] = counts.get(item_id, 0) + 1
+        return counts
+
+    def _iter_target_tiles(
+        self,
+        positions: Iterable[MapPosition] | None,
+    ) -> tuple[TileState, ...]:
+        if positions is None:
+            return self.map_model.tiles()
+        return tuple(
+            tile
+            for position in sorted(set(positions))
+            if (tile := self.map_model.get_tile(position)) is not None
+        )
 
     def _apply_changes(
         self,

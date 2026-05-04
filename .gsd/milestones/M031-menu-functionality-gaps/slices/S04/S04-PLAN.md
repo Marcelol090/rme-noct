@@ -15,11 +15,11 @@ Plan source: `docs/superpowers/plans/2026-05-01-m031-menu-functionality-gaps.md`
 
 ## Tasks
 
-- [ ] T01: failing tests for transformation actions and confirmation seams.
-- [ ] T02: add pure `EditorModel` operations where current map data supports them.
-- [ ] T03: consume M030 autoborder plan for borderize actions where available.
-- [ ] T04: keep unsupported corpse/unreachable/house cleanup explicit with evidence if required data is absent.
-- [ ] T05: closeout summary and state update.
+- [x] T01: failing tests for transformation actions and confirmation seams.
+- [x] T02: add pure `EditorModel` operations where current map data supports them.
+- [x] T03: consume M030 autoborder plan for borderize actions where available.
+- [x] T04: keep unsupported corpse/unreachable/house cleanup explicit with evidence if required data is absent.
+- [x] T05: closeout summary and state update.
 
 ## Files
 
