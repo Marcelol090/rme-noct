@@ -76,6 +76,7 @@ CanvasFactory = Callable[[QWidget | None], QWidget]
 DialogFactory = Callable[[QWidget | None], QDialog]
 CloseDirtyDecision = Literal["save", "discard", "cancel"]
 FileDataResultStatus = Literal["success", "deferred", "failure"]
+ItemReplacement = tuple[int, int]
 
 QSETTINGS_BORDER_AUTOMAGIC = "editor/border_automagic"
 QSETTINGS_SELECTION_MODE = "editor/selection_mode"
@@ -303,6 +304,52 @@ class DeferredFileDataService:
         )
 
 
+class EditTransformService(Protocol):
+    def choose_replace_items(
+        self,
+        parent: QWidget,
+        current_context: EditorContext,
+    ) -> ItemReplacement | None: ...
+
+    def choose_remove_items_by_id(
+        self,
+        parent: QWidget,
+        current_context: EditorContext,
+    ) -> int | None: ...
+
+    def confirm_map_transform(self, parent: QWidget, label: str) -> bool: ...
+
+
+class DeferredEditTransformService:
+    def choose_replace_items(
+        self,
+        parent: QWidget,
+        current_context: EditorContext,
+    ) -> ItemReplacement | None:
+        del parent, current_context
+        return None
+
+    def choose_remove_items_by_id(
+        self,
+        parent: QWidget,
+        current_context: EditorContext,
+    ) -> int | None:
+        del parent, current_context
+        return None
+
+    def confirm_map_transform(self, parent: QWidget, label: str) -> bool:
+        if QApplication.platformName() == "offscreen":
+            return False
+        result = QMessageBox.question(
+            parent,
+            label,
+            f"Apply {label} to the current map?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return result == QMessageBox.StandardButton.Yes
+
+
 class TownManagerDialog(QDialog):
     """Safe placeholder until the full town manager dialog is mounted."""
 
@@ -351,6 +398,7 @@ class MainWindow(QMainWindow):
         house_manager_dialog_factory: DialogFactory | None = None,
         file_lifecycle_service: FileLifecycleService | None = None,
         file_data_service: FileDataService | None = None,
+        edit_transform_service: EditTransformService | None = None,
         canvas_factory: CanvasFactory | None = None,
         enable_docks: bool | None = None,
     ) -> None:
@@ -374,6 +422,9 @@ class MainWindow(QMainWindow):
             file_lifecycle_service or QtFileLifecycleService()
         )
         self._file_data_service = file_data_service or DeferredFileDataService()
+        self._edit_transform_service = (
+            edit_transform_service or DeferredEditTransformService()
+        )
         self._canvas_factory = canvas_factory or RendererHostCanvasWidget
         self._enable_docks = True if enable_docks is None else enable_docks
         self._editor_context = EditorContext()
@@ -589,7 +640,7 @@ class MainWindow(QMainWindow):
         self.edit_undo_action = self._action_from_spec("edit_undo", self._undo_edit)
         self.edit_redo_action = self._action_from_spec("edit_redo", self._redo_edit)
         self.replace_items_action = self._action_from_spec(
-            "replace_items", self._show_replace_items
+            "replace_items", self._replace_items
         )
         menu.addActions([self.edit_undo_action, self.edit_redo_action])
         menu.addSeparator()
@@ -615,21 +666,28 @@ class MainWindow(QMainWindow):
             ("randomize_map", "Randomize Map"),
         ):
             self.edit_menu_actions[key] = self._action_from_spec(
-                key, lambda _checked=False, value=label: self._show_unavailable(value)
+                key, lambda _checked=False, value=label: self._defer_edit_transform(value)
             )
             border_menu.addAction(self.edit_menu_actions[key])
 
         other_menu = menu.addMenu("Other Options")
         assert other_menu is not None
-        for key, label in (
-            ("remove_items_by_id", "Remove Items by ID"),
+        other_handlers = (
+            ("remove_items_by_id", self._remove_items_by_id),
             ("remove_all_corpses", "Remove all Corpses"),
             ("remove_all_unreachable_tiles", "Remove all Unreachable Tiles"),
             ("clear_invalid_houses", "Clear Invalid Houses"),
-            ("clear_modified_state", "Clear Modified State"),
-        ):
+            ("clear_modified_state", self._clear_modified_state),
+        )
+        for key, handler in other_handlers:
+            callback = (
+                handler
+                if callable(handler)
+                else lambda _checked=False, value=handler: self._defer_edit_transform(value)
+            )
             self.edit_menu_actions[key] = self._action_from_spec(
-                key, lambda _checked=False, value=label: self._show_unavailable(value)
+                key,
+                callback,
             )
             other_menu.addAction(self.edit_menu_actions[key])
 
@@ -1587,8 +1645,94 @@ class MainWindow(QMainWindow):
         )
         return True
 
-    def _show_replace_items(self) -> None:
-        self._status_bar().showMessage("Replace Items is not available yet.", 3000)
+    def _replace_items(self) -> None:
+        item_pair = self._edit_transform_service.choose_replace_items(
+            self,
+            self._editor_context,
+        )
+        if item_pair is None:
+            self._status_bar().showMessage(
+                "Replace Items deferred: no item selection dialog is mounted.",
+                3000,
+            )
+            return
+        if not self._edit_transform_service.confirm_map_transform(self, "Replace Items"):
+            self._status_bar().showMessage("Replace Items canceled.", 3000)
+            return
+        old_item_id, new_item_id = item_pair
+        count = self._editor_context.session.editor.replace_item_id(
+            old_item_id,
+            new_item_id,
+        )
+        self._refresh_edit_action_state()
+        self._refresh_dirty_chrome()
+        self._status_bar().showMessage(
+            f"Replaced {count} item {self._occurrence_label(count)}.",
+            3000,
+        )
+
+    def _remove_items_by_id(self) -> None:
+        item_id = self._edit_transform_service.choose_remove_items_by_id(
+            self,
+            self._editor_context,
+        )
+        if item_id is None:
+            self._status_bar().showMessage(
+                "Remove Items by ID deferred: no item ID selection dialog is mounted.",
+                3000,
+            )
+            return
+        if not self._edit_transform_service.confirm_map_transform(
+            self,
+            "Remove Items by ID",
+        ):
+            self._status_bar().showMessage("Remove Items by ID canceled.", 3000)
+            return
+        count = self._editor_context.session.editor.remove_item_id(item_id)
+        self._refresh_edit_action_state()
+        self._refresh_dirty_chrome()
+        self._status_bar().showMessage(
+            f"Removed {count} item {self._occurrence_label(count)}.",
+            3000,
+        )
+
+    def _clear_modified_state(self) -> None:
+        self._editor_context.session.editor.clear_modified_state()
+        self._refresh_dirty_chrome()
+        self._status_bar().showMessage("Cleared modified state.", 3000)
+
+    def _defer_edit_transform(self, label: str) -> None:
+        message = {
+            "Borderize Selection": (
+                "Borderize Selection deferred: rme_core AutoborderPlan has no "
+                "Python map mutation bridge."
+            ),
+            "Borderize Map": (
+                "Borderize Map deferred: rme_core AutoborderPlan has no Python "
+                "map mutation bridge."
+            ),
+            "Randomize Selection": (
+                "Randomize Selection deferred: TileState has no ground variant catalog."
+            ),
+            "Randomize Map": (
+                "Randomize Map deferred: TileState has no ground variant catalog."
+            ),
+            "Remove all Corpses": (
+                "Remove all Corpses deferred: TileState has no item type flags."
+            ),
+            "Remove all Unreachable Tiles": (
+                "Remove all Unreachable Tiles deferred: no pathing or visibility graph "
+                "exists."
+            ),
+            "Clear Invalid Houses": (
+                "Clear Invalid Houses deferred: tiles do not store house IDs."
+            ),
+        }[label]
+        self._status_bar().showMessage(message, 3000)
+
+    @staticmethod
+    def _occurrence_label(count: int) -> str:
+        return "occurrence" if count == 1 else "occurrences"
 
     def _undo_edit(self) -> None:
         editor = self._editor_context.session.editor

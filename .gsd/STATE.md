@@ -1,15 +1,16 @@
 # GSD State
 
 **Active Milestone:** M031-menu-functionality-gaps
-**Active Slice:** S03-EDIT-HISTORY-CLIPBOARD
+**Active Slice:** S04-EDIT-MAP-TRANSFORMS
 **Active Task:** none
 **Phase:** complete
-**Next Action:** Await explicit approval to start M031/S04-SELECTION-BULK-ACTIONS.
-**Last Updated:** 2026-05-04T16:41:27-03:00
+**Next Action:** Await explicit approval to start M031/S05-SELECTION-OPERATIONS.
+**Last Updated:** 2026-05-04T17:35:08-03:00
 **Requirements Status:** 0 active · 24 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
+- `M031/S04-EDIT-MAP-TRANSFORMS` is complete: Replace Items, Remove Items by ID, and Clear Modified State now use tested map mutation seams; Borderize/Randomize/Corpse/Unreachable/Invalid House actions report exact missing backend evidence.
 - `M031/S03-EDIT-HISTORY-CLIPBOARD` is complete: Edit Undo/Redo/Cut/Copy/Paste now mutate the in-memory `MapModel` through tested history and clipboard operations.
 - `M031/S02-FILE-IMPORT-EXPORT-DATA-REPORTS` is complete: six File data actions now route through an injectable service seam with exact deferred backend reasons and targeted tests passing.
 - `M031/S01-FILE-LIFECYCLE-RECENTS` is complete: File New/Open/Save/Save As/Close/Exit/Recent Files now route through an active document lifecycle seam with failure-safe persistence behavior and targeted tests passing.

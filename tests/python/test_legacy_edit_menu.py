@@ -220,13 +220,185 @@ def test_edit_actions_keep_unsupported_gaps_safe(qtbot, settings_workspace: Path
     window._editor_context.session.editor.select_position(MapPosition(32000, 32000, 7))
     window._refresh_selection_action_state()
     window.edit_menu_actions["borderize_selection"].trigger()
-    assert _status_message(window) == "Borderize Selection is not available yet."
+    assert (
+        _status_message(window)
+        == "Borderize Selection deferred: rme_core AutoborderPlan has no Python "
+        "map mutation bridge."
+    )
 
     window.edit_menu_actions["remove_all_corpses"].trigger()
-    assert _status_message(window) == "Remove all Corpses is not available yet."
+    assert (
+        _status_message(window)
+        == "Remove all Corpses deferred: TileState has no item type flags."
+    )
 
     window.edit_menu_actions["border_automagic"].setChecked(False)
     assert _status_message(window) == "Automagic disabled."
+
+
+def test_editor_model_replaces_and_removes_item_ids_with_history() -> None:
+    editor = EditorModel()
+    first = MapPosition(32000, 32000, 7)
+    second = MapPosition(32001, 32000, 7)
+    editor.map_model.set_tile(
+        TileState(position=first, ground_item_id=100, item_ids=(200, 300, 200))
+    )
+    editor.map_model.set_tile(
+        TileState(position=second, ground_item_id=200, item_ids=(400,))
+    )
+    editor.map_model.clear_changed()
+
+    assert editor.replace_item_id(200, 500) == 3
+    assert editor.map_model.get_tile(first) == TileState(
+        position=first,
+        ground_item_id=100,
+        item_ids=(500, 300, 500),
+    )
+    assert editor.map_model.get_tile(second) == TileState(
+        position=second,
+        ground_item_id=500,
+        item_ids=(400,),
+    )
+    assert editor.can_undo() is True
+
+    assert editor.undo() is True
+    assert editor.map_model.get_tile(first) == TileState(
+        position=first,
+        ground_item_id=100,
+        item_ids=(200, 300, 200),
+    )
+
+    assert editor.remove_item_id(200) == 3
+    assert editor.map_model.get_tile(first) == TileState(
+        position=first,
+        ground_item_id=100,
+        item_ids=(300,),
+    )
+    assert editor.map_model.get_tile(second) == TileState(
+        position=second,
+        ground_item_id=None,
+        item_ids=(400,),
+    )
+
+
+class _TransformService:
+    def __init__(self) -> None:
+        self.confirmed: list[str] = []
+
+    def choose_replace_items(self, _parent, _context) -> tuple[int, int]:
+        return (200, 500)
+
+    def choose_remove_items_by_id(self, _parent, _context) -> int:
+        return 500
+
+    def confirm_map_transform(self, _parent, label: str) -> bool:
+        self.confirmed.append(label)
+        return True
+
+
+def test_edit_transform_actions_use_injected_item_and_confirmation_seams(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    service = _TransformService()
+    window = MainWindow(
+        settings=_build_settings(settings_workspace, "edit-transform-actions.ini"),
+        enable_docks=False,
+        edit_transform_service=service,
+    )
+    qtbot.addWidget(window)
+
+    editor = window._editor_context.session.editor
+    position = MapPosition(32000, 32000, 7)
+    editor.map_model.set_tile(
+        TileState(position=position, ground_item_id=200, item_ids=(200, 300))
+    )
+    editor.map_model.clear_changed()
+
+    window.replace_items_action.trigger()
+    assert editor.map_model.get_tile(position) == TileState(
+        position=position,
+        ground_item_id=500,
+        item_ids=(500, 300),
+    )
+    assert editor.map_model.is_dirty is True
+    assert service.confirmed == ["Replace Items"]
+    assert _status_message(window) == "Replaced 2 item occurrences."
+
+    window.edit_menu_actions["remove_items_by_id"].trigger()
+    assert editor.map_model.get_tile(position) == TileState(
+        position=position,
+        ground_item_id=None,
+        item_ids=(300,),
+    )
+    assert service.confirmed == ["Replace Items", "Remove Items by ID"]
+    assert _status_message(window) == "Removed 2 item occurrences."
+
+
+def test_clear_modified_state_action_clears_dirty_chrome(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    window = MainWindow(
+        settings=_build_settings(settings_workspace, "edit-clear-modified.ini"),
+        enable_docks=False,
+    )
+    qtbot.addWidget(window)
+
+    editor = window._editor_context.session.editor
+    editor.map_model.set_tile(
+        TileState(position=MapPosition(32000, 32000, 7), ground_item_id=100)
+    )
+    assert editor.map_model.is_dirty is True
+
+    window.edit_menu_actions["clear_modified_state"].trigger()
+    assert editor.map_model.is_dirty is False
+    assert _status_message(window) == "Cleared modified state."
+
+
+def test_edit_transform_gaps_report_exact_missing_backend_evidence(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    window = MainWindow(
+        settings=_build_settings(settings_workspace, "edit-transform-gaps.ini"),
+        enable_docks=False,
+    )
+    qtbot.addWidget(window)
+
+    window._editor_context.session.editor.select_position(MapPosition(32000, 32000, 7))
+    window._refresh_selection_action_state()
+
+    window.edit_menu_actions["borderize_selection"].trigger()
+    assert (
+        _status_message(window)
+        == "Borderize Selection deferred: rme_core AutoborderPlan has no Python "
+        "map mutation bridge."
+    )
+
+    window.edit_menu_actions["randomize_map"].trigger()
+    assert (
+        _status_message(window)
+        == "Randomize Map deferred: TileState has no ground variant catalog."
+    )
+
+    window.edit_menu_actions["remove_all_corpses"].trigger()
+    assert (
+        _status_message(window)
+        == "Remove all Corpses deferred: TileState has no item type flags."
+    )
+
+    window.edit_menu_actions["remove_all_unreachable_tiles"].trigger()
+    assert (
+        _status_message(window)
+        == "Remove all Unreachable Tiles deferred: no pathing or visibility graph exists."
+    )
+
+    window.edit_menu_actions["clear_invalid_houses"].trigger()
+    assert (
+        _status_message(window)
+        == "Clear Invalid Houses deferred: tiles do not store house IDs."
+    )
 
 
 def test_border_automagic_persists_as_global_setting(
