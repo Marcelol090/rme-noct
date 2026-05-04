@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QSettings
 
-from pyrme.editor.model import MapPosition
+from pyrme.editor.model import EditorModel, MapPosition, TileState
 from pyrme.ui.legacy_menu_contract import (
     LEGACY_SELECTION_FIND_ITEMS,
     LEGACY_SELECTION_MENU_SEQUENCE,
@@ -48,6 +48,41 @@ def _status_message(window: MainWindow) -> str:
     status_bar = window.statusBar()
     assert status_bar is not None
     return status_bar.currentMessage()
+
+
+class _SelectionTransformService:
+    def __init__(self, *, item_id: int = 200) -> None:
+        self.item_id = item_id
+        self.confirmed: list[str] = []
+
+    def choose_replace_items(self, _parent, _context) -> tuple[int, int]:
+        return (200, 500)
+
+    def choose_remove_items_by_id(self, _parent, _context) -> int:
+        return self.item_id
+
+    def confirm_map_transform(self, _parent, label: str) -> bool:
+        self.confirmed.append(label)
+        return True
+
+
+def _seed_selected_map(editor: EditorModel) -> tuple[MapPosition, MapPosition, MapPosition]:
+    first = MapPosition(32000, 32000, 7)
+    second = MapPosition(32001, 32000, 7)
+    unselected = MapPosition(32002, 32000, 7)
+    editor.map_model.set_tile(
+        TileState(position=first, ground_item_id=200, item_ids=(300, 200))
+    )
+    editor.map_model.set_tile(
+        TileState(position=second, ground_item_id=400, item_ids=(500,))
+    )
+    editor.map_model.set_tile(
+        TileState(position=unselected, ground_item_id=200, item_ids=(200,))
+    )
+    editor.map_model.clear_changed()
+    editor.select_position(first)
+    editor.select_position(second)
+    return first, second, unselected
 
 
 def test_legacy_selection_contract_matches_xml_and_defaults() -> None:
@@ -159,7 +194,134 @@ def test_selection_actions_follow_selection_presence_and_safe_gaps(
     assert window.edit_menu_actions["randomize_selection"].isEnabled() is True
 
     window.selection_menu_actions["replace_on_selection_items"].trigger()
-    assert _status_message(window) == "Replace Items on Selection is not available yet."
+    assert (
+        _status_message(window)
+        == "Replace Items on Selection deferred: no item selection dialog is mounted."
+    )
+
+
+def test_editor_model_counts_selected_item_occurrences() -> None:
+    editor = EditorModel()
+    _first, _second, _unselected = _seed_selected_map(editor)
+
+    assert editor.selection_item_counts() == {200: 2, 300: 1, 400: 1, 500: 1}
+
+
+def test_selection_replace_and_remove_items_mutate_only_selected_tiles(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    service = _SelectionTransformService(item_id=500)
+    window = MainWindow(
+        settings=_build_settings(settings_workspace, "selection-mutate.ini"),
+        enable_docks=False,
+        edit_transform_service=service,
+    )
+    qtbot.addWidget(window)
+
+    editor = window._editor_context.session.editor
+    first, second, unselected = _seed_selected_map(editor)
+    window._refresh_selection_action_state()
+
+    window.selection_menu_actions["replace_on_selection_items"].trigger()
+    assert editor.map_model.get_tile(first) == TileState(
+        position=first,
+        ground_item_id=500,
+        item_ids=(300, 500),
+    )
+    assert editor.map_model.get_tile(second) == TileState(
+        position=second,
+        ground_item_id=400,
+        item_ids=(500,),
+    )
+    assert editor.map_model.get_tile(unselected) == TileState(
+        position=unselected,
+        ground_item_id=200,
+        item_ids=(200,),
+    )
+    assert service.confirmed == ["Replace Items on Selection"]
+    assert _status_message(window) == "Replaced 2 selected item occurrences."
+
+    window.selection_menu_actions["remove_on_selection_item"].trigger()
+    assert editor.map_model.get_tile(first) == TileState(
+        position=first,
+        ground_item_id=None,
+        item_ids=(300,),
+    )
+    assert editor.map_model.get_tile(second) == TileState(
+        position=second,
+        ground_item_id=400,
+        item_ids=(),
+    )
+    assert editor.map_model.get_tile(unselected) == TileState(
+        position=unselected,
+        ground_item_id=200,
+        item_ids=(200,),
+    )
+    assert service.confirmed == [
+        "Replace Items on Selection",
+        "Remove Item on Selection",
+    ]
+    assert _status_message(window) == "Removed 3 selected item occurrences."
+
+
+def test_selection_search_actions_report_selected_item_counts(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    service = _SelectionTransformService(item_id=200)
+    window = MainWindow(
+        settings=_build_settings(settings_workspace, "selection-search.ini"),
+        enable_docks=False,
+        edit_transform_service=service,
+    )
+    qtbot.addWidget(window)
+
+    editor = window._editor_context.session.editor
+    _seed_selected_map(editor)
+    window._refresh_selection_action_state()
+
+    window.selection_menu_actions["search_on_selection_item"].trigger()
+    assert _status_message(window) == "Found 2 selected item occurrences for item #200."
+
+    window.selection_menu_actions["search_on_selection_everything"].trigger()
+    assert _status_message(window) == "Selection contains 2 tiles and 5 item occurrences."
+
+    window.selection_menu_actions["search_on_selection_unique"].trigger()
+    assert _status_message(window) == "Selection unique item IDs: 200, 300, 400, 500."
+
+
+def test_selection_type_filter_gaps_report_missing_item_flags(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    window = MainWindow(
+        settings=_build_settings(settings_workspace, "selection-filter-gaps.ini"),
+        enable_docks=False,
+    )
+    qtbot.addWidget(window)
+
+    editor = window._editor_context.session.editor
+    _seed_selected_map(editor)
+    window._refresh_selection_action_state()
+
+    window.selection_menu_actions["search_on_selection_action"].trigger()
+    assert (
+        _status_message(window)
+        == "Find Action on Selection deferred: TileState has no item type flags."
+    )
+
+    window.selection_menu_actions["search_on_selection_container"].trigger()
+    assert (
+        _status_message(window)
+        == "Find Container on Selection deferred: TileState has no item type flags."
+    )
+
+    window.selection_menu_actions["search_on_selection_writeable"].trigger()
+    assert (
+        _status_message(window)
+        == "Find Writeable on Selection deferred: TileState has no item type flags."
+    )
 
 
 def test_selection_mode_enablement_tracks_show_all_floors(qtbot, settings_workspace: Path) -> None:

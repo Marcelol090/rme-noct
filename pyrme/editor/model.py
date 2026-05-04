@@ -336,6 +336,15 @@ class EditorModel:
         self.map_model.clear_changed()
         return was_dirty
 
+    def selection_item_counts(self) -> dict[int, int]:
+        counts: dict[int, int] = {}
+        for tile in self._iter_target_tiles(self.selection_positions):
+            if tile.ground_item_id is not None:
+                counts[tile.ground_item_id] = counts.get(tile.ground_item_id, 0) + 1
+            for item_id in tile.item_ids:
+                counts[item_id] = counts.get(item_id, 0) + 1
+        return counts
+
     def _iter_target_tiles(
         self,
         positions: Iterable[MapPosition] | None,
