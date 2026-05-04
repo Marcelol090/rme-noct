@@ -29,6 +29,13 @@ class TileState:
     item_ids: tuple[int, ...] = ()
 
 
+@dataclass(frozen=True, slots=True)
+class TileEditChange:
+    position: MapPosition
+    before: TileState | None
+    after: TileState | None
+
+
 @dataclass(slots=True)
 class MapModel:
     """Sparse shared map model owned by the editor session."""
@@ -74,6 +81,18 @@ class EditorModel:
     _mode: str = "drawing"
     _active_brush_id: str | None = None
     _active_item_id: int | None = None
+    _undo_stack: list[tuple[TileEditChange, ...]] = field(
+        default_factory=list,
+        repr=False,
+    )
+    _redo_stack: list[tuple[TileEditChange, ...]] = field(
+        default_factory=list,
+        repr=False,
+    )
+    _clipboard: tuple[tuple[int, int, int, TileState], ...] = field(
+        default=(),
+        repr=False,
+    )
 
     @property
     def mode(self) -> str:
@@ -131,16 +150,130 @@ class EditorModel:
             )
             if existing == next_tile:
                 return False
-            self.map_model.set_tile(next_tile)
+            self._apply_changes(
+                (TileEditChange(position=position, before=existing, after=next_tile),)
+            )
             return True
 
         if self.mode == "erasing":
-            if self.map_model.get_tile(position) is None:
+            existing = self.map_model.get_tile(position)
+            if existing is None:
                 return False
-            self.map_model.remove_tile(position)
+            self._apply_changes(
+                (TileEditChange(position=position, before=existing, after=None),)
+            )
             return True
 
         return False
+
+    def can_undo(self) -> bool:
+        return bool(self._undo_stack)
+
+    def can_redo(self) -> bool:
+        return bool(self._redo_stack)
+
+    def has_clipboard(self) -> bool:
+        return bool(self._clipboard)
+
+    def undo(self) -> bool:
+        if not self._undo_stack:
+            return False
+        changes = self._undo_stack.pop()
+        self._apply_changes(
+            tuple(
+                TileEditChange(
+                    position=change.position,
+                    before=change.after,
+                    after=change.before,
+                )
+                for change in changes
+            ),
+            record=False,
+        )
+        self._redo_stack.append(changes)
+        return True
+
+    def redo(self) -> bool:
+        if not self._redo_stack:
+            return False
+        changes = self._redo_stack.pop()
+        self._apply_changes(changes, record=False)
+        self._undo_stack.append(changes)
+        return True
+
+    def copy_selection(self) -> bool:
+        selected_tiles = [
+            tile
+            for position in sorted(self.selection_positions)
+            if (tile := self.map_model.get_tile(position)) is not None
+        ]
+        if not selected_tiles:
+            return False
+        anchor_x = min(tile.position.x for tile in selected_tiles)
+        anchor_y = min(tile.position.y for tile in selected_tiles)
+        anchor_z = min(tile.position.z for tile in selected_tiles)
+        self._clipboard = tuple(
+            (
+                tile.position.x - anchor_x,
+                tile.position.y - anchor_y,
+                tile.position.z - anchor_z,
+                tile,
+            )
+            for tile in selected_tiles
+        )
+        return True
+
+    def cut_selection(self) -> bool:
+        if not self.copy_selection():
+            return False
+        changes = tuple(
+            TileEditChange(position=tile.position, before=tile, after=None)
+            for _dx, _dy, _dz, tile in self._clipboard
+        )
+        changed = self._apply_changes(changes)
+        if changed:
+            self.clear_selection()
+        return changed
+
+    def paste_clipboard_at(self, anchor: MapPosition) -> bool:
+        changes: list[TileEditChange] = []
+        for dx, dy, dz, tile in self._clipboard:
+            position = MapPosition(anchor.x + dx, anchor.y + dy, anchor.z + dz)
+            after = TileState(
+                position=position,
+                ground_item_id=tile.ground_item_id,
+                item_ids=tile.item_ids,
+            )
+            before = self.map_model.get_tile(position)
+            if before != after:
+                changes.append(
+                    TileEditChange(position=position, before=before, after=after)
+                )
+        return self._apply_changes(tuple(changes))
+
+    def clipboard_tile_count(self) -> int:
+        return len(self._clipboard)
+
+    def _apply_changes(
+        self,
+        changes: tuple[TileEditChange, ...],
+        *,
+        record: bool = True,
+    ) -> bool:
+        effective_changes = tuple(
+            change for change in changes if change.before != change.after
+        )
+        if not effective_changes:
+            return False
+        for change in effective_changes:
+            if change.after is None:
+                self.map_model.remove_tile(change.position)
+            else:
+                self.map_model.set_tile(change.after)
+        if record:
+            self._undo_stack.append(effective_changes)
+            self._redo_stack.clear()
+        return True
 
     def has_selection(self) -> bool:
         return bool(self.selection_positions)
