@@ -8,6 +8,10 @@ use std::collections::BTreeMap;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
+use crate::autoborder::{
+    resolve_autoborder_plan, AutoBorderDefinition, AutoborderNeighbor, AutoborderNeighborhood,
+    BorderTarget, GroundBorderRule,
+};
 use crate::item::Item;
 use crate::map::{
     Creature, House, MapModel, MapPosition, MapStatistics, Spawn, Town, Waypoint, DEFAULT_X,
@@ -202,6 +206,63 @@ impl EditorShellState {
     /// Returns the map mutation generation counter.
     fn map_generation(&self) -> u64 {
         self.map.generation()
+    }
+
+    /// Resolves existing rme_core autoborder plan output into item ids.
+    #[pyo3(signature = (neighbor_brush_ids, rule_id, border_item_id, center_brush_id=None))]
+    fn resolve_autoborder_items(
+        &self,
+        neighbor_brush_ids: Vec<Option<u32>>,
+        rule_id: u32,
+        border_item_id: u16,
+        center_brush_id: Option<u32>,
+    ) -> PyResult<Vec<u16>> {
+        if neighbor_brush_ids.len() != 8 {
+            return Err(PyValueError::new_err(
+                "autoborder neighborhood must contain exactly 8 neighbors",
+            ));
+        }
+        if border_item_id == 0 {
+            return Ok(Vec::new());
+        }
+
+        let neighbors: Vec<AutoborderNeighbor> = neighbor_brush_ids
+            .into_iter()
+            .map(|brush_id| {
+                brush_id
+                    .map(AutoborderNeighbor::Brush)
+                    .unwrap_or(AutoborderNeighbor::Empty)
+            })
+            .collect();
+        let neighbors: [AutoborderNeighbor; 8] = neighbors.try_into().map_err(|_| {
+            PyValueError::new_err("autoborder neighborhood must contain exactly 8 neighbors")
+        })?;
+
+        let tiles = [border_item_id; 13];
+        let rules = vec![GroundBorderRule {
+            id: rule_id,
+            name: format!("bridge-{rule_id}"),
+            outer: true,
+            to: BorderTarget::All,
+            autoborder: AutoBorderDefinition {
+                id: rule_id,
+                group: 0,
+                ground: true,
+                tiles,
+            },
+            optional_autoborder: None,
+        }];
+        let neighborhood = AutoborderNeighborhood {
+            center: center_brush_id,
+            neighbors,
+        };
+        let plan = resolve_autoborder_plan(&rules, &neighborhood)
+            .map_err(|err| PyValueError::new_err(format!("autoborder plan error: {err}")))?;
+        Ok(plan
+            .placements()
+            .iter()
+            .map(|placement| placement.item_id)
+            .collect())
     }
 
     // --- XML sidecar bridge ---
@@ -474,6 +535,27 @@ mod tests {
         assert_eq!(shell.map_generation(), 0);
         shell.set_tile_ground(1, 1, 0, 100);
         assert!(shell.map_generation() > 0);
+    }
+
+    #[test]
+    fn editor_bridge_resolves_autoborder_items() {
+        let shell = EditorShellState::default();
+
+        assert_eq!(
+            shell
+                .resolve_autoborder_items(
+                    vec![None, Some(99), None, None, None, None, None, None],
+                    10,
+                    4527,
+                    Some(10),
+                )
+                .unwrap(),
+            vec![4527]
+        );
+        assert!(shell
+            .resolve_autoborder_items(vec![None; 8], 10, 4527, Some(10))
+            .unwrap()
+            .is_empty());
     }
 
     #[test]

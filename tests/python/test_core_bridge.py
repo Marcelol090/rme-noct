@@ -31,6 +31,23 @@ def test_editor_shell_core_bridge_exposes_clamped_shell_state() -> None:
     assert "worker_threads=" in core.render_summary()
 
 
+def test_editor_shell_core_bridge_resolves_autoborder_items() -> None:
+    core = EditorShellCoreBridge(_FallbackEditorShellState(), native=False)
+
+    assert core.resolve_autoborder_items(
+        center_brush_id=10,
+        neighbor_brush_ids=(None, 99, None, None, None, None, None, None),
+        rule_id=10,
+        border_item_id=4527,
+    ) == (4527,)
+    assert core.resolve_autoborder_items(
+        center_brush_id=10,
+        neighbor_brush_ids=(None, None, None, None, None, None, None, None),
+        rule_id=10,
+        border_item_id=4527,
+    ) == ()
+
+
 def test_fallback_bridge_stores_waypoints() -> None:
     core = EditorShellCoreBridge(_FallbackEditorShellState(), native=False)
 

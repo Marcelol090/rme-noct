@@ -236,6 +236,22 @@ class _FallbackEditorShellState:
                 return True
         return False
 
+    def resolve_autoborder_items(
+        self,
+        neighbor_brush_ids: tuple[int | None, ...],
+        rule_id: int,
+        border_item_id: int,
+        center_brush_id: int | None = None,
+    ) -> tuple[int, ...]:
+        del center_brush_id, rule_id
+        if len(neighbor_brush_ids) != 8:
+            raise ValueError("autoborder neighborhood must contain exactly 8 neighbors")
+        if border_item_id <= 0:
+            return ()
+        if not any(brush_id is not None for brush_id in neighbor_brush_ids):
+            return ()
+        return (int(border_item_id),)
+
     @staticmethod
     def _clamp_position(x: int, y: int, z: int) -> tuple[int, int, int]:
         return (
@@ -429,6 +445,32 @@ class EditorShellCoreBridge:
         if hasattr(self._inner, "remove_house"):
             return bool(self._inner.remove_house(houseid))
         return False
+
+    def resolve_autoborder_items(
+        self,
+        center_brush_id: int | None,
+        neighbor_brush_ids: tuple[int | None, ...],
+        rule_id: int,
+        border_item_id: int,
+    ) -> tuple[int, ...]:
+        if len(neighbor_brush_ids) != 8:
+            raise ValueError("autoborder neighborhood must contain exactly 8 neighbors")
+        if not hasattr(self._inner, "resolve_autoborder_items"):
+            return _FallbackEditorShellState().resolve_autoborder_items(
+                neighbor_brush_ids,
+                rule_id,
+                border_item_id,
+                center_brush_id,
+            )
+        return tuple(
+            int(item_id)
+            for item_id in self._inner.resolve_autoborder_items(
+                list(neighbor_brush_ids),
+                int(rule_id),
+                int(border_item_id),
+                center_brush_id,
+            )
+        )
 
     def load_otbm(self, path: str) -> bool:
         if not hasattr(self._inner, "load_otbm"):

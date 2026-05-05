@@ -345,6 +345,41 @@ class EditorModel:
             return 0
         return occurrence_count
 
+    def append_border_items(
+        self,
+        additions: dict[MapPosition, tuple[int, ...]],
+    ) -> int:
+        changes: list[TileEditChange] = []
+        changed_tile_count = 0
+        for position in sorted(additions):
+            tile = self.map_model.get_tile(position)
+            if tile is None:
+                continue
+            next_items = list(tile.item_ids)
+            for item_id in additions[position]:
+                normalized_item_id = int(item_id)
+                if normalized_item_id <= 0:
+                    continue
+                if normalized_item_id not in next_items:
+                    next_items.append(normalized_item_id)
+            if tuple(next_items) == tile.item_ids:
+                continue
+            changes.append(
+                TileEditChange(
+                    position=position,
+                    before=tile,
+                    after=TileState(
+                        position=position,
+                        ground_item_id=tile.ground_item_id,
+                        item_ids=tuple(next_items),
+                    ),
+                )
+            )
+            changed_tile_count += 1
+        if not self._apply_changes(tuple(changes)):
+            return 0
+        return changed_tile_count
+
     def clear_modified_state(self) -> bool:
         was_dirty = self.map_model.is_dirty
         self.map_model.clear_changed()
