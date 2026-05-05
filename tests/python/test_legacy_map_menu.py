@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from PyQt6.QtCore import QSettings
 from PyQt6.QtWidgets import QDialog
 
+from pyrme.editor.model import MapPosition, TileState
 from pyrme.ui.legacy_menu_contract import LEGACY_MAP_MENU_SEQUENCE, PHASE1_ACTIONS
 from pyrme.ui.main_window import MainWindow
 
@@ -63,6 +64,21 @@ class _HouseManagerDialog:
         type(self).opened = True
         return int(QDialog.DialogCode.Accepted)
 
+
+class _MapStatisticsDialog:
+    opened = False
+    received_stats = None
+
+    def __init__(self, parent=None, *, statistics=None) -> None:
+        self.parent = parent
+        self.statistics = statistics
+        type(self).received_stats = statistics
+
+    def exec(self) -> int:
+        type(self).opened = True
+        return int(QDialog.DialogCode.Accepted)
+
+
 def test_legacy_map_contract_matches_xml() -> None:
     assert LEGACY_MAP_MENU_SEQUENCE == (
         "Edit Towns",
@@ -106,7 +122,7 @@ def test_main_window_map_menu_matches_legacy_order(qtbot, settings_workspace: Pa
     assert window.map_statistics_action.objectName() == "action_map_statistics"
 
 
-def test_map_backend_gap_actions_are_safe_until_backend_exists(
+def test_map_cleanup_gap_actions_report_exact_missing_core_data(
     qtbot,
     settings_workspace: Path,
 ) -> None:
@@ -117,14 +133,54 @@ def test_map_backend_gap_actions_are_safe_until_backend_exists(
     qtbot.addWidget(window)
 
     for action, expected in (
-        (window.map_cleanup_invalid_tiles_action, "cleanup invalid tiles"),
-        (window.map_cleanup_invalid_zones_action, "cleanup invalid zones"),
-        (window.map_statistics_action, "map statistics"),
+        (
+            window.map_cleanup_invalid_tiles_action,
+            "Cleanup invalid tiles deferred: TileState has no invalid item or "
+            "unresolved item flags.",
+        ),
+        (
+            window.map_cleanup_invalid_zones_action,
+            "Cleanup invalid zones deferred: TileState has no invalid zone or "
+            "opaque OTBM fragment fields.",
+        ),
     ):
         action.trigger()
-        message = window.statusBar().currentMessage().lower()
-        assert expected in message
-        assert "not available" in message
+        assert window.statusBar().currentMessage() == expected
+
+
+def test_map_statistics_action_uses_current_editor_map_data(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    _MapStatisticsDialog.opened = False
+    _MapStatisticsDialog.received_stats = None
+    window = MainWindow(
+        settings=_build_settings(settings_workspace, "map-statistics-action.ini"),
+        enable_docks=False,
+        map_statistics_dialog_factory=_MapStatisticsDialog,
+    )
+    qtbot.addWidget(window)
+
+    editor = window._editor_context.session.editor
+    editor.map_model.set_tile(
+        TileState(
+            position=MapPosition(32000, 32000, 7),
+            ground_item_id=100,
+            item_ids=(200, 300),
+        )
+    )
+    editor.map_model.set_tile(
+        TileState(position=MapPosition(32001, 32000, 7), ground_item_id=400)
+    )
+
+    window.map_statistics_action.trigger()
+
+    assert _MapStatisticsDialog.opened is True
+    assert _MapStatisticsDialog.received_stats is not None
+    assert _MapStatisticsDialog.received_stats.tile_count == 2
+    assert _MapStatisticsDialog.received_stats.item_count == 4
+    assert _MapStatisticsDialog.received_stats.walkable_tile_count == 2
+    assert _MapStatisticsDialog.received_stats.blocking_tile_count == 0
 
 
 def test_map_edit_towns_action_uses_town_manager_dialog(
