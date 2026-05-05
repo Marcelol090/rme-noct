@@ -1,15 +1,17 @@
 # GSD State
 
-**Active Milestone:** M033-brush-catalog-ui-bridge
-**Active Slice:** S01-BRUSH-CATALOG-UI-BRIDGE
+**Active Milestone:** M034-tool-selection-ui
+**Active Slice:** S01-TOOL-SELECTION-UI
 **Active Task:** none
 **Phase:** review
-**Next Action:** Run caveman-review on M033/S01 diff, then commit and PR after clean review.
-**Last Updated:** 2026-05-05T11:42:00-03:00
+**Next Action:** Run caveman-review on M034/S01 diff, then commit and PR after clean review.
+**Last Updated:** 2026-05-05T13:19:50-03:00
 **Requirements Status:** 0 active · 24 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
+- `M034/S01-TOOL-SELECTION-UI` is implemented: Drawing Tools toolbar now exposes Select/Draw/Erase/Fill/Move as real exclusive mode actions while Fill/Move remain no-op backend modes for later slices.
+- `M034/S01-TOOL-SELECTION-UI` is designed from GitHub issue #72: make Select/Draw/Erase/Fill/Move real exclusive toolbar modes without renderer, minimap, Search menu, PyO3, or new Fill/Move map mutation changes.
 - `M033/S01-BRUSH-CATALOG-UI-BRIDGE` is implemented: Brush Palette and Jump to Brush now use shared Python catalog entries, and catalog brush selection updates active shell state without Search menu, renderer, minimap, PyO3 export, or map mutation changes.
 - `M033/S01-BRUSH-CATALOG-UI-BRIDGE` is planned from GitHub issue #72: expose real ground/wall brush catalog entries in the PyQt shell without map mutation, renderer, minimap, or Search menu changes.
 - `M032/S02-HYPRLAND-VISUAL-POLISH` is complete: Arch-blue Hyprland glass tokens, `GlassPanel` shadow/focus rim, shared dock QSS reuse, and GAP docs landed without changing Search menu behavior.
