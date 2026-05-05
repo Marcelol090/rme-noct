@@ -1,15 +1,16 @@
 # GSD State
 
-**Active Milestone:** M031-menu-functionality-gaps
-**Active Slice:** S06-MAP-CLEANUP-STATISTICS
+**Active Milestone:** M032-ui-hyprland-integration
+**Active Slice:** S01-SHELL-FOCUS-TOKENS
 **Active Task:** none
-**Phase:** complete
-**Next Action:** Await explicit approval to close M031 or start the next milestone.
-**Last Updated:** 2026-05-04T21:31:22-03:00
+**Phase:** planning
+**Next Action:** Await explicit approval to implement M032/S01 from `docs/superpowers/plans/2026-05-05-m032-s01-shell-focus-tokens.md`.
+**Last Updated:** 2026-05-05T00:00:00-03:00
 **Requirements Status:** 0 active · 24 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
+- `M032/S01-SHELL-FOCUS-TOKENS` is planned: use tokenized Noct focus state for welcome lists and editor view canvases only; no renderer rewrite, no broad restyling, no window-manager claims.
 - `M031/S06-MAP-CLEANUP-STATISTICS` is complete: Map Statistics now receives real in-memory map tile/item counts without hanging offscreen tests; cleanup invalid tiles/zones report exact missing `TileState` invalid-data evidence.
 - `M031/S05-SELECTION-OPERATIONS` is complete: Selection replace/remove/find item actions now operate on selected tiles only, while Action/Container/Writeable filters report exact missing `TileState` type-flag evidence.
 - `M031/S04-EDIT-MAP-TRANSFORMS` is complete: Replace Items, Remove Items by ID, and Clear Modified State now use tested map mutation seams; Borderize/Randomize/Corpse/Unreachable/Invalid House actions report exact missing backend evidence.
