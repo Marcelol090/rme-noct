@@ -240,3 +240,18 @@ class TestEventEmission:
         dialog.show()
         dialog._on_exit_clicked()
         assert not dialog.isVisible()
+
+
+class TestWelcomeFocusStyling:
+    def test_recent_and_client_lists_have_stable_focus_object_names(self, dialog):
+        assert dialog._recent_list.objectName() == "welcome_recent_maps_list"
+        assert dialog._client_list.objectName() == "welcome_client_version_list"
+
+    def test_lists_include_focus_border_rule(self, dialog):
+        recent_qss = dialog._recent_list.styleSheet()
+        client_qss = dialog._client_list.styleSheet()
+
+        assert "QListWidget:focus" in recent_qss
+        assert "QListWidget:focus" in client_qss
+        assert "border: 1px solid rgba(124, 92, 252, 127)" in recent_qss
+        assert "border: 1px solid rgba(124, 92, 252, 127)" in client_qss

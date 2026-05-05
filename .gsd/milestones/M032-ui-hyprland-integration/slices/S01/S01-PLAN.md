@@ -8,11 +8,11 @@
 
 ## Tasks
 
-- [ ] T01: Add failing focus-token and welcome-list tests.
-- [ ] T02: Add minimal focus token QSS seam.
-- [ ] T03: Wire welcome lists to stable object names and focus QSS.
-- [ ] T04: Add failing editor-view focus state tests.
-- [ ] T05: Wire editor view tabs/canvas active state and closeout docs.
+- [x] T01: Add failing focus-token and welcome-list tests.
+- [x] T02: Add minimal focus token QSS seam.
+- [x] T03: Wire welcome lists to stable object names and focus QSS.
+- [x] T04: Add failing editor-view focus state tests.
+- [x] T05: Wire editor view tabs/canvas active state and closeout docs.
 
 ## Files
 
