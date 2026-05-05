@@ -3,9 +3,9 @@
 **Active Milestone:** M034-tool-selection-ui
 **Active Slice:** S01-TOOL-SELECTION-UI
 **Active Task:** none
-**Phase:** design
-**Next Action:** Review M034/S01 design spec, then approve implementation plan writing.
-**Last Updated:** 2026-05-05T12:49:58-03:00
+**Phase:** planning
+**Next Action:** Review M034/S01 implementation plan, then approve implementation gate.
+**Last Updated:** 2026-05-05T12:58:26-03:00
 **Requirements Status:** 0 active · 24 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
