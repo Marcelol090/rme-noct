@@ -1,15 +1,17 @@
 # GSD State
 
-**Active Milestone:** M034-tool-selection-ui
-**Active Slice:** S01-TOOL-SELECTION-UI
+**Active Milestone:** M035-ground-wall-brushes
+**Active Slice:** S01-GROUND-WALL-BRUSHES
 **Active Task:** none
-**Phase:** review
-**Next Action:** Run caveman-review on M034/S01 diff, then commit and PR after clean review.
-**Last Updated:** 2026-05-05T13:19:50-03:00
+**Phase:** design
+**Next Action:** Review M035/S01 design spec, then write implementation plan after approval.
+**Last Updated:** 2026-05-05T14:05:14-03:00
 **Requirements Status:** 0 active · 24 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
+- `M035/S01-GROUND-WALL-BRUSHES` is designed from GitHub issue #72: apply selected ground and wall catalog brushes through the Python editor model while keeping autoborder mutation, renderer, Search menu, and PyO3/Rust export out of scope.
+- `M034/S01-TOOL-SELECTION-UI` is merged via PR #85: Drawing Tools toolbar exposes Select/Draw/Erase/Fill/Move as real exclusive mode actions.
 - `M034/S01-TOOL-SELECTION-UI` is implemented: Drawing Tools toolbar now exposes Select/Draw/Erase/Fill/Move as real exclusive mode actions while Fill/Move remain no-op backend modes for later slices.
 - `M034/S01-TOOL-SELECTION-UI` is designed from GitHub issue #72: make Select/Draw/Erase/Fill/Move real exclusive toolbar modes without renderer, minimap, Search menu, PyO3, or new Fill/Move map mutation changes.
 - `M033/S01-BRUSH-CATALOG-UI-BRIDGE` is implemented: Brush Palette and Jump to Brush now use shared Python catalog entries, and catalog brush selection updates active shell state without Search menu, renderer, minimap, PyO3 export, or map mutation changes.
