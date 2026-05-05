@@ -63,7 +63,7 @@ from pyrme.ui.legacy_menu_contract import (
     LEGACY_VIEW_FLAG_DEFAULTS,
     PHASE1_ACTIONS,
 )
-from pyrme.ui.styles import qss_color
+from pyrme.ui.styles import focus_panel_qss, qss_color
 from pyrme.ui.theme import THEME, TYPOGRAPHY
 
 if TYPE_CHECKING:
@@ -1208,9 +1208,23 @@ class MainWindow(QMainWindow):
         )
         self._views.append(view)
         self._view_tabs = QTabWidget(self)
+        self._view_tabs.setObjectName("editor_view_tabs")
+        self._view_tabs.setStyleSheet(
+            f"""
+            QTabWidget#editor_view_tabs::pane {{
+                border: 1px solid {qss_color(THEME.ghost_border)};
+                border-radius: 4px;
+            }}
+            QTabBar::tab:selected {{
+                border-bottom: 2px solid {qss_color(THEME.focus_border)};
+            }}
+            {focus_panel_qss("QWidget")}
+            """
+        )
         self._view_tabs.addTab(cast("QWidget", raw_canvas), "Untitled")
         self._view_tabs.currentChanged.connect(self._on_view_tab_changed)
         self.setCentralWidget(self._view_tabs)
+        self._refresh_editor_view_focus_state()
 
     def _setup_docks(self) -> None:
         """Create dock widgets for palettes and tools."""
@@ -2154,6 +2168,7 @@ class MainWindow(QMainWindow):
         self._views.append(view)
         self._view_tabs.addTab(cast("QWidget", raw_canvas), "Untitled")
         self._view_tabs.setCurrentIndex(self._view_tabs.count() - 1)
+        self._refresh_editor_view_focus_state()
         self._canvas = cast("CanvasWidgetProtocol", raw_canvas)
         self._sync_canvas_shell_state()
         self._status_bar().showMessage("Opened a new view.", 3000)
@@ -2180,6 +2195,16 @@ class MainWindow(QMainWindow):
 
     def _active_view(self) -> EditorViewRecord:
         return self._views[self._view_tabs.currentIndex()]
+
+    def _refresh_editor_view_focus_state(self) -> None:
+        if not hasattr(self, "_view_tabs"):
+            return
+        active_index = self._view_tabs.currentIndex()
+        for index, view in enumerate(self._views):
+            widget = cast("QWidget", view.canvas)
+            widget.setProperty("activeEditorView", index == active_index)
+            widget.style().unpolish(widget)
+            widget.style().polish(widget)
 
     def _on_view_tab_changed(self, index: int) -> None:
         if not 0 <= index < len(self._views):
@@ -2209,6 +2234,7 @@ class MainWindow(QMainWindow):
             action = self.show_menu_actions.get(key)
             if action is not None:
                 self._sync_checkable_action(action, checked)
+        self._refresh_editor_view_focus_state()
         self._sync_canvas_shell_state()
 
     def _set_view_flag(self, name: str, enabled: bool) -> None:

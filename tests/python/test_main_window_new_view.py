@@ -313,3 +313,50 @@ def test_new_view_apply_uses_active_canvas_seam(
     assert window._view_tabs.tabText(0) == "Untitled*"
     assert window._view_tabs.tabText(1) == "Untitled*"
     assert window.statusBar().currentMessage() == "Applied Draw tool at 32123, 32145, 05."
+
+
+def test_editor_view_tabs_have_focus_object_name_and_qss(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    window = MainWindow(
+        settings=_build_settings(settings_workspace, "new-view-focus-qss.ini"),
+        canvas_factory=_FakeCanvasWidget,
+        enable_docks=False,
+    )
+    qtbot.addWidget(window)
+
+    assert window._view_tabs.objectName() == "editor_view_tabs"
+    assert "QTabWidget#editor_view_tabs::pane" in window._view_tabs.styleSheet()
+    assert 'QWidget[activeEditorView="true"]' in window._view_tabs.styleSheet()
+
+
+def test_active_editor_view_property_tracks_current_tab(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    canvases: list[_FakeCanvasWidget] = []
+
+    def _canvas_factory(parent: QWidget | None = None) -> _FakeCanvasWidget:
+        canvas = _FakeCanvasWidget(parent)
+        canvases.append(canvas)
+        return canvas
+
+    window = MainWindow(
+        settings=_build_settings(settings_workspace, "new-view-focus-state.ini"),
+        canvas_factory=_canvas_factory,
+        enable_docks=False,
+    )
+    qtbot.addWidget(window)
+
+    assert canvases[0].property("activeEditorView") is True
+
+    window.editor_new_view_action.trigger()
+
+    assert canvases[0].property("activeEditorView") is False
+    assert canvases[1].property("activeEditorView") is True
+
+    window._view_tabs.setCurrentIndex(0)
+
+    assert canvases[0].property("activeEditorView") is True
+    assert canvases[1].property("activeEditorView") is False

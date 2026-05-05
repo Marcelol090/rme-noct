@@ -183,6 +183,10 @@ def item_view_qss(widget_selector: str, *, include_header: bool = False) -> str:
             font-size: 12px;
             outline: none;
         }}
+        {widget_selector}:focus {{
+            border: 1px solid {qss_color(THEME.focus_border)};
+            background-color: {qss_color(THEME.lifted_glass)};
+        }}
         {widget_selector}::item {{
             padding: 4px 0;
             border-left: 3px solid transparent;

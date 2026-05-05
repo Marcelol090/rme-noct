@@ -159,6 +159,7 @@ class WelcomeDialog(QDialog):
         # Recent Maps
         recent_panel = self._build_card("RECENT MAPS")
         self._recent_list = QListWidget()
+        self._recent_list.setObjectName("welcome_recent_maps_list")
         self._recent_list.setStyleSheet(item_view_qss("QListWidget"))
         self._recent_list.currentRowChanged.connect(self._on_map_selected)
         recent_panel.layout().addWidget(self._recent_list)
@@ -173,6 +174,7 @@ class WelcomeDialog(QDialog):
         # Client Info (embedded in client card)
         client_panel = self._build_card("CLIENT VERSION")
         self._client_list = QListWidget()
+        self._client_list.setObjectName("welcome_client_version_list")
         self._client_list.setStyleSheet(item_view_qss("QListWidget"))
         self._client_list.currentRowChanged.connect(self._on_client_selected)
         client_panel.layout().addWidget(self._client_list)

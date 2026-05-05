@@ -1,0 +1,7 @@
+{
+  "id": "M032-ui-hyprland-integration",
+  "title": "UI Hyprland Integration",
+  "status": "planned",
+  "active_slice": "S01-shell-focus-tokens",
+  "source": "M031 follow-up after menu functionality gaps"
+}
