@@ -28,6 +28,31 @@ def test_native_rme_core_exposes_editor_shell_state() -> None:
     assert shell.show_flag("show_spawns") is True
     assert "worker_threads=" in shell.render_summary()
 
+
+def test_native_rme_core_exposes_autoborder_plan_bridge() -> None:
+    rme_core = pytest.importorskip(
+        "pyrme.rme_core",
+        reason="pyrme.rme_core is not built in this environment",
+    )
+    if not hasattr(rme_core.EditorShellState, "resolve_autoborder_items"):
+        pytest.skip("pyrme.rme_core binary was not rebuilt with autoborder bridge")
+
+    shell = rme_core.EditorShellState()
+
+    assert shell.resolve_autoborder_items(
+        [None, 99, None, None, None, None, None, None],
+        10,
+        4527,
+        10,
+    ) == [4527]
+    assert shell.resolve_autoborder_items(
+        [None, None, None, None, None, None, None, None],
+        10,
+        4527,
+        10,
+    ) == []
+
+
 def test_native_rme_core_save_otbm(tmp_path) -> None:
     rme_core = pytest.importorskip(
         "pyrme.rme_core",

@@ -219,11 +219,10 @@ def test_edit_actions_keep_unsupported_gaps_safe(qtbot, settings_workspace: Path
 
     window._editor_context.session.editor.select_position(MapPosition(32000, 32000, 7))
     window._refresh_selection_action_state()
-    window.edit_menu_actions["borderize_selection"].trigger()
+    window.edit_menu_actions["randomize_selection"].trigger()
     assert (
         _status_message(window)
-        == "Borderize Selection deferred: rme_core AutoborderPlan has no Python "
-        "map mutation bridge."
+        == "Randomize Selection deferred: TileState has no ground variant catalog."
     )
 
     window.edit_menu_actions["remove_all_corpses"].trigger()
@@ -279,6 +278,64 @@ def test_editor_model_replaces_and_removes_item_ids_with_history() -> None:
         ground_item_id=None,
         item_ids=(400,),
     )
+
+
+def test_editor_model_appends_border_items_with_history() -> None:
+    editor = EditorModel()
+    position = MapPosition(32000, 32000, 7)
+    editor.map_model.set_tile(TileState(position=position, ground_item_id=4526))
+    editor.map_model.clear_changed()
+
+    assert editor.append_border_items({position: (4527, 4527)}) == 1
+    assert editor.map_model.get_tile(position) == TileState(
+        position=position,
+        ground_item_id=4526,
+        item_ids=(4527,),
+    )
+    assert editor.map_model.is_dirty is True
+
+    assert editor.undo() is True
+    assert editor.map_model.get_tile(position) == TileState(
+        position=position,
+        ground_item_id=4526,
+    )
+
+
+def test_borderize_actions_use_autoborder_bridge(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    window = MainWindow(
+        settings=_build_settings(settings_workspace, "edit-borderize-actions.ini"),
+        enable_docks=False,
+    )
+    qtbot.addWidget(window)
+
+    editor = window._editor_context.session.editor
+    center = MapPosition(32000, 32000, 7)
+    north = MapPosition(32000, 31999, 7)
+    editor.map_model.set_tile(TileState(position=center, ground_item_id=4526))
+    editor.map_model.set_tile(TileState(position=north, ground_item_id=4526))
+    editor.map_model.clear_changed()
+
+    editor.select_position(center)
+    window._refresh_selection_action_state()
+    window.edit_menu_actions["borderize_selection"].trigger()
+
+    assert editor.map_model.get_tile(center) == TileState(
+        position=center,
+        ground_item_id=4526,
+        item_ids=(4527,),
+    )
+    assert _status_message(window) == "Borderized 1 tile."
+
+    window.edit_menu_actions["borderize_map"].trigger()
+    assert editor.map_model.get_tile(north) == TileState(
+        position=north,
+        ground_item_id=4526,
+        item_ids=(4527,),
+    )
+    assert _status_message(window) == "Borderized 1 tile."
 
 
 class _TransformService:
@@ -368,13 +425,6 @@ def test_edit_transform_gaps_report_exact_missing_backend_evidence(
 
     window._editor_context.session.editor.select_position(MapPosition(32000, 32000, 7))
     window._refresh_selection_action_state()
-
-    window.edit_menu_actions["borderize_selection"].trigger()
-    assert (
-        _status_message(window)
-        == "Borderize Selection deferred: rme_core AutoborderPlan has no Python "
-        "map mutation bridge."
-    )
 
     window.edit_menu_actions["randomize_map"].trigger()
     assert (
