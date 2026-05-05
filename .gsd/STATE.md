@@ -3,9 +3,9 @@
 **Active Milestone:** M035-ground-wall-brushes
 **Active Slice:** S01-GROUND-WALL-BRUSHES
 **Active Task:** none
-**Phase:** design
-**Next Action:** Review M035/S01 design spec, then write implementation plan after approval.
-**Last Updated:** 2026-05-05T14:05:14-03:00
+**Phase:** planning
+**Next Action:** Review M035/S01 implementation plan, then approve implementation gate.
+**Last Updated:** 2026-05-05T14:21:00-03:00
 **Requirements Status:** 0 active · 24 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
