@@ -147,6 +147,7 @@ class TestTabSwitchPreservesBehavior:
         assert dock.current_palette() == "Terrain"
         # Terrain should still have its proxy model
         assert "Terrain" in dock._proxies
+        assert dock._proxies["Terrain"].index(0, 0).data() == "grass"
 
     def test_all_palette_names_reachable(self, dock: BrushPaletteDock) -> None:
         for name in dock.palette_names():

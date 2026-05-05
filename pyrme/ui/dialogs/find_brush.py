@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 )
 
 from pyrme.ui.dialogs.find_item import DEFAULT_CATALOG
+from pyrme.ui.models.brush_catalog import default_brush_palette_entries
 from pyrme.ui.styles import dialog_base_qss, ghost_button_qss, item_view_qss, primary_button_qss
 from pyrme.ui.theme import TYPOGRAPHY
 
@@ -34,6 +35,7 @@ class FindBrushResult:
     name: str
     kind: str
     palette_name: str | None = None
+    brush_id: int | None = None
     item_id: int | None = None
 
 
@@ -126,6 +128,10 @@ class FindBrushDialog(QDialog):
                 for result in self._catalog
                 if search_text in result.name.casefold()
                 or (
+                    result.brush_id is not None
+                    and search_text in str(result.brush_id)
+                )
+                or (
                     result.item_id is not None
                     and search_text in str(result.item_id)
                 )
@@ -163,6 +169,8 @@ class FindBrushDialog(QDialog):
     def _format_result_text(result: FindBrushResult) -> str:
         if result.kind == "palette":
             return f"{result.name} palette"
+        if result.kind == "brush":
+            return f"{result.name} brush"
         if result.item_id is not None:
             return f"{result.name} (#{result.item_id})"
         return result.name
@@ -172,6 +180,16 @@ class FindBrushDialog(QDialog):
         palette_results = tuple(
             FindBrushResult(name=palette, kind="palette", palette_name=palette)
             for palette in _DEFAULT_PALETTES
+        )
+        brush_results = tuple(
+            FindBrushResult(
+                name=entry.name,
+                kind="brush",
+                palette_name=entry.palette_name,
+                brush_id=entry.brush_id,
+            )
+            for entry in default_brush_palette_entries()
+            if entry.visible_in_palette
         )
         item_results = tuple(
             FindBrushResult(
@@ -183,4 +201,4 @@ class FindBrushDialog(QDialog):
             for result in DEFAULT_CATALOG
             if result.kind != "creature"
         )
-        return palette_results + item_results
+        return palette_results + brush_results + item_results
