@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
 )
 
 from pyrme.ui.components.glass import GlassDockWidget
+from pyrme.ui.styles import qss_color, section_heading_qss
 from pyrme.ui.theme import THEME, TYPOGRAPHY
 
 
@@ -31,9 +32,8 @@ class PropertiesDock(GlassDockWidget):
         layout.setContentsMargins(12, 12, 12, 12)
 
         # Heading
-        heading = QLabel("Selection Properties")
-        heading.setFont(TYPOGRAPHY.ui_label())
-        heading.setStyleSheet(f"color: {THEME.ash_lavender.name()}; font-weight: 600;")
+        heading = QLabel("SELECTION PROPERTIES")
+        heading.setStyleSheet(section_heading_qss())
         layout.addWidget(heading)
 
         # Form layout for properties
@@ -45,14 +45,14 @@ class PropertiesDock(GlassDockWidget):
         def create_prop_value(text: str) -> QLabel:
             val_label = QLabel(text)
             val_label.setFont(TYPOGRAPHY.coordinate_display())
-            val_label.setStyleSheet("color: #FFFFFF;")
+            val_label.setStyleSheet(f"color: {qss_color(THEME.moonstone_white)};")
             val_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
             return val_label
 
         def create_prop_key(text: str) -> QLabel:
             key_label = QLabel(text)
             key_label.setFont(TYPOGRAPHY.ui_label())
-            key_label.setStyleSheet(f"color: {THEME.ash_lavender.name()};")
+            key_label.setStyleSheet(f"color: {qss_color(THEME.ash_lavender)};")
             return key_label
 
         form_layout.addRow(create_prop_key("Position:"), create_prop_value("X:32000 Y:32000 Z:07"))

@@ -16,6 +16,8 @@ from pyrme.ui.models.startup_models import (
     StartupMapPeekResult,
     StartupRecentMapEntry,
 )
+from pyrme.ui.styles.contracts import qss_color
+from pyrme.ui.theme import THEME
 
 
 # Ensure QApplication exists for widget tests
@@ -250,8 +252,9 @@ class TestWelcomeFocusStyling:
     def test_lists_include_focus_border_rule(self, dialog):
         recent_qss = dialog._recent_list.styleSheet()
         client_qss = dialog._client_list.styleSheet()
+        expected_focus_border = qss_color(THEME.focus_border)
 
         assert "QListWidget:focus" in recent_qss
         assert "QListWidget:focus" in client_qss
-        assert "border: 1px solid rgba(124, 92, 252, 127)" in recent_qss
-        assert "border: 1px solid rgba(124, 92, 252, 127)" in client_qss
+        assert f"border: 1px solid {expected_focus_border}" in recent_qss
+        assert f"border: 1px solid {expected_focus_border}" in client_qss
