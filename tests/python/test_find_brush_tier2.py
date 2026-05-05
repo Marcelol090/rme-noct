@@ -42,3 +42,16 @@ def test_find_brush_dialog_returns_selected_result_on_accept(qtbot) -> None:
         kind="palette",
         palette_name="RAW",
     )
+
+
+def test_find_brush_default_catalog_includes_catalog_brushes(qapp) -> None:  # noqa: ARG001
+    dialog = FindBrushDialog()
+    dialog.search_field.setText("grass")
+
+    result = dialog.selected_result()
+
+    assert result is not None
+    assert result.name == "grass"
+    assert result.kind == "brush"
+    assert result.palette_name == "Terrain"
+    assert result.brush_id == 10

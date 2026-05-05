@@ -20,6 +20,11 @@ from PyQt6.QtWidgets import (
 
 from pyrme.ui.components.glass import GlassDockWidget
 from pyrme.ui.docks.item_palette import ItemPaletteWidget
+from pyrme.ui.models.brush_catalog import (
+    BrushPaletteEntry,
+    default_brush_palette_entries,
+    entries_by_palette,
+)
 from pyrme.ui.models.item_palette_types import ItemEntry
 from pyrme.ui.styles import input_field_qss, item_view_qss, qss_color
 from pyrme.ui.theme import THEME, TYPOGRAPHY
@@ -32,7 +37,7 @@ class VirtualBrushModel(QAbstractListModel):
 
     def __init__(self, parent=None) -> None:  # noqa: ANN001
         super().__init__(parent)
-        self._names: list[str] = []
+        self._entries: list[BrushPaletteEntry | str] = []
 
     def index(  # noqa: D102
         self,
@@ -44,39 +49,60 @@ class VirtualBrushModel(QAbstractListModel):
 
     def load_names(self, names: list[str]) -> None:
         self.beginResetModel()
-        self._names = list(names)
+        self._entries = list(names)
+        self.endResetModel()
+
+    def load_entries(self, entries: tuple[BrushPaletteEntry, ...]) -> None:
+        self.beginResetModel()
+        self._entries = list(entries)
         self.endResetModel()
 
     def rowCount(self, parent: QModelIndex = _ROOT_INDEX) -> int:  # noqa: N802
         if parent.isValid():
             return 0
-        return len(self._names)
+        return len(self._entries)
 
     def data(self, index: QModelIndex, role: int = int(Qt.ItemDataRole.DisplayRole)):  # noqa: ANN201
-        if (
-            role == int(Qt.ItemDataRole.DisplayRole)
-            and index.isValid()
-            and 0 <= index.row() < len(self._names)
-        ):
-            return self._names[index.row()]
+        if not index.isValid() or not 0 <= index.row() < len(self._entries):
+            return None
+        entry = self._entries[index.row()]
+        if role in (Qt.ItemDataRole.DisplayRole, int(Qt.ItemDataRole.DisplayRole)):
+            return entry.name if isinstance(entry, BrushPaletteEntry) else entry
+        if role in (Qt.ItemDataRole.UserRole, int(Qt.ItemDataRole.UserRole)):
+            return entry.search_text if isinstance(entry, BrushPaletteEntry) else entry
         return None
+
+    def entry_at(self, row: int) -> BrushPaletteEntry | None:
+        if not 0 <= row < len(self._entries):
+            return None
+        entry = self._entries[row]
+        return entry if isinstance(entry, BrushPaletteEntry) else None
 
 
 class BrushPaletteDock(GlassDockWidget):
     """Legacy-style brush palette dock with a real model/view Item tab."""
 
     item_selected = pyqtSignal(ItemEntry)
+    brush_selected = pyqtSignal(BrushPaletteEntry)
     manage_houses_requested = pyqtSignal()
 
     _PALETTE_NAMES = ("Terrain", "Doodads", "Item", "Creature", "RAW")
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        brush_entries: tuple[BrushPaletteEntry, ...] | None = None,
+    ) -> None:
         super().__init__("BRUSH PALETTE", parent)
         self.setObjectName("brush_palette_dock")
         self._views: dict[str, QListView] = {}
         self._models: dict[str, VirtualBrushModel] = {}
         self._proxies: dict[str, QSortFilterProxyModel] = {}
         self._item_palette: ItemPaletteWidget | None = None
+        self._brush_entries = entries_by_palette(
+            brush_entries or default_brush_palette_entries()
+        )
         self._setup_ui()
 
     @property
@@ -159,10 +185,11 @@ class BrushPaletteDock(GlassDockWidget):
 
     def _create_brush_view(self, name: str) -> QListView:
         model = VirtualBrushModel(self)
-        model.load_names([f"{name} Brush {i}" for i in range(1, 21)])
+        model.load_entries(self._brush_entries.get(name, ()))
         proxy = QSortFilterProxyModel(self)
         proxy.setSourceModel(model)
         proxy.setFilterCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
+        proxy.setFilterRole(int(Qt.ItemDataRole.UserRole))
 
         view = QListView()
         view.setFrameShape(QListView.Shape.NoFrame)
@@ -171,11 +198,27 @@ class BrushPaletteDock(GlassDockWidget):
         view.setIconSize(QSize(32, 32))
         view.setStyleSheet(item_view_qss("QListView"))
         view.setFont(TYPOGRAPHY.ui_label())
+        view.clicked.connect(
+            lambda index, palette_name=name: self._on_brush_clicked(
+                palette_name,
+                index,
+            )
+        )
 
         self._models[name] = model
         self._proxies[name] = proxy
         self._views[name] = view
         return view
+
+    def _on_brush_clicked(self, palette_name: str, index: QModelIndex) -> None:
+        proxy = self._proxies.get(palette_name)
+        model = self._models.get(palette_name)
+        if proxy is None or model is None:
+            return
+        source_index = proxy.mapToSource(index)
+        entry = model.entry_at(source_index.row())
+        if entry is not None:
+            self.brush_selected.emit(entry)
 
     def _apply_search_to_current_palette(self, text: str) -> None:
         current = self.current_palette()

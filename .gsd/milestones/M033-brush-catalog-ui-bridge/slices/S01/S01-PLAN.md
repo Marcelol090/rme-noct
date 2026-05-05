@@ -21,11 +21,11 @@ Plan source: `docs/superpowers/plans/2026-05-05-m033-brush-catalog-ui-bridge.md`
 
 ## Tasks
 
-- [ ] T01: Add brush catalog view-model tests and implementation.
-- [ ] T02: Load Brush Palette non-Item tabs from catalog entries.
-- [ ] T03: Wire catalog brush selection into MainWindow active brush state.
-- [ ] T04: Reuse catalog entries in Jump to Brush.
-- [ ] T05: Closeout docs, caveman-review, and verification.
+- [x] T01: Add brush catalog view-model tests and implementation.
+- [x] T02: Load Brush Palette non-Item tabs from catalog entries.
+- [x] T03: Wire catalog brush selection into MainWindow active brush state.
+- [x] T04: Reuse catalog entries in Jump to Brush.
+- [x] T05: Closeout docs, caveman-review, and verification.
 
 ## Verification
 

@@ -1,7 +1,7 @@
 {
   "id": "M033-brush-catalog-ui-bridge",
   "title": "Brush Catalog UI Bridge",
-  "status": "active",
+  "status": "review",
   "active_slice": "S01-brush-catalog-ui-bridge",
   "source": "GitHub issue #72 Phase 3 brush engine and toolset"
 }

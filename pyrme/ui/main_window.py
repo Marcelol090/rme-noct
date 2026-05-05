@@ -67,6 +67,7 @@ from pyrme.ui.styles import focus_panel_qss, qss_color
 from pyrme.ui.theme import THEME, TYPOGRAPHY
 
 if TYPE_CHECKING:
+    from pyrme.ui.models.brush_catalog import BrushPaletteEntry
     from pyrme.ui.models.item_palette_types import ItemEntry
     from pyrme.ui.models.startup_models import StartupLoadRequest
 
@@ -1230,6 +1231,9 @@ class MainWindow(QMainWindow):
         """Create dock widgets for palettes and tools."""
         self.brush_palette_dock = BrushPaletteDock(self)
         self.brush_palette_dock.item_selected.connect(self._handle_item_palette_selection)
+        self.brush_palette_dock.brush_selected.connect(
+            self._handle_brush_palette_selection
+        )
         if hasattr(self.brush_palette_dock, "manage_houses_requested"):
             self.brush_palette_dock.manage_houses_requested.connect(
                 self._show_house_manager
@@ -2293,6 +2297,15 @@ class MainWindow(QMainWindow):
             f"Selected item {item.name} (#{item.item_id}).",
             3000,
         )
+
+    def _handle_brush_palette_selection(self, entry: BrushPaletteEntry) -> None:
+        self._active_brush_name = entry.name
+        self._active_brush_id = entry.active_brush_id
+        self._active_item_id = None
+        self._editor_context.session.active_brush_id = self._active_brush_id
+        self._editor_context.session.active_item_id = None
+        self._sync_canvas_shell_state()
+        self._status_bar().showMessage(f"Brush: {entry.name}.", 3000)
 
     def _set_active_item_selection(self, name: str, item_id: int) -> None:
         self._active_brush_name = name

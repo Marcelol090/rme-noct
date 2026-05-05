@@ -76,11 +76,11 @@ class TestBrushDockIntegration:
     def test_palette_tabs_exist(self, dock: BrushPaletteDock) -> None:
         assert dock.tabs.count() == len(dock.palette_names())
 
-    def test_8px_spacing_in_stylesheet(self, dock: BrushPaletteDock) -> None:
-        """Item padding must use 8px grid."""
+    def test_shared_item_padding_in_stylesheet(self, dock: BrushPaletteDock) -> None:
+        """Item padding must match the shared list view contract."""
         first_view = list(dock._views.values())[0]
         ss = first_view.styleSheet()
-        assert "padding: 8px" in ss
+        assert "padding: 4px 0" in ss
 
     def test_hover_state_in_stylesheet(self, dock: BrushPaletteDock) -> None:
         first_view = list(dock._views.values())[0]
