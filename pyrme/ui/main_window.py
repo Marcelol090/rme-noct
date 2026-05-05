@@ -79,6 +79,14 @@ CloseDirtyDecision = Literal["save", "discard", "cancel"]
 FileDataResultStatus = Literal["success", "deferred", "failure"]
 ItemReplacement = tuple[int, int]
 
+EDITOR_MODE_ACTIONS: tuple[tuple[str, str], ...] = (
+    ("selection", "Select"),
+    ("drawing", "Draw"),
+    ("erasing", "Erase"),
+    ("fill", "Fill"),
+    ("move", "Move"),
+)
+
 QSETTINGS_BORDER_AUTOMAGIC = "editor/border_automagic"
 QSETTINGS_SELECTION_MODE = "editor/selection_mode"
 QSETTINGS_SELECTION_COMPENSATE = "editor/selection_compensate"
@@ -443,6 +451,7 @@ class MainWindow(QMainWindow):
         self.toggle_minimap_action: QAction | None = None
         self.toggle_floors_toolbar_action: QAction | None = None
         self.drawing_toolbar: QToolBar | None = None
+        self._brush_mode_group: QActionGroup | None = None
         self.floor_toolbar: QToolBar | None = None
         self.sizes_toolbar: QToolBar | None = None
         self.standard_toolbar: QToolBar | None = None
@@ -553,9 +562,9 @@ class MainWindow(QMainWindow):
         self._setup_tail_menus()
 
         self.brush_mode_actions: dict[str, QAction] = {}
-        mode_group = QActionGroup(self)
-        mode_group.setExclusive(True)
-        for mode, label in (("selection", "Select"), ("drawing", "Draw")):
+        self._brush_mode_group = QActionGroup(self)
+        self._brush_mode_group.setExclusive(True)
+        for mode, label in EDITOR_MODE_ACTIONS:
             action = self._action(label)
             action.setCheckable(True)
             action.triggered.connect(
@@ -563,7 +572,7 @@ class MainWindow(QMainWindow):
                 if checked
                 else None
             )
-            mode_group.addAction(action)
+            self._brush_mode_group.addAction(action)
             self.brush_mode_actions[mode] = action
         self.brush_mode_actions["drawing"].setChecked(True)
 
@@ -1106,12 +1115,10 @@ class MainWindow(QMainWindow):
         self.drawing_toolbar = QToolBar("Drawing Tools")
         self.drawing_toolbar.setObjectName("drawing_toolbar")
         self.drawing_toolbar.setMovable(True)
-        self.drawing_toolbar.addAction(self.brush_mode_actions["selection"])
-        self.drawing_toolbar.addAction(self.brush_mode_actions["drawing"])
-        self.drawing_toolbar.addAction(self._action("Erase"))
-        self.drawing_toolbar.addAction(self._action("Fill"))
+        for mode in ("selection", "drawing", "erasing", "fill"):
+            self.drawing_toolbar.addAction(self.brush_mode_actions[mode])
         self.drawing_toolbar.addSeparator()
-        self.drawing_toolbar.addAction(self._action("Move"))
+        self.drawing_toolbar.addAction(self.brush_mode_actions["move"])
         self.addToolBar(self.drawing_toolbar)
 
         self.sizes_toolbar = QToolBar("Sizes")

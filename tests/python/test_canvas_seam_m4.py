@@ -388,6 +388,30 @@ def test_main_window_forwards_editor_activation_state_to_canvas(qtbot) -> None:
         shutil.rmtree(temp_root, ignore_errors=True)
 
 
+def test_main_window_extended_tool_modes_update_canvas_activation(qtbot) -> None:
+    holder: dict[str, _FakeCanvasWidget] = {}
+    temp_root = _make_workspace("canvas-extended-modes")
+
+    try:
+        def _canvas_factory(parent: QWidget | None = None) -> _FakeCanvasWidget:
+            canvas = _FakeCanvasWidget(parent)
+            holder["canvas"] = canvas
+            return canvas
+
+        window = MainWindow(
+            settings=_build_settings(temp_root, "canvas-extended-modes.ini"),
+            canvas_factory=_canvas_factory,
+        )
+        qtbot.addWidget(window)
+
+        for mode in ("erasing", "fill", "move"):
+            window.brush_mode_actions[mode].trigger()
+            assert window._editor_context.session.mode == mode
+            assert holder["canvas"].editor_mode == mode
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)
+
+
 def test_main_window_apply_active_tool_uses_canvas_seam_and_marks_view_dirty(qtbot) -> None:
     holder: dict[str, _FakeCanvasWidget] = {}
     temp_root = _make_workspace("canvas-apply")

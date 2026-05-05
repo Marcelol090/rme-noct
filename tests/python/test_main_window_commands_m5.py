@@ -408,6 +408,65 @@ def test_main_window_brush_mode_toolbar_updates_session_and_tool_options(
     assert _status_message(window) == "Editor mode: Select."
 
 
+@pytest.mark.parametrize(
+    ("mode", "label"),
+    [
+        ("selection", "Select"),
+        ("drawing", "Draw"),
+        ("erasing", "Erase"),
+        ("fill", "Fill"),
+        ("move", "Move"),
+    ],
+)
+def test_main_window_drawing_toolbar_exposes_all_editor_modes(
+    qtbot,
+    settings_workspace: Path,
+    mode: str,
+    label: str,
+) -> None:
+    window = MainWindow(settings=_build_settings(settings_workspace, f"mode-{mode}.ini"))
+    qtbot.addWidget(window)
+
+    assert set(window.brush_mode_actions) == {
+        "selection",
+        "drawing",
+        "erasing",
+        "fill",
+        "move",
+    }
+    assert window.drawing_toolbar is not None
+    assert window.brush_mode_actions[mode].isCheckable() is True
+
+    if mode == "drawing":
+        window.brush_mode_actions["selection"].trigger()
+    window.brush_mode_actions[mode].trigger()
+
+    assert window._editor_context.session.mode == mode
+    assert window.brush_mode_actions[mode].isChecked() is True
+    for other_mode, action in window.brush_mode_actions.items():
+        if other_mode != mode:
+            assert action.isChecked() is False
+    assert window.tool_options_dock is not None
+    assert window.tool_options_dock._mode_label.text() == label
+    assert _status_message(window) == f"Editor mode: {label}."
+
+
+def test_main_window_drawing_toolbar_orders_tool_modes(
+    qtbot,
+    settings_workspace: Path,
+) -> None:
+    window = MainWindow(settings=_build_settings(settings_workspace, "mode-order.ini"))
+    qtbot.addWidget(window)
+
+    assert window.drawing_toolbar is not None
+    labels = [
+        "|" if action.isSeparator() else action.text()
+        for action in window.drawing_toolbar.actions()
+    ]
+
+    assert labels[:6] == ["Select", "Draw", "Erase", "Fill", "|", "Move"]
+
+
 def test_main_window_unknown_brush_mode_falls_back_to_drawing(
     qtbot,
     settings_workspace: Path,

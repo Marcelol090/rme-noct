@@ -1,7 +1,7 @@
 {
   "id": "M034-tool-selection-ui",
   "title": "Tool Selection UI",
-  "status": "planning",
+  "status": "review",
   "active_slice": "S01-tool-selection-ui",
   "source": "GitHub issue #72 Phase 3 brush engine and toolset"
 }
