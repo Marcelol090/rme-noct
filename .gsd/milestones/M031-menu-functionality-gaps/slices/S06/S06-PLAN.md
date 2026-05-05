@@ -13,11 +13,11 @@ Plan source: `docs/superpowers/plans/2026-05-01-m031-menu-functionality-gaps.md`
 
 ## Tasks
 
-- [ ] T01: failing tests for Map cleanup/statistics behavior.
-- [ ] T02: add bridge surface for invalid tile/zone cleanup where core exposes data.
-- [ ] T03: feed real map statistics into `MapStatisticsDialog`.
-- [ ] T04: verify Map Properties, Town Manager, and House Manager remain wired.
-- [ ] T05: closeout summary and state update.
+- [x] T01: failing tests for Map cleanup/statistics behavior.
+- [x] T02: add bridge surface for invalid tile/zone cleanup where core exposes data.
+- [x] T03: feed real map statistics into `MapStatisticsDialog`.
+- [x] T04: verify Map Properties, Town Manager, and House Manager remain wired.
+- [x] T05: closeout summary and state update.
 
 ## Files
 

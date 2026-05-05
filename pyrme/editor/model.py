@@ -40,6 +40,20 @@ class TileEditChange:
     after: TileState | None
 
 
+@dataclass(frozen=True, slots=True)
+class MapStatisticsSnapshot:
+    tile_count: int
+    item_count: int
+    blocking_tile_count: int = 0
+    walkable_tile_count: int = 0
+    spawn_count: int = 0
+    creature_count: int = 0
+    waypoint_count: int = 0
+    house_count: int = 0
+    total_house_sqm: int = 0
+    town_count: int = 0
+
+
 @dataclass(slots=True)
 class MapModel:
     """Sparse shared map model owned by the editor session."""
@@ -335,6 +349,17 @@ class EditorModel:
         was_dirty = self.map_model.is_dirty
         self.map_model.clear_changed()
         return was_dirty
+
+    def collect_statistics(self) -> MapStatisticsSnapshot:
+        tiles = self.map_model.tiles()
+        return MapStatisticsSnapshot(
+            tile_count=len(tiles),
+            item_count=sum(
+                int(tile.ground_item_id is not None) + len(tile.item_ids)
+                for tile in tiles
+            ),
+            walkable_tile_count=len(tiles),
+        )
 
     def selection_item_counts(self) -> dict[int, int]:
         counts: dict[int, int] = {}

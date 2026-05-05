@@ -76,11 +76,18 @@ class MapStatisticsDialog(QDialog):
 
     DIALOG_SIZE = QSize(640, 520)
 
-    def __init__(self, parent: QWidget | None = None, shell_state=None) -> None:
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        shell_state=None,
+        *,
+        statistics=None,
+    ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Map Statistics")
         self.setFixedSize(self.DIALOG_SIZE)
         self._shell_state = shell_state
+        self._statistics = statistics
 
         self._apply_dialog_style()
         self._build_layout()
@@ -148,10 +155,13 @@ class MapStatisticsDialog(QDialog):
         layout.addLayout(footer)
 
     def refresh_stats(self) -> None:
-        if not self._shell_state:
+        if self._statistics is not None:
+            stats = self._statistics
+        elif self._shell_state:
+            stats = self._shell_state.collect_statistics()
+        else:
             return
 
-        stats = self._shell_state.collect_statistics()
         if not stats:
             return
 

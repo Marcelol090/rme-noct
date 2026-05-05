@@ -395,6 +395,7 @@ class MainWindow(QMainWindow):
         jump_to_item_dialog_factory=None,
         find_item_dialog_factory=None,
         map_properties_dialog_factory: DialogFactory | None = None,
+        map_statistics_dialog_factory: DialogFactory | None = None,
         house_manager_dialog_factory: DialogFactory | None = None,
         file_lifecycle_service: FileLifecycleService | None = None,
         file_data_service: FileDataService | None = None,
@@ -414,6 +415,9 @@ class MainWindow(QMainWindow):
         self._find_item_dialog_factory = find_item_dialog_factory or FindItemDialog
         self._map_properties_dialog_factory = (
             map_properties_dialog_factory or MapPropertiesDialog
+        )
+        self._map_statistics_dialog_factory = (
+            map_statistics_dialog_factory or MapStatisticsDialog
         )
         self._house_manager_dialog_factory = (
             house_manager_dialog_factory or HouseManagerDialog
@@ -786,11 +790,11 @@ class MainWindow(QMainWindow):
         )
         self.map_cleanup_invalid_tiles_action = self._action_from_spec(
             "map_cleanup_invalid_tiles",
-            lambda: self._show_unavailable("Cleanup invalid tiles"),
+            self._cleanup_invalid_tiles,
         )
         self.map_cleanup_invalid_zones_action = self._action_from_spec(
             "map_cleanup_invalid_zones",
-            lambda: self._show_unavailable("Cleanup invalid zones"),
+            self._cleanup_invalid_zones,
         )
         self.map_properties_action = self._action_from_spec(
             "map_properties", self._show_map_properties
@@ -1918,8 +1922,25 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     def _show_map_statistics(self) -> None:
-        dialog = MapStatisticsDialog(self)
+        dialog = self._map_statistics_dialog_factory(
+            self,
+            statistics=self._editor_context.session.editor.collect_statistics(),
+        )
         dialog.exec()
+
+    def _cleanup_invalid_tiles(self) -> None:
+        self._status_bar().showMessage(
+            "Cleanup invalid tiles deferred: TileState has no invalid item or "
+            "unresolved item flags.",
+            3000,
+        )
+
+    def _cleanup_invalid_zones(self) -> None:
+        self._status_bar().showMessage(
+            "Cleanup invalid zones deferred: TileState has no invalid zone or "
+            "opaque OTBM fragment fields.",
+            3000,
+        )
 
     def _show_goto_position(self) -> None:
         dialog = self._goto_dialog_factory(self)
