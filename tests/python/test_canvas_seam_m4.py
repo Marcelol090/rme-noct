@@ -23,6 +23,7 @@ from pyrme.ui.canvas_host import (
     implements_editor_view_flag_canvas_protocol,
 )
 from pyrme.ui.main_window import MainWindow
+from pyrme.ui.models.brush_catalog import default_brush_palette_entries
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -35,6 +36,10 @@ def _make_workspace(name: str) -> Path:
 
 def _build_settings(root: Path, name: str) -> QSettings:
     return QSettings(str(root / name), QSettings.Format.IniFormat)
+
+
+def _brush_entry(name: str):
+    return next(entry for entry in default_brush_palette_entries() if entry.name == name)
 
 
 class _FakeCanvasWidget(QWidget):
@@ -439,6 +444,74 @@ def test_main_window_apply_active_tool_uses_canvas_seam_and_marks_view_dirty(qtb
             MapPosition(32000, 32000, 7)
         ) == TileState(position=MapPosition(32000, 32000, 7), ground_item_id=1)
         assert window._view_tabs.tabText(0) == "Untitled*"
+        assert window.statusBar().currentMessage() == "Applied Draw tool at 32000, 32000, 07."
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)
+
+
+def test_main_window_apply_ground_catalog_brush_uses_canvas_seam(qtbot) -> None:
+    holder: dict[str, _FakeCanvasWidget] = {}
+    temp_root = _make_workspace("canvas-ground-brush")
+
+    try:
+        def _canvas_factory(parent: QWidget | None = None) -> _FakeCanvasWidget:
+            canvas = _FakeCanvasWidget(parent)
+            holder["canvas"] = canvas
+            return canvas
+
+        window = MainWindow(
+            settings=_build_settings(temp_root, "canvas-ground-brush.ini"),
+            canvas_factory=_canvas_factory,
+        )
+        qtbot.addWidget(window)
+
+        window._handle_brush_palette_selection(_brush_entry("grass"))
+        changed = window._apply_active_tool_at_cursor()
+
+        assert changed is True
+        assert holder["canvas"].apply_count == 1
+        assert window._editor_context.session.document.is_dirty is True
+        assert window._editor_context.session.editor.map_model.get_tile(
+            MapPosition(32000, 32000, 7)
+        ) == TileState(position=MapPosition(32000, 32000, 7), ground_item_id=4526)
+        assert window.statusBar().currentMessage() == "Applied Draw tool at 32000, 32000, 07."
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)
+
+
+def test_main_window_apply_wall_catalog_brush_uses_canvas_seam(qtbot) -> None:
+    holder: dict[str, _FakeCanvasWidget] = {}
+    temp_root = _make_workspace("canvas-wall-brush")
+
+    try:
+        def _canvas_factory(parent: QWidget | None = None) -> _FakeCanvasWidget:
+            canvas = _FakeCanvasWidget(parent)
+            holder["canvas"] = canvas
+            return canvas
+
+        window = MainWindow(
+            settings=_build_settings(temp_root, "canvas-wall-brush.ini"),
+            canvas_factory=_canvas_factory,
+        )
+        qtbot.addWidget(window)
+        window._editor_context.session.editor.map_model.set_tile(
+            TileState(position=MapPosition(32000, 32000, 7), ground_item_id=4526)
+        )
+        window._editor_context.session.editor.map_model.clear_changed()
+
+        window._handle_brush_palette_selection(_brush_entry("stone wall"))
+        changed = window._apply_active_tool_at_cursor()
+
+        assert changed is True
+        assert holder["canvas"].apply_count == 1
+        assert window._editor_context.session.document.is_dirty is True
+        assert window._editor_context.session.editor.map_model.get_tile(
+            MapPosition(32000, 32000, 7)
+        ) == TileState(
+            position=MapPosition(32000, 32000, 7),
+            ground_item_id=4526,
+            item_ids=(3361,),
+        )
         assert window.statusBar().currentMessage() == "Applied Draw tool at 32000, 32000, 07."
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)

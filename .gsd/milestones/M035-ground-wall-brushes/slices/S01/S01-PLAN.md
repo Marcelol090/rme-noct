@@ -23,8 +23,8 @@ Plan source: `docs/superpowers/plans/2026-05-05-m035-ground-wall-brushes.md`
 ## Tasks
 
 - [x] T01: Write implementation plan after design review.
-- [ ] T02: Execute TDD implementation.
-- [ ] T03: Closeout docs, caveman-review, and verification.
+- [x] T02: Execute TDD implementation.
+- [x] T03: Closeout docs, caveman-review, and verification.
 
 ## Stop Condition
 

@@ -2,6 +2,11 @@ from __future__ import annotations
 
 from PyQt6.QtCore import QSettings, Qt
 
+from pyrme.editor.brushes import (
+    BrushPlacementKind,
+    brush_placement_for_active_id,
+    default_editor_brush_placements,
+)
 from pyrme.ui.docks.brush_palette import BrushPaletteDock
 from pyrme.ui.main_window import MainWindow
 from pyrme.ui.models.brush_catalog import (
@@ -35,6 +40,31 @@ def test_brush_palette_entry_active_id_and_search_text() -> None:
 
     assert entry.active_brush_id == "brush:ground:10"
     assert entry.search_text == "grass ground terrain 10 4526 4527"
+
+
+def test_default_editor_brush_placements_match_visible_catalog_entries() -> None:
+    placements = default_editor_brush_placements()
+    entries = default_brush_palette_entries()
+
+    assert [placement.active_brush_id for placement in placements] == [
+        entry.active_brush_id for entry in entries
+    ]
+    assert [placement.item_id for placement in placements] == [
+        entry.look_id for entry in entries
+    ]
+
+
+def test_brush_placement_for_active_id_resolves_default_ground_and_wall() -> None:
+    grass = brush_placement_for_active_id("brush:ground:10")
+    stone_wall = brush_placement_for_active_id("brush:wall:20")
+
+    assert grass is not None
+    assert grass.kind is BrushPlacementKind.GROUND
+    assert grass.item_id == 4526
+    assert stone_wall is not None
+    assert stone_wall.kind is BrushPlacementKind.WALL
+    assert stone_wall.item_id == 3361
+    assert brush_placement_for_active_id("brush:ground:999") is None
 
 
 def test_entries_by_palette_filters_visible_entries() -> None:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pyrme.editor import EditorModel, MapPosition, TileState
+from pyrme.editor.brushes import brush_placement_for_active_id
 from pyrme.ui.editor_context import EditorContext
 
 
@@ -108,6 +109,60 @@ def test_editor_backend_drawing_tool_preserves_existing_item_stack() -> None:
         ground_item_id=2148,
         item_ids=(200, 300),
     )
+
+
+def test_editor_backend_ground_catalog_brush_sets_ground_and_preserves_stack() -> None:
+    editor = EditorModel()
+    position = MapPosition(32000, 32000, 7)
+    editor.map_model.set_tile(
+        TileState(position=position, ground_item_id=100, item_ids=(200, 300))
+    )
+    editor.map_model.clear_changed()
+
+    editor.set_mode("drawing")
+    editor.active_brush_id = "brush:ground:10"
+
+    assert editor.apply_active_tool_at(position) is True
+    assert editor.map_model.get_tile(position) == TileState(
+        position=position,
+        ground_item_id=4526,
+        item_ids=(200, 300),
+    )
+
+
+def test_editor_backend_wall_catalog_brush_appends_wall_item_once() -> None:
+    editor = EditorModel()
+    position = MapPosition(32000, 32000, 7)
+    editor.map_model.set_tile(TileState(position=position, ground_item_id=4526))
+    editor.map_model.clear_changed()
+
+    editor.set_mode("drawing")
+    editor.active_brush_id = "brush:wall:20"
+
+    assert editor.apply_active_tool_at(position) is True
+    assert editor.map_model.get_tile(position) == TileState(
+        position=position,
+        ground_item_id=4526,
+        item_ids=(3361,),
+    )
+    assert editor.apply_active_tool_at(position) is False
+    assert editor.map_model.get_tile(position) == TileState(
+        position=position,
+        ground_item_id=4526,
+        item_ids=(3361,),
+    )
+
+
+def test_editor_backend_unknown_catalog_brush_noops() -> None:
+    editor = EditorModel()
+    position = MapPosition(32000, 32000, 7)
+
+    editor.set_mode("drawing")
+    editor.active_brush_id = "brush:ground:999"
+
+    assert brush_placement_for_active_id(editor.active_brush_id) is None
+    assert editor.apply_active_tool_at(position) is False
+    assert editor.map_model.get_tile(position) is None
 
 
 def test_editor_backend_erasing_tool_removes_existing_tile() -> None:

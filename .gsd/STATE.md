@@ -3,13 +3,14 @@
 **Active Milestone:** M035-ground-wall-brushes
 **Active Slice:** S01-GROUND-WALL-BRUSHES
 **Active Task:** none
-**Phase:** planning
-**Next Action:** Review M035/S01 implementation plan, then approve implementation gate.
-**Last Updated:** 2026-05-05T14:21:00-03:00
+**Phase:** review
+**Next Action:** Run caveman-review on M035/S01 diff, then commit and PR after clean review.
+**Last Updated:** 2026-05-05T15:11:45-03:00
 **Requirements Status:** 0 active · 24 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
+- `M035/S01-GROUND-WALL-BRUSHES` is implemented: selected default ground and wall catalog brushes now mutate the Python map model through Draw while Fill/Move and deferred autoborder behavior remain unchanged.
 - `M035/S01-GROUND-WALL-BRUSHES` is designed from GitHub issue #72: apply selected ground and wall catalog brushes through the Python editor model while keeping autoborder mutation, renderer, Search menu, and PyO3/Rust export out of scope.
 - `M034/S01-TOOL-SELECTION-UI` is merged via PR #85: Drawing Tools toolbar exposes Select/Draw/Erase/Fill/Move as real exclusive mode actions.
 - `M034/S01-TOOL-SELECTION-UI` is implemented: Drawing Tools toolbar now exposes Select/Draw/Erase/Fill/Move as real exclusive mode actions while Fill/Move remain no-op backend modes for later slices.

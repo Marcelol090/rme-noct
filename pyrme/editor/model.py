@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from pyrme.editor.brushes import BrushPlacementKind, brush_placement_for_active_id
+
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
@@ -158,14 +160,35 @@ class EditorModel:
             return len(self.selection_positions) != size_before
 
         if self.mode == "drawing":
-            if self.active_item_id is None:
-                return False
             existing = self.map_model.get_tile(position)
-            next_tile = TileState(
-                position=position,
-                ground_item_id=self.active_item_id,
-                item_ids=existing.item_ids if existing is not None else (),
-            )
+            if self.active_item_id is not None:
+                next_tile = TileState(
+                    position=position,
+                    ground_item_id=self.active_item_id,
+                    item_ids=existing.item_ids if existing is not None else (),
+                )
+            elif (
+                placement := brush_placement_for_active_id(self.active_brush_id)
+            ) is not None:
+                if placement.kind is BrushPlacementKind.GROUND:
+                    next_tile = TileState(
+                        position=position,
+                        ground_item_id=placement.item_id,
+                        item_ids=existing.item_ids if existing is not None else (),
+                    )
+                else:
+                    existing_items = existing.item_ids if existing is not None else ()
+                    if placement.item_id in existing_items:
+                        return False
+                    next_tile = TileState(
+                        position=position,
+                        ground_item_id=(
+                            existing.ground_item_id if existing is not None else None
+                        ),
+                        item_ids=(*existing_items, placement.item_id),
+                    )
+            else:
+                return False
             if existing == next_tile:
                 return False
             self._apply_changes(
