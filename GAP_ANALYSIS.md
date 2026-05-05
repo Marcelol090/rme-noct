@@ -9,7 +9,7 @@ This document outlines the current progression of **RME Noct** (Python/Rust) rel
 | **Language** | C++17 / Qt5 | Python 3.12 / Rust / PyQt6 | **Transitional** |
 | **Renderer** | OpenGL (Fixed/Legacy) | wgpu-rs (Modern GPU API) | **In Progress** |
 | **Architecture** | Monolithic C++ | Split Shell (Python) & Core (Rust) | **Active** |
-| **Design System** | Native OS / Standard Qt | Noct Glassmorphism (Premium) | **Superior** |
+| **Design System** | Native OS / Standard Qt | Hyprland-inspired Noct Glassmorphism | **Superior** |
 
 ---
 
@@ -17,6 +17,8 @@ This document outlines the current progression of **RME Noct** (Python/Rust) rel
 
 ### 2.1 UI & Experience
 - **Menubar**: 100% parity achieved. Uses `menubar.xml` as source of truth for all labels, shortcuts, and ordering.
+- **Design System**: Hyprland-inspired Arch-blue glass tokens now cover focus state, shared QSS helpers, and selected dock chrome.
+- **Active State Tracking**: Welcome lists and editor canvases expose stable focus state; `GlassPanel` now uses focus-rim and shadow contracts without compositor claims.
 - **Dialogs**: Parity achieved for Tier 2/3 Dialogs (Town Manager, Waypoints, Map Properties, Find Item, About).
 - **Toolbars**: Basic parity achieved; Noct uses a refined, high-fidelity dock system.
 - **Docks**: Parity achieved for viewport navigation and visibility flags (Show All Floors, Grid, etc.).

@@ -10,9 +10,9 @@
 
 ## Tasks
 
-- [ ] T01: Add failing token/glass-panel tests and implement token/shadow/focus state.
-- [ ] T02: Add failing shared-QSS dock tests and reuse existing QSS helpers.
-- [ ] T03: Update wording/static QSS/GAP docs and verify Search guardrails.
+- [x] T01: Add failing token/glass-panel tests and implement token/shadow/focus state.
+- [x] T02: Add failing shared-QSS dock tests and reuse existing QSS helpers.
+- [x] T03: Update wording/static QSS/GAP docs and verify Search guardrails.
 
 ## Files
 
@@ -41,4 +41,3 @@ rtk git diff --check
 ## Stop Condition
 
 S02 done when visual polish is implemented with focused tests, Search menu guard tests still pass, and no behavior-only Search/Menu changes are in the diff.
-

@@ -3,7 +3,7 @@
 Behavioral parity with legacy WelcomeDialog (welcome_dialog.cpp).
 Single-screen dashboard: Recent Maps + Client Selection + Compatibility Status.
 
-Design: Obsidian Cartographer tokens from .stitch/DESIGN.md.
+Design: Hyprland Glassmorphism tokens from .stitch/DESIGN.md.
 """
 
 from __future__ import annotations

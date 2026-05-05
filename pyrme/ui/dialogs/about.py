@@ -1,7 +1,7 @@
 """About Dialog — Noct Map Editor.
 
 Displays version, credits, and license information in a glassmorphic modal.
-Aligned with Obsidian Cartographer design system.
+Aligned with Hyprland Glassmorphism design system.
 """
 
 from __future__ import annotations
@@ -148,12 +148,12 @@ class AboutDialog(QDialog):
         container_layout.addLayout(footer)
         root.addWidget(container)
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event):  # noqa: N802
         if event.button() == Qt.MouseButton.LeftButton:
             self._drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
             event.accept()
 
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event):  # noqa: N802
         if event.buttons() == Qt.MouseButton.LeftButton:
             self.move(event.globalPosition().toPoint() - self._drag_pos)
             event.accept()

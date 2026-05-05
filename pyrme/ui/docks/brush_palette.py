@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
 from pyrme.ui.components.glass import GlassDockWidget
 from pyrme.ui.docks.item_palette import ItemPaletteWidget
 from pyrme.ui.models.item_palette_types import ItemEntry
-from pyrme.ui.styles import qss_color
+from pyrme.ui.styles import input_field_qss, item_view_qss, qss_color
 from pyrme.ui.theme import THEME, TYPOGRAPHY
 
 _ROOT_INDEX = QModelIndex()
@@ -114,21 +114,7 @@ class BrushPaletteDock(GlassDockWidget):
         self._search_bar = QLineEdit()
         self._search_bar.setPlaceholderText("Search brushes")
         self._search_bar.setFont(TYPOGRAPHY.ui_label())
-        self._search_bar.setStyleSheet(f"""
-            QLineEdit {{
-                background: rgba(255, 255, 255, 0.04);
-                border: 1px solid {qss_color(THEME.ghost_border)};
-                border-radius: 4px;
-                color: {qss_color(THEME.ash_lavender)};
-                padding: 8px;
-            }}
-            QLineEdit:focus {{
-                border-color: {qss_color(THEME.amethyst_core)};
-            }}
-            QLineEdit:disabled {{
-                color: {qss_color(THEME.muted_slate)};
-            }}
-        """)
+        self._search_bar.setStyleSheet(input_field_qss("QLineEdit"))
         self._search_bar.textChanged.connect(self._apply_search_to_current_palette)
         layout.addWidget(self._search_bar)
 
@@ -183,28 +169,7 @@ class BrushPaletteDock(GlassDockWidget):
         view.setModel(proxy)
         view.setUniformItemSizes(True)
         view.setIconSize(QSize(32, 32))
-        view.setStyleSheet(f"""
-            QListView {{
-                background: transparent;
-                outline: none;
-                color: {qss_color(THEME.ash_lavender)};
-            }}
-            QListView::item {{
-                padding: 8px;
-                border-bottom: 1px solid {qss_color(THEME.ghost_border)};
-            }}
-            QListView::item:selected {{
-                background-color: {qss_color(THEME.amethyst_core)};
-                color: #ffffff;
-                border-radius: 2px;
-            }}
-            QListView::item:hover {{
-                background-color: rgba(255, 255, 255, 0.05);
-            }}
-            QListView::item:disabled {{
-                color: {qss_color(THEME.muted_slate)};
-            }}
-        """)
+        view.setStyleSheet(item_view_qss("QListView"))
         view.setFont(TYPOGRAPHY.ui_label())
 
         self._models[name] = model

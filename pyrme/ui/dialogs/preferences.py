@@ -1,7 +1,7 @@
 """Preferences Dialog — Noct Map Editor.
 
 Comprehensive settings dashboard with sidebar navigation.
-Aligned with Obsidian Cartographer design system.
+Aligned with Hyprland Glassmorphism design system.
 """
 
 from __future__ import annotations
@@ -191,7 +191,7 @@ class PreferencesDialog(QDialog):
         theme_layout = QHBoxLayout()
         theme_label = QLabel("Active Theme:")
         self.theme_combo = QComboBox()
-        self.theme_combo.addItem("Obsidian Cartographer (Dark)")
+        self.theme_combo.addItem("Hyprland Glassmorphism (Dark)")
         self.theme_combo.setStyleSheet(dropdown_qss())
         theme_layout.addWidget(theme_label)
         theme_layout.addWidget(self.theme_combo)

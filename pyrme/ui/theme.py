@@ -16,16 +16,16 @@ class ColorTokens:
     """Color tokens for the Noct Map Editor design system."""
 
     # Base Surfaces
-    void_black = QColor("#0A0A12")
+    void_black = QColor("#1e2227")
     obsidian_glass = QColor(255, 255, 255, int(255 * 0.04))
     lifted_glass = QColor(255, 255, 255, int(255 * 0.07))
     elevated_surface = QColor(255, 255, 255, int(255 * 0.09))
 
     # Accent & Interactive
-    amethyst_core = QColor("#7C5CFC")
-    deep_amethyst = QColor("#4F3DB5")
-    amethyst_glow = QColor(124, 92, 252, int(255 * 0.15))
-    amethyst_rim = QColor(124, 92, 252, int(255 * 0.5))
+    amethyst_core = QColor("#1793d1")
+    deep_amethyst = QColor("#116b99")
+    amethyst_glow = QColor(23, 147, 209, int(255 * 0.15))
+    amethyst_rim = QColor(23, 147, 209, int(255 * 0.5))
 
     # Text
     moonstone_white = QColor("#E8E6F0")
@@ -35,7 +35,7 @@ class ColorTokens:
     # Borders & Dividers
     ghost_border = QColor(255, 255, 255, int(255 * 0.08))
     active_border = QColor(255, 255, 255, int(255 * 0.14))
-    focus_border = QColor(124, 92, 252, int(255 * 0.5))
+    focus_border = QColor(23, 147, 209, int(255 * 0.8))
 
     # Semantic Status
     ember_red = QColor("#E05C5C")

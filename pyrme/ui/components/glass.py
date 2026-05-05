@@ -11,8 +11,14 @@ from __future__ import annotations
 import logging
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QBrush, QPainter, QPaintEvent, QPen
-from PyQt6.QtWidgets import QDockWidget, QHBoxLayout, QLabel, QWidget
+from PyQt6.QtGui import QBrush, QFocusEvent, QPainter, QPaintEvent, QPen
+from PyQt6.QtWidgets import (
+    QDockWidget,
+    QGraphicsDropShadowEffect,
+    QHBoxLayout,
+    QLabel,
+    QWidget,
+)
 
 from pyrme.ui.styles import section_heading_qss
 from pyrme.ui.theme import THEME
@@ -31,6 +37,26 @@ class GlassPanel(QWidget):
         # Enable translucent background rendering
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.setAutoFillBackground(False)
+        self._is_active = False
+        self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
+
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setBlurRadius(20)
+        shadow.setColor(THEME.void_black)
+        shadow.setOffset(0, 4)
+        self.setGraphicsEffect(shadow)
+
+    def focusInEvent(self, event: QFocusEvent) -> None:  # noqa: N802
+        """Track active glass focus state."""
+        super().focusInEvent(event)
+        self._is_active = True
+        self.update()
+
+    def focusOutEvent(self, event: QFocusEvent) -> None:  # noqa: N802
+        """Track inactive glass focus state."""
+        super().focusOutEvent(event)
+        self._is_active = False
+        self.update()
 
     def paintEvent(self, event: QPaintEvent | None) -> None:  # noqa: N802
         """Draw the glass background and borders."""
@@ -62,11 +88,10 @@ class GlassPanel(QWidget):
         border_rect = rect.adjusted(0, 0, -1, -1)
         painter.drawRoundedRect(border_rect, radius, radius)
 
-        # Draw 1px Active Border (Top edge "Rim of the glass")
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False) # precise 1px line
-        painter.setPen(QPen(THEME.active_border, 1))
-        # Draw a line along the top inner edge, keeping rounded corners in mind
-        painter.drawLine(int(radius), 0, rect.width() - int(radius), 0)
+        if self._is_active:
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+            painter.setPen(QPen(THEME.focus_border, 1))
+            painter.drawLine(int(radius), 0, rect.width() - int(radius), 0)
 
         painter.end()
 

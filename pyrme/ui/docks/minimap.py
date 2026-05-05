@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
 )
 
 from pyrme.ui.components.glass import GlassDockWidget
+from pyrme.ui.styles import qss_color
 from pyrme.ui.theme import THEME, TYPOGRAPHY
 
 
@@ -39,9 +40,9 @@ class MinimapDock(GlassDockWidget):
         self.map_view.setText("Minimap Render")
         self.map_view.setStyleSheet(f"""
             background-color: #000000;
-            border: 1px solid {THEME.ghost_border.name()};
+            border: 1px solid {qss_color(THEME.ghost_border)};
             border-radius: 4px;
-            color: {THEME.ash_lavender.name()};
+            color: {qss_color(THEME.ash_lavender)};
         """)
         layout.addWidget(self.map_view)
 
@@ -56,7 +57,7 @@ class MinimapDock(GlassDockWidget):
         self.pos_label = QLabel("Z: 07")
         self.pos_label.setFont(TYPOGRAPHY.coordinate_display())
         self.pos_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.pos_label.setStyleSheet("color: #FFFFFF;")
+        self.pos_label.setStyleSheet(f"color: {qss_color(THEME.moonstone_white)};")
         controls_layout.addWidget(self.z_up_btn)
         controls_layout.addWidget(self.pos_label)
         controls_layout.addWidget(self.z_down_btn)
@@ -72,18 +73,19 @@ class MinimapDock(GlassDockWidget):
         btn.setFont(TYPOGRAPHY.ui_label())
         btn.setStyleSheet(f"""
             QPushButton {{
-                background-color: rgba(255, 255, 255, 0.05);
-                border: 1px solid {THEME.ghost_border.name()};
+                background-color: {qss_color(THEME.obsidian_glass)};
+                border: 1px solid {qss_color(THEME.ghost_border)};
                 border-radius: 4px;
-                color: {THEME.ash_lavender.name()};
+                color: {qss_color(THEME.ash_lavender)};
             }}
             QPushButton:hover {{
-                background-color: rgba(255, 255, 255, 0.1);
-                color: #FFFFFF;
-                border: 1px solid {THEME.active_border.name()};
+                background-color: {qss_color(THEME.lifted_glass)};
+                color: {qss_color(THEME.moonstone_white)};
+                border: 1px solid {qss_color(THEME.active_border)};
             }}
             QPushButton:pressed {{
-                background-color: {THEME.amethyst_core.name()};
+                background-color: {qss_color(THEME.amethyst_core)};
+                color: #ffffff;
             }}
         """)
         return btn
