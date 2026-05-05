@@ -1,15 +1,16 @@
 # GSD State
 
-**Active Milestone:** M032-ui-hyprland-integration
-**Active Slice:** S02-HYPRLAND-VISUAL-POLISH
+**Active Milestone:** M033-brush-catalog-ui-bridge
+**Active Slice:** S01-BRUSH-CATALOG-UI-BRIDGE
 **Active Task:** none
-**Phase:** complete
-**Next Action:** Review, commit implementation, push draft PR for M032/S02.
-**Last Updated:** 2026-05-05T10:59:49-03:00
+**Phase:** planning
+**Next Action:** Review M033/S01 spec and plan, then approve implementation gate.
+**Last Updated:** 2026-05-05T11:36:00-03:00
 **Requirements Status:** 0 active · 24 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
+- `M033/S01-BRUSH-CATALOG-UI-BRIDGE` is planned from GitHub issue #72: expose real ground/wall brush catalog entries in the PyQt shell without map mutation, renderer, minimap, or Search menu changes.
 - `M032/S02-HYPRLAND-VISUAL-POLISH` is complete: Arch-blue Hyprland glass tokens, `GlassPanel` shadow/focus rim, shared dock QSS reuse, and GAP docs landed without changing Search menu behavior.
 - `M032/S01-SHELL-FOCUS-TOKENS` is complete: Noct focus tokens now cover welcome lists and active editor view canvases with offscreen tests passing; no renderer rewrite, no broad restyling, no window-manager claims.
 - `M031/S06-MAP-CLEANUP-STATISTICS` is complete: Map Statistics now receives real in-memory map tile/item counts without hanging offscreen tests; cleanup invalid tiles/zones report exact missing `TileState` invalid-data evidence.
