@@ -11,7 +11,7 @@
 ## Verification
 
 - `cargo fmt --all --check`: pass.
-- `cargo test -p rme_core`: 114 passed.
+- `cargo test -p rme_core`: 115 passed.
 - `python -m pytest tests/python/test_sprite_rendering.py tests/python/test_frame_payload.py tests/python/test_wgpu_sprite_renderer.py -q --tb=short`: 7 passed, 2 skipped.
 - `npm run preflight`: `Validation: ok`.
 
