@@ -1,0 +1,9 @@
+{
+  "id": "M037-sprite-draw-plan",
+  "title": "Sprite Draw Plan Integration",
+  "status": "review",
+  "active_slice": "S01-SPRITE-DRAW-PLAN-INTEGRATION",
+  "branch": "gsd/M037/S01-sprite-draw-plan",
+  "worktree": ".worktrees/m037-sprite-draw-plan-20260506",
+  "updated_at": "2026-05-06T00:00:00-03:00"
+}
