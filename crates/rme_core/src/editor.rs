@@ -12,12 +12,73 @@ use crate::autoborder::{
     resolve_autoborder_plan, AutoBorderDefinition, AutoborderNeighbor, AutoborderNeighborhood,
     BorderTarget, GroundBorderRule,
 };
+use crate::command_stack::{
+    CommandPosition, CommandStack, TileCommandBatch, TileCommandChange, TileSnapshot,
+};
 use crate::item::Item;
 use crate::map::{
     Creature, House, MapModel, MapPosition, MapStatistics, Spawn, Town, Waypoint, DEFAULT_X,
-    DEFAULT_Y, DEFAULT_Z,
+    DEFAULT_Y, DEFAULT_Z, MAX_Z,
 };
 use crate::rendering::{RenderBudget, RenderState};
+
+type PyTileSnapshot = Option<(Option<u16>, Vec<u16>)>;
+type PyTileCommandChange = (i32, i32, i32, PyTileSnapshot, PyTileSnapshot);
+type PyTileCommandReplay = (u16, u16, u8, PyTileSnapshot, PyTileSnapshot);
+
+fn py_snapshot(snapshot: PyTileSnapshot) -> Option<TileSnapshot> {
+    snapshot.map(|(ground_id, item_ids)| TileSnapshot {
+        ground_id,
+        item_ids,
+    })
+}
+
+fn replay_snapshot(snapshot: Option<TileSnapshot>) -> PyTileSnapshot {
+    snapshot.map(|value| (value.ground_id, value.item_ids))
+}
+
+fn command_position(x: i32, y: i32, z: i32) -> PyResult<CommandPosition> {
+    if !(0..=i32::from(u16::MAX)).contains(&x) {
+        return Err(PyValueError::new_err(format!("x out of range: {x}")));
+    }
+    if !(0..=i32::from(u16::MAX)).contains(&y) {
+        return Err(PyValueError::new_err(format!("y out of range: {y}")));
+    }
+    if !(0..=i32::from(MAX_Z)).contains(&z) {
+        return Err(PyValueError::new_err(format!("z out of range: {z}")));
+    }
+    Ok(CommandPosition::new(x as u16, y as u16, z as u8))
+}
+
+fn py_changes(changes: Vec<PyTileCommandChange>) -> PyResult<Vec<TileCommandChange>> {
+    changes
+        .into_iter()
+        .map(|(x, y, z, before, after)| {
+            Ok(TileCommandChange {
+                position: command_position(x, y, z)?,
+                before: py_snapshot(before),
+                after: py_snapshot(after),
+            })
+        })
+        .collect()
+}
+
+fn replay_changes(batch: TileCommandBatch) -> Vec<PyTileCommandReplay> {
+    batch
+        .changes
+        .into_iter()
+        .map(|change| {
+            let (x, y, z) = change.position.as_tuple();
+            (
+                x,
+                y,
+                z,
+                replay_snapshot(change.before),
+                replay_snapshot(change.after),
+            )
+        })
+        .collect()
+}
 
 /// Minimal editor state placeholder.
 #[derive(Debug, Default, Clone)]
@@ -37,6 +98,7 @@ pub struct EditorShellState {
     map: MapModel,
     render: RenderState,
     budget: RenderBudget,
+    command_stack: CommandStack,
 }
 
 impl Default for EditorShellState {
@@ -45,6 +107,7 @@ impl Default for EditorShellState {
             map: MapModel::new(),
             render: RenderState::default(),
             budget: RenderBudget::default_budget(),
+            command_stack: CommandStack::default(),
         }
     }
 }
@@ -147,6 +210,7 @@ impl EditorShellState {
     fn reset_defaults(&mut self) -> (u16, u16, u8) {
         self.map = MapModel::new();
         self.render = RenderState::default();
+        self.command_stack = CommandStack::default();
         self.map
             .set_position(
                 i32::from(DEFAULT_X),
@@ -263,6 +327,38 @@ impl EditorShellState {
             .iter()
             .map(|placement| placement.item_id)
             .collect())
+    }
+
+    // --- Command history bridge ---
+
+    fn record_tile_command(
+        &mut self,
+        label: &str,
+        changes: Vec<PyTileCommandChange>,
+    ) -> PyResult<bool> {
+        Ok(self.command_stack.record(label, py_changes(changes)?))
+    }
+
+    fn can_undo_tile_command(&self) -> bool {
+        self.command_stack.can_undo()
+    }
+
+    fn can_redo_tile_command(&self) -> bool {
+        self.command_stack.can_redo()
+    }
+
+    fn undo_tile_command(&mut self) -> Vec<PyTileCommandReplay> {
+        self.command_stack
+            .undo()
+            .map(replay_changes)
+            .unwrap_or_default()
+    }
+
+    fn redo_tile_command(&mut self) -> Vec<PyTileCommandReplay> {
+        self.command_stack
+            .redo()
+            .map(replay_changes)
+            .unwrap_or_default()
     }
 
     // --- XML sidecar bridge ---
@@ -448,6 +544,7 @@ impl EditorShellState {
             .map_err(|e| PyValueError::new_err(format!("OTBM parse error: {e:?}")))?;
         let tile_count = model.tile_count();
         self.map = model;
+        self.command_stack = CommandStack::default();
         crate::io::xml::load_sidecar_xml(&mut self.map, path)
             .map_err(|e| PyValueError::new_err(format!("XML load error: {e}")))?;
         self.map.mark_clean();

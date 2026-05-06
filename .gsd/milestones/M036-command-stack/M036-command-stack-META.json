@@ -1,0 +1,20 @@
+{
+  "id": "M036-command-stack",
+  "title": "Command Stack",
+  "status": "review",
+  "active_slice": "S01",
+  "source": "GAP_ANALYSIS.md",
+  "scope": [
+    "Rust-backed tile command journal",
+    "PyO3 and Python fallback bridge",
+    "EditorModel undo/redo delegation"
+  ],
+  "non_goals": [
+    "renderer changes",
+    "minimap changes",
+    "Search menu changes",
+    "clipboard redesign",
+    "file lifecycle command journal",
+    "full Rust MapModel migration"
+  ]
+}

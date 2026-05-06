@@ -10,6 +10,7 @@ use pyo3::prelude::*;
 
 pub mod autoborder;
 pub mod brushes;
+pub mod command_stack;
 pub mod editor;
 pub mod io;
 pub mod item;

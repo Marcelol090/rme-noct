@@ -1,15 +1,16 @@
 # GSD State
 
-**Active Milestone:** M035-autoborder-core-bridge
-**Active Slice:** S01-AUTOBORDER-CORE-BRIDGE
+**Active Milestone:** M036-command-stack
+**Active Slice:** S01-COMMAND-STACK
 **Active Task:** none
 **Phase:** review
-**Next Action:** Commit M035/S01 after user approval, then push and open PR in the next gate.
-**Last Updated:** 2026-05-05T17:07:30-03:00
+**Next Action:** Run caveman-review on M036/S01 diff, then commit and PR after clean review.
+**Last Updated:** 2026-05-05T18:20:00-03:00
 **Requirements Status:** 0 active · 24 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
+- `M036/S01-COMMAND-STACK` is implemented: Rust/fallback command history now owns Undo/Redo state for existing Python tile edit batches while Python `MapModel` remains the UI source of truth.
 - `M035/S01-AUTOBORDER-CORE-BRIDGE` is implemented in a clean worktree: Borderize Selection/Map now consume existing M030 `AutoborderPlan` output through a Python bridge and mutate `EditorModel` with undo support while Randomize remains an explicit catalog gap.
 - `M034/S01-TOOL-SELECTION-UI` is implemented: Drawing Tools toolbar now exposes Select/Draw/Erase/Fill/Move as real exclusive mode actions while Fill/Move remain no-op backend modes for later slices.
 - `M034/S01-TOOL-SELECTION-UI` is designed from GitHub issue #72: make Select/Draw/Erase/Fill/Move real exclusive toolbar modes without renderer, minimap, Search menu, PyO3, or new Fill/Move map mutation changes.

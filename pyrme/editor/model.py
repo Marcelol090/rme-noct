@@ -3,6 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from pyrme.editor.command_history import (
+    TileCommandHistory,
+    TileCommandPayload,
+    TileSnapshotPayload,
+)
+
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
@@ -99,12 +105,8 @@ class EditorModel:
     _mode: str = "drawing"
     _active_brush_id: str | None = None
     _active_item_id: int | None = None
-    _undo_stack: list[tuple[TileEditChange, ...]] = field(
-        default_factory=list,
-        repr=False,
-    )
-    _redo_stack: list[tuple[TileEditChange, ...]] = field(
-        default_factory=list,
+    _command_history: TileCommandHistory = field(
+        default_factory=TileCommandHistory,
         repr=False,
     )
     _clipboard: tuple[tuple[int, int, int, TileState], ...] = field(
@@ -169,7 +171,8 @@ class EditorModel:
             if existing == next_tile:
                 return False
             self._apply_changes(
-                (TileEditChange(position=position, before=existing, after=next_tile),)
+                (TileEditChange(position=position, before=existing, after=next_tile),),
+                label="Draw Tile",
             )
             return True
 
@@ -178,46 +181,33 @@ class EditorModel:
             if existing is None:
                 return False
             self._apply_changes(
-                (TileEditChange(position=position, before=existing, after=None),)
+                (TileEditChange(position=position, before=existing, after=None),),
+                label="Erase Tile",
             )
             return True
 
         return False
 
     def can_undo(self) -> bool:
-        return bool(self._undo_stack)
+        return self._command_history.can_undo()
 
     def can_redo(self) -> bool:
-        return bool(self._redo_stack)
+        return self._command_history.can_redo()
 
     def has_clipboard(self) -> bool:
         return bool(self._clipboard)
 
     def undo(self) -> bool:
-        if not self._undo_stack:
+        replay = self._command_history.undo()
+        if not replay:
             return False
-        changes = self._undo_stack.pop()
-        self._apply_changes(
-            tuple(
-                TileEditChange(
-                    position=change.position,
-                    before=change.after,
-                    after=change.before,
-                )
-                for change in changes
-            ),
-            record=False,
-        )
-        self._redo_stack.append(changes)
-        return True
+        return self._apply_replay_payloads(replay)
 
     def redo(self) -> bool:
-        if not self._redo_stack:
+        replay = self._command_history.redo()
+        if not replay:
             return False
-        changes = self._redo_stack.pop()
-        self._apply_changes(changes, record=False)
-        self._undo_stack.append(changes)
-        return True
+        return self._apply_replay_payloads(replay)
 
     def copy_selection(self) -> bool:
         selected_tiles = [
@@ -248,7 +238,7 @@ class EditorModel:
             TileEditChange(position=tile.position, before=tile, after=None)
             for _dx, _dy, _dz, tile in self._clipboard
         )
-        changed = self._apply_changes(changes)
+        changed = self._apply_changes(changes, label="Cut Selection")
         if changed:
             self.clear_selection()
         return changed
@@ -267,7 +257,7 @@ class EditorModel:
                 changes.append(
                     TileEditChange(position=position, before=before, after=after)
                 )
-        return self._apply_changes(tuple(changes))
+        return self._apply_changes(tuple(changes), label="Paste Selection")
 
     def clipboard_tile_count(self) -> int:
         return len(self._clipboard)
@@ -303,7 +293,7 @@ class EditorModel:
                         after=next_tile,
                     )
                 )
-        if not self._apply_changes(tuple(changes)):
+        if not self._apply_changes(tuple(changes), label="Replace Items"):
             return 0
         return occurrence_count
 
@@ -341,7 +331,7 @@ class EditorModel:
                         after=after,
                     )
                 )
-        if not self._apply_changes(tuple(changes)):
+        if not self._apply_changes(tuple(changes), label="Remove Items"):
             return 0
         return occurrence_count
 
@@ -376,7 +366,7 @@ class EditorModel:
                 )
             )
             changed_tile_count += 1
-        if not self._apply_changes(tuple(changes)):
+        if not self._apply_changes(tuple(changes), label="Borderize"):
             return 0
         return changed_tile_count
 
@@ -422,21 +412,75 @@ class EditorModel:
         changes: tuple[TileEditChange, ...],
         *,
         record: bool = True,
+        label: str = "Tile Edit",
     ) -> bool:
         effective_changes = tuple(
             change for change in changes if change.before != change.after
         )
         if not effective_changes:
             return False
-        for change in effective_changes:
+        if record and not self._command_history.record(
+            label,
+            tuple(self._change_to_payload(change) for change in effective_changes),
+        ):
+            return False
+        self._apply_replay_changes(effective_changes)
+        return True
+
+    def _apply_replay_changes(self, changes: tuple[TileEditChange, ...]) -> None:
+        for change in changes:
             if change.after is None:
                 self.map_model.remove_tile(change.position)
             else:
                 self.map_model.set_tile(change.after)
-        if record:
-            self._undo_stack.append(effective_changes)
-            self._redo_stack.clear()
+
+    def _apply_replay_payloads(
+        self,
+        payloads: tuple[TileCommandPayload, ...],
+    ) -> bool:
+        changes = tuple(self._payload_to_change(payload) for payload in payloads)
+        if not changes:
+            return False
+        self._apply_replay_changes(changes)
         return True
+
+    @staticmethod
+    def _snapshot_to_payload(tile: TileState | None) -> TileSnapshotPayload | None:
+        if tile is None:
+            return None
+        return (tile.ground_item_id, tuple(tile.item_ids))
+
+    @staticmethod
+    def _payload_to_snapshot(
+        position: MapPosition,
+        payload: TileSnapshotPayload | None,
+    ) -> TileState | None:
+        if payload is None:
+            return None
+        ground_item_id, item_ids = payload
+        return TileState(
+            position=position,
+            ground_item_id=ground_item_id,
+            item_ids=tuple(item_ids),
+        )
+
+    def _change_to_payload(self, change: TileEditChange) -> TileCommandPayload:
+        return (
+            change.position.x,
+            change.position.y,
+            change.position.z,
+            self._snapshot_to_payload(change.before),
+            self._snapshot_to_payload(change.after),
+        )
+
+    def _payload_to_change(self, payload: TileCommandPayload) -> TileEditChange:
+        x, y, z, before, after = payload
+        position = MapPosition(x, y, z)
+        return TileEditChange(
+            position=position,
+            before=self._payload_to_snapshot(position, before),
+            after=self._payload_to_snapshot(position, after),
+        )
 
     def has_selection(self) -> bool:
         return bool(self.selection_positions)
