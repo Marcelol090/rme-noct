@@ -6,6 +6,8 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from pyrme.editor.brushes import default_editor_brush_placements
+
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
@@ -42,11 +44,17 @@ class BrushPaletteEntry:
 
 def default_brush_palette_entries() -> tuple[BrushPaletteEntry, ...]:
     """Return visible starter brush entries mirrored from the Rust brush contract."""
-    return (
-        BrushPaletteEntry(10, "grass", "ground", "Terrain", 4526, (4526, 4527)),
-        BrushPaletteEntry(11, "dirt", "ground", "Terrain", 103, (103,)),
-        BrushPaletteEntry(20, "stone wall", "wall", "Terrain", 3361, (3361, 3362)),
-        BrushPaletteEntry(21, "wooden wall", "wall", "Terrain", 3390, (3390,)),
+    return tuple(
+        BrushPaletteEntry(
+            brush_id=placement.brush_id,
+            name=placement.name,
+            kind=placement.kind.value,
+            palette_name=placement.palette_name,
+            look_id=placement.item_id,
+            related_item_ids=placement.related_item_ids,
+            visible_in_palette=placement.visible_in_palette,
+        )
+        for placement in default_editor_brush_placements()
     )
 
 
