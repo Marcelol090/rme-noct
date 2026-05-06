@@ -15,6 +15,15 @@ TileCommandPayload = tuple[
     TileSnapshotPayload | None,
 ]
 
+
+@dataclass(frozen=True)
+class ImportMapReport:
+    copied_tiles: int
+    replaced_tiles: int
+    skipped_existing_tiles: int
+    discarded_tiles: int
+
+
 VIEW_FLAG_DEFAULTS: dict[str, bool] = {
     "show_all_floors": False,
     "show_as_minimap": False,
@@ -572,6 +581,33 @@ class EditorShellCoreBridge:
                 int(border_item_id),
                 center_brush_id,
             )
+        )
+
+    def import_otbm(
+        self,
+        path: str,
+        offset_x: int = 0,
+        offset_y: int = 0,
+        offset_z: int = 0,
+        collision_policy: str = "replace",
+    ) -> ImportMapReport | None:
+        if not hasattr(self._inner, "import_otbm"):
+            return None
+        try:
+            copied, replaced, skipped, discarded = self._inner.import_otbm(
+                path,
+                int(offset_x),
+                int(offset_y),
+                int(offset_z),
+                collision_policy,
+            )
+        except Exception:
+            return None
+        return ImportMapReport(
+            copied_tiles=int(copied),
+            replaced_tiles=int(replaced),
+            skipped_existing_tiles=int(skipped),
+            discarded_tiles=int(discarded),
         )
 
     def load_otbm(self, path: str) -> bool:
