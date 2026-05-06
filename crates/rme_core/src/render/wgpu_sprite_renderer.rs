@@ -224,7 +224,8 @@ impl HeadlessSpriteRenderer {
             if !sprites.is_empty() {
                 pass.set_pipeline(&pipeline);
                 pass.set_bind_group(0, &texture_bind_group, &[]);
-                for sprite in sprites {
+                for index in sorted_draw_indices(sprites) {
+                    let sprite = &sprites[index];
                     let uniform = sprite_uniform(width, height, sprite);
                     let uniform_buffer =
                         self.device
@@ -398,6 +399,12 @@ impl HeadlessSpriteRenderer {
     }
 }
 
+fn sorted_draw_indices(sprites: &[GpuSpriteCommand]) -> Vec<usize> {
+    let mut indices = (0..sprites.len()).collect::<Vec<_>>();
+    indices.sort_by_key(|index| sprites[*index].layer);
+    indices
+}
+
 fn sprite_uniform(width: u32, height: u32, sprite: &GpuSpriteCommand) -> SpriteUniformRaw {
     let scale = [
         SPRITE_SIZE as f32 / width as f32,
@@ -498,5 +505,65 @@ mod tests {
         assert_eq!(result.rendered_sprite_count, 1);
         assert_eq!(result.missing_sprite_count, 0);
         assert!(result.rgba.chunks_exact(4).all(|pixel| pixel == [255, 0, 0, 255]));
+    }
+
+    #[test]
+    fn sprite_draw_order_sorts_by_layer() {
+        let sprites = vec![
+            GpuSpriteCommand {
+                x: 0,
+                y: 0,
+                layer: 3,
+                sprite_id: 3,
+                pixels: Vec::new(),
+            },
+            GpuSpriteCommand {
+                x: 0,
+                y: 0,
+                layer: 1,
+                sprite_id: 1,
+                pixels: Vec::new(),
+            },
+            GpuSpriteCommand {
+                x: 0,
+                y: 0,
+                layer: 2,
+                sprite_id: 2,
+                pixels: Vec::new(),
+            },
+        ];
+
+        assert_eq!(sorted_draw_indices(&sprites), vec![1, 2, 0]);
+    }
+
+    #[test]
+    fn higher_layer_draws_last_for_same_tile() {
+        let renderer = match HeadlessSpriteRenderer::new() {
+            Ok(renderer) => renderer,
+            Err(HeadlessRendererError::AdapterUnavailable) => return,
+            Err(error) => panic!("unexpected renderer init error: {error:?}"),
+        };
+        let red = vec![255u8, 0, 0, 255].repeat((SPRITE_SIZE * SPRITE_SIZE) as usize);
+        let blue = vec![0u8, 0, 255, 255].repeat((SPRITE_SIZE * SPRITE_SIZE) as usize);
+        let sprites = vec![
+            GpuSpriteCommand {
+                x: 0,
+                y: 0,
+                layer: 0,
+                sprite_id: 55,
+                pixels: red,
+            },
+            GpuSpriteCommand {
+                x: 0,
+                y: 0,
+                layer: 1,
+                sprite_id: 77,
+                pixels: blue,
+            },
+        ];
+
+        let result = renderer.render_frame(32, 32, &sprites).unwrap();
+
+        assert!(result.rgba.chunks_exact(4).all(|pixel| pixel == [0, 0, 255, 255]));
     }
 }
