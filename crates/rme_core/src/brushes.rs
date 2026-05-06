@@ -39,6 +39,14 @@ pub enum WallAlignment {
     Intersection,
 }
 
+pub trait Brush {
+    fn id(&self) -> u32;
+
+    fn kind(&self) -> BrushKind;
+
+    fn placement_command(&self, variation_index: Option<usize>) -> BrushPlacementCommand;
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GroundBrushDefinition {
     pub id: u32,
@@ -64,6 +72,55 @@ pub struct WallBrushDefinition {
 pub enum BrushDefinition {
     Ground(GroundBrushDefinition),
     Wall(WallBrushDefinition),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GroundBrush {
+    definition: GroundBrushDefinition,
+}
+
+impl GroundBrush {
+    pub fn new() -> Self {
+        Self {
+            definition: GroundBrushDefinition {
+                id: 1,
+                name: String::from("ground"),
+                look_id: 0,
+                ground_items: Vec::new(),
+                visible_in_palette: true,
+                uses_collection: false,
+                max_variation: 0,
+            },
+        }
+    }
+
+    pub fn from_definition(definition: GroundBrushDefinition) -> Self {
+        Self { definition }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WallBrush {
+    definition: WallBrushDefinition,
+}
+
+impl WallBrush {
+    pub fn new() -> Self {
+        Self {
+            definition: WallBrushDefinition {
+                id: 2,
+                name: String::from("wall"),
+                look_id: 0,
+                wall_items: Vec::new(),
+                visible_in_palette: true,
+                uses_collection: false,
+            },
+        }
+    }
+
+    pub fn from_definition(definition: WallBrushDefinition) -> Self {
+        Self { definition }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -144,6 +201,48 @@ impl BrushDefinition {
     }
 }
 
+impl Brush for GroundBrush {
+    fn id(&self) -> u32 {
+        self.definition.id
+    }
+
+    fn kind(&self) -> BrushKind {
+        BrushKind::Ground
+    }
+
+    fn placement_command(&self, variation_index: Option<usize>) -> BrushPlacementCommand {
+        BrushDefinition::Ground(self.definition.clone()).placement_command(variation_index)
+    }
+}
+
+impl Brush for WallBrush {
+    fn id(&self) -> u32 {
+        self.definition.id
+    }
+
+    fn kind(&self) -> BrushKind {
+        BrushKind::Wall
+    }
+
+    fn placement_command(&self, variation_index: Option<usize>) -> BrushPlacementCommand {
+        BrushDefinition::Wall(self.definition.clone()).placement_command(variation_index)
+    }
+}
+
+impl Brush for BrushDefinition {
+    fn id(&self) -> u32 {
+        Self::id(self)
+    }
+
+    fn kind(&self) -> BrushKind {
+        Self::kind(self)
+    }
+
+    fn placement_command(&self, variation_index: Option<usize>) -> BrushPlacementCommand {
+        Self::placement_command(self, variation_index)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BrushCatalogError {
     ReservedName(String),
@@ -169,6 +268,8 @@ pub struct BrushCatalog {
     by_name: BTreeMap<String, usize>,
     by_id: BTreeMap<u32, usize>,
 }
+
+pub type BrushManager = BrushCatalog;
 
 impl BrushCatalog {
     pub fn new() -> Self {
@@ -368,5 +469,11 @@ mod tests {
             catalog.placement_command_by_name("missing", None),
             BrushPlacementCommand::Noop
         );
+    }
+
+    #[test]
+    fn ground_brush_exposes_expected_id() {
+        let brush = GroundBrush::new();
+        assert_eq!(brush.id(), 1);
     }
 }
