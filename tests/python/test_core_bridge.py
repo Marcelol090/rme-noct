@@ -4,6 +4,7 @@ from pyrme.core_bridge import (
     SHOW_FLAG_DEFAULTS,
     VIEW_FLAG_DEFAULTS,
     EditorShellCoreBridge,
+    ImportMapReport,
     _FallbackEditorShellState,
     create_editor_shell_state,
 )
@@ -107,3 +108,58 @@ def test_fallback_bridge_preserves_max_python_map_coordinate() -> None:
     assert core.record_tile_command("Edge Tile", (change,)) is True
 
     assert core.undo_tile_command() == ((65535, 65535, 15, (100, ()), None),)
+
+
+class _NativeImportRecorder:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, int, int, int, str]] = []
+
+    def import_otbm(
+        self,
+        path: str,
+        offset_x: int,
+        offset_y: int,
+        offset_z: int,
+        collision_policy: str,
+    ) -> tuple[int, int, int, int]:
+        self.calls.append((path, offset_x, offset_y, offset_z, collision_policy))
+        return (1, 2, 3, 4)
+
+
+class _NativeImportRaises:
+    def import_otbm(
+        self,
+        path: str,
+        offset_x: int,
+        offset_y: int,
+        offset_z: int,
+        collision_policy: str,
+    ) -> tuple[int, int, int, int]:
+        raise RuntimeError("import failed")
+
+
+def test_editor_shell_core_bridge_import_otbm_returns_report() -> None:
+    native = _NativeImportRecorder()
+    core = EditorShellCoreBridge(native, native=True)
+
+    report = core.import_otbm("source.otbm", 5, -2, 1, "skip")
+
+    assert report == ImportMapReport(
+        copied_tiles=1,
+        replaced_tiles=2,
+        skipped_existing_tiles=3,
+        discarded_tiles=4,
+    )
+    assert native.calls == [("source.otbm", 5, -2, 1, "skip")]
+
+
+def test_editor_shell_core_bridge_import_otbm_missing_native_method() -> None:
+    core = EditorShellCoreBridge(_FallbackEditorShellState(), native=False)
+
+    assert core.import_otbm("source.otbm") is None
+
+
+def test_editor_shell_core_bridge_import_otbm_native_exception() -> None:
+    core = EditorShellCoreBridge(_NativeImportRaises(), native=True)
+
+    assert core.import_otbm("source.otbm") is None
