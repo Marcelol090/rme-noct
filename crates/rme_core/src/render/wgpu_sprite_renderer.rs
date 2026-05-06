@@ -87,7 +87,6 @@ impl HeadlessSpriteRenderer {
             power_preference: wgpu::PowerPreference::LowPower,
             compatible_surface: None,
             force_fallback_adapter: false,
-            ..Default::default()
         }))
         .map_err(|_| HeadlessRendererError::AdapterUnavailable)?;
         let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
