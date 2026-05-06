@@ -20,6 +20,7 @@ use crate::map::{
     Creature, House, MapModel, MapPosition, MapStatistics, Spawn, Town, Waypoint, DEFAULT_X,
     DEFAULT_Y, DEFAULT_Z, MAX_Z,
 };
+use crate::merger::{merge_map_tiles, CollisionPolicy, MapMergeOptions};
 use crate::rendering::{RenderBudget, RenderState};
 
 type PyTileSnapshot = Option<(Option<u16>, Vec<u16>)>;
@@ -61,6 +62,16 @@ fn py_changes(changes: Vec<PyTileCommandChange>) -> PyResult<Vec<TileCommandChan
             })
         })
         .collect()
+}
+
+fn import_collision_policy(value: &str) -> PyResult<CollisionPolicy> {
+    match value {
+        "replace" => Ok(CollisionPolicy::Replace),
+        "skip" => Ok(CollisionPolicy::Skip),
+        other => Err(PyValueError::new_err(format!(
+            "Unsupported collision policy: {other}"
+        ))),
+    }
 }
 
 fn replay_changes(batch: TileCommandBatch) -> Vec<PyTileCommandReplay> {
@@ -551,6 +562,38 @@ impl EditorShellState {
         Ok((header.width, header.height, tile_count))
     }
 
+    /// Imports OTBM tiles into the current map. Returns merge report counters.
+    #[pyo3(signature = (path, offset_x=0, offset_y=0, offset_z=0, collision_policy="replace"))]
+    fn import_otbm(
+        &mut self,
+        path: &str,
+        offset_x: i32,
+        offset_y: i32,
+        offset_z: i32,
+        collision_policy: &str,
+    ) -> PyResult<(u64, u64, u64, u64)> {
+        let data = std::fs::read(path)
+            .map_err(|e| PyValueError::new_err(format!("Failed to read import file: {e}")))?;
+        let (_, source_map) = crate::io::otbm::load_otbm(&data)
+            .map_err(|e| PyValueError::new_err(format!("OTBM import parse error: {e:?}")))?;
+        let report = merge_map_tiles(
+            &mut self.map,
+            &source_map,
+            MapMergeOptions {
+                offset_x,
+                offset_y,
+                offset_z,
+                collision_policy: import_collision_policy(collision_policy)?,
+            },
+        );
+        Ok((
+            report.copied_tiles,
+            report.replaced_tiles,
+            report.skipped_existing_tiles,
+            report.discarded_tiles,
+        ))
+    }
+
     /// Saves the current map to an OTBM file.
     fn save_otbm(&mut self, path: &str) -> PyResult<()> {
         crate::io::otbm::save_otbm(&self.map, path)
@@ -579,6 +622,8 @@ impl EditorShellState {
 
 #[cfg(test)]
 mod tests {
+    use std::path::{Path, PathBuf};
+
     use super::*;
 
     #[test]
@@ -725,5 +770,117 @@ mod tests {
         assert_eq!(loaded.2, 0);
         assert_eq!(reader.sidecar_counts(), (1, 1, 1, 1));
         assert!(!reader.map_is_dirty());
+    }
+
+    fn save_source_with_ground(
+        dir: &Path,
+        name: &str,
+        x: i32,
+        y: i32,
+        z: i32,
+        item_id: u16,
+    ) -> PathBuf {
+        let path = dir.join(name);
+        let mut source = EditorShellState::default();
+        assert!(source.set_tile_ground(x, y, z, item_id));
+        source.save_otbm(path.to_str().unwrap()).unwrap();
+        path
+    }
+
+    #[test]
+    fn editor_import_otbm_copies_offset_source_tile() {
+        let dir = tempfile::tempdir().unwrap();
+        let source_path = save_source_with_ground(dir.path(), "source.otbm", 10, 20, 7, 100);
+
+        let mut target = EditorShellState::default();
+        let report = target
+            .import_otbm(source_path.to_str().unwrap(), 5, -2, 1, "replace")
+            .unwrap();
+
+        assert_eq!(report, (1, 0, 0, 0));
+        assert_eq!(
+            target.get_tile_data(15, 18, 8),
+            Some((Some(100), Vec::new(), 0, 0))
+        );
+        assert!(target.map_generation() > 0);
+        assert!(!target.map_is_dirty());
+    }
+
+    #[test]
+    fn editor_import_otbm_replace_policy_overwrites_destination() {
+        let dir = tempfile::tempdir().unwrap();
+        let source_path = save_source_with_ground(dir.path(), "source.otbm", 10, 20, 7, 100);
+
+        let mut target = EditorShellState::default();
+        assert!(target.set_tile_ground(15, 18, 8, 500));
+        let report = target
+            .import_otbm(source_path.to_str().unwrap(), 5, -2, 1, "replace")
+            .unwrap();
+
+        assert_eq!(report, (1, 1, 0, 0));
+        assert_eq!(
+            target.get_tile_data(15, 18, 8),
+            Some((Some(100), Vec::new(), 0, 0))
+        );
+    }
+
+    #[test]
+    fn editor_import_otbm_skip_policy_keeps_destination() {
+        let dir = tempfile::tempdir().unwrap();
+        let source_path = save_source_with_ground(dir.path(), "source.otbm", 10, 20, 7, 100);
+
+        let mut target = EditorShellState::default();
+        assert!(target.set_tile_ground(15, 18, 8, 500));
+        let report = target
+            .import_otbm(source_path.to_str().unwrap(), 5, -2, 1, "skip")
+            .unwrap();
+
+        assert_eq!(report, (0, 0, 1, 0));
+        assert_eq!(
+            target.get_tile_data(15, 18, 8),
+            Some((Some(500), Vec::new(), 0, 0))
+        );
+    }
+
+    #[test]
+    fn editor_import_otbm_discards_out_of_bounds_destination() {
+        let dir = tempfile::tempdir().unwrap();
+        let source_path = save_source_with_ground(dir.path(), "source.otbm", 0, 0, 0, 100);
+
+        let mut target = EditorShellState::default();
+        let before_generation = target.map_generation();
+        let report = target
+            .import_otbm(source_path.to_str().unwrap(), -1, 0, 0, "replace")
+            .unwrap();
+
+        assert_eq!(report, (0, 0, 0, 1));
+        assert_eq!(target.tile_count(), 0);
+        assert_eq!(target.map_generation(), before_generation);
+    }
+
+    #[test]
+    fn editor_import_otbm_rejects_unknown_collision_policy() {
+        let dir = tempfile::tempdir().unwrap();
+        let source_path = save_source_with_ground(dir.path(), "source.otbm", 10, 20, 7, 100);
+
+        let mut target = EditorShellState::default();
+        let err = target
+            .import_otbm(source_path.to_str().unwrap(), 0, 0, 0, "merge")
+            .unwrap_err();
+
+        assert!(err.to_string().contains("Unsupported collision policy"));
+    }
+
+    #[test]
+    fn editor_import_otbm_reports_missing_source_path() {
+        let dir = tempfile::tempdir().unwrap();
+        let missing = dir.path().join("missing.otbm");
+
+        let mut target = EditorShellState::default();
+        let err = target
+            .import_otbm(missing.to_str().unwrap(), 0, 0, 0, "replace")
+            .unwrap_err();
+
+        assert!(err.to_string().contains("Failed to read import file"));
     }
 }
