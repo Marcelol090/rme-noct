@@ -143,6 +143,37 @@ def test_native_rme_core_load_otbm_reads_xml_sidecars(tmp_path) -> None:
     assert reader.map_is_dirty() is False
 
 
+def test_native_rme_core_import_otbm_merges_saved_source(tmp_path) -> None:
+    rme_core = pytest.importorskip(
+        "pyrme.rme_core",
+        reason="pyrme.rme_core is not built in this environment",
+    )
+    required_methods = (
+        "get_tile_data",
+        "import_otbm",
+        "map_generation",
+        "save_otbm",
+        "set_tile_ground",
+    )
+    missing = [
+        name for name in required_methods if not hasattr(rme_core.EditorShellState, name)
+    ]
+    if missing:
+        pytest.skip(f"pyrme.rme_core missing M041 methods: {missing}")
+
+    source = rme_core.EditorShellState()
+    assert source.set_tile_ground(10, 20, 7, 100) is True
+    source_path = tmp_path / "source.otbm"
+    source.save_otbm(str(source_path))
+
+    target = rme_core.EditorShellState()
+    generation_before = target.map_generation()
+
+    assert target.import_otbm(str(source_path), 5, -2, 1, "replace") == (1, 0, 0, 0)
+    assert target.get_tile_data(15, 18, 8) == (100, [], 0, 0)
+    assert target.map_generation() > generation_before
+
+
 def test_native_rme_core_bridge_edits_save_xml_sidecars(tmp_path) -> None:
     rme_core = pytest.importorskip(
         "pyrme.rme_core",
