@@ -120,12 +120,14 @@ impl HeadlessSpriteRenderer {
             mipmap_filter: wgpu::MipmapFilterMode::Nearest,
             ..Default::default()
         });
-        let shader = self.device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("rme_core sprite shader"),
-            source: wgpu::ShaderSource::Wgsl(
-                crate::render::sprite_shader::SPRITE_SHADER_WGSL.into(),
-            ),
-        });
+        let shader = self
+            .device
+            .create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("rme_core sprite shader"),
+                source: wgpu::ShaderSource::Wgsl(
+                    crate::render::sprite_shader::SPRITE_SHADER_WGSL.into(),
+                ),
+            });
         let texture_layout =
             self.device
                 .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -313,36 +315,39 @@ impl HeadlessSpriteRenderer {
         texture_layout: &wgpu::BindGroupLayout,
         uniform_layout: &wgpu::BindGroupLayout,
     ) -> wgpu::RenderPipeline {
-        let layout = self.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("rme_core sprite pipeline layout"),
-            bind_group_layouts: &[Some(texture_layout), Some(uniform_layout)],
-            immediate_size: 0,
-        });
-        self.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("rme_core sprite pipeline"),
-            layout: Some(&layout),
-            vertex: wgpu::VertexState {
-                module: shader,
-                entry_point: Some("vs_main"),
-                compilation_options: Default::default(),
-                buffers: &[],
-            },
-            primitive: wgpu::PrimitiveState::default(),
-            depth_stencil: None,
-            multisample: wgpu::MultisampleState::default(),
-            fragment: Some(wgpu::FragmentState {
-                module: shader,
-                entry_point: Some("fs_main"),
-                compilation_options: Default::default(),
-                targets: &[Some(wgpu::ColorTargetState {
-                    format: wgpu::TextureFormat::Rgba8Unorm,
-                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
-                    write_mask: wgpu::ColorWrites::ALL,
-                })],
-            }),
-            multiview_mask: None,
-            cache: None,
-        })
+        let layout = self
+            .device
+            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("rme_core sprite pipeline layout"),
+                bind_group_layouts: &[Some(texture_layout), Some(uniform_layout)],
+                immediate_size: 0,
+            });
+        self.device
+            .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some("rme_core sprite pipeline"),
+                layout: Some(&layout),
+                vertex: wgpu::VertexState {
+                    module: shader,
+                    entry_point: Some("vs_main"),
+                    compilation_options: Default::default(),
+                    buffers: &[],
+                },
+                primitive: wgpu::PrimitiveState::default(),
+                depth_stencil: None,
+                multisample: wgpu::MultisampleState::default(),
+                fragment: Some(wgpu::FragmentState {
+                    module: shader,
+                    entry_point: Some("fs_main"),
+                    compilation_options: Default::default(),
+                    targets: &[Some(wgpu::ColorTargetState {
+                        format: wgpu::TextureFormat::Rgba8Unorm,
+                        blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                        write_mask: wgpu::ColorWrites::ALL,
+                    })],
+                }),
+                multiview_mask: None,
+                cache: None,
+            })
     }
 
     fn read_texture_rgba(
@@ -504,7 +509,10 @@ mod tests {
 
         assert_eq!(result.rendered_sprite_count, 1);
         assert_eq!(result.missing_sprite_count, 0);
-        assert!(result.rgba.chunks_exact(4).all(|pixel| pixel == [255, 0, 0, 255]));
+        assert!(result
+            .rgba
+            .chunks_exact(4)
+            .all(|pixel| pixel == [255, 0, 0, 255]));
     }
 
     #[test]
@@ -564,6 +572,9 @@ mod tests {
 
         let result = renderer.render_frame(32, 32, &sprites).unwrap();
 
-        assert!(result.rgba.chunks_exact(4).all(|pixel| pixel == [0, 0, 255, 255]));
+        assert!(result
+            .rgba
+            .chunks_exact(4)
+            .all(|pixel| pixel == [0, 0, 255, 255]));
     }
 }
