@@ -282,6 +282,7 @@ impl HeadlessSpriteRenderer {
             view_formats: &[],
         });
         for sprite in sprites {
+            let upload_pixels = padded_sprite_upload_pixels(&sprite.pixels);
             self.queue.write_texture(
                 wgpu::TexelCopyTextureInfo {
                     texture: &texture,
@@ -293,10 +294,10 @@ impl HeadlessSpriteRenderer {
                     },
                     aspect: wgpu::TextureAspect::All,
                 },
-                &sprite.pixels,
+                &upload_pixels,
                 wgpu::TexelCopyBufferLayout {
                     offset: 0,
-                    bytes_per_row: Some(SPRITE_SIZE * RGBA_BYTES_PER_PIXEL),
+                    bytes_per_row: Some(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT),
                     rows_per_image: Some(SPRITE_SIZE),
                 },
                 wgpu::Extent3d {
@@ -404,6 +405,19 @@ impl HeadlessSpriteRenderer {
     }
 }
 
+fn padded_sprite_upload_pixels(pixels: &[u8]) -> Vec<u8> {
+    let tight_row = (SPRITE_SIZE * RGBA_BYTES_PER_PIXEL) as usize;
+    let padded_row = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT as usize;
+    let mut padded = vec![0u8; padded_row * SPRITE_SIZE as usize];
+    for row in 0..SPRITE_SIZE as usize {
+        let tight_start = row * tight_row;
+        let padded_start = row * padded_row;
+        padded[padded_start..padded_start + tight_row]
+            .copy_from_slice(&pixels[tight_start..tight_start + tight_row]);
+    }
+    padded
+}
+
 fn sorted_draw_indices(sprites: &[GpuSpriteCommand]) -> Vec<usize> {
     let mut indices = (0..sprites.len()).collect::<Vec<_>>();
     indices.sort_by_key(|index| sprites[*index].layer);
@@ -487,6 +501,24 @@ mod tests {
         assert_eq!(result.missing_sprite_count, 0);
         assert_eq!(result.rgba.len(), 4 * 3 * 4);
         assert!(result.rgba.chunks_exact(4).all(|pixel| pixel == CLEAR_RGBA));
+    }
+
+    #[test]
+    fn padded_sprite_upload_pixels_aligns_each_row_to_wgpu_pitch() {
+        let tight_row = (SPRITE_SIZE * RGBA_BYTES_PER_PIXEL) as usize;
+        let padded_row = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT as usize;
+        let pixels = (0..SPRITE_SIZE * SPRITE_SIZE * RGBA_BYTES_PER_PIXEL)
+            .map(|index| (index % 256) as u8)
+            .collect::<Vec<_>>();
+
+        let padded = padded_sprite_upload_pixels(&pixels);
+
+        assert_eq!(padded.len(), padded_row * SPRITE_SIZE as usize);
+        assert_eq!(&padded[0..tight_row], &pixels[0..tight_row]);
+        assert!(padded[tight_row..padded_row].iter().all(|byte| *byte == 0));
+        let source_second_row = tight_row..tight_row * 2;
+        let padded_second_row = padded_row..padded_row + tight_row;
+        assert_eq!(&padded[padded_second_row], &pixels[source_second_row]);
     }
 
     #[test]
