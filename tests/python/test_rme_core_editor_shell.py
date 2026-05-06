@@ -28,6 +28,31 @@ def test_native_rme_core_exposes_editor_shell_state() -> None:
     assert shell.show_flag("show_spawns") is True
     assert "worker_threads=" in shell.render_summary()
 
+
+def test_native_rme_core_exposes_autoborder_plan_bridge() -> None:
+    rme_core = pytest.importorskip(
+        "pyrme.rme_core",
+        reason="pyrme.rme_core is not built in this environment",
+    )
+    if not hasattr(rme_core.EditorShellState, "resolve_autoborder_items"):
+        pytest.skip("pyrme.rme_core binary was not rebuilt with autoborder bridge")
+
+    shell = rme_core.EditorShellState()
+
+    assert shell.resolve_autoborder_items(
+        [None, 99, None, None, None, None, None, None],
+        10,
+        4527,
+        10,
+    ) == [4527]
+    assert shell.resolve_autoborder_items(
+        [None, None, None, None, None, None, None, None],
+        10,
+        4527,
+        10,
+    ) == []
+
+
 def test_native_rme_core_save_otbm(tmp_path) -> None:
     rme_core = pytest.importorskip(
         "pyrme.rme_core",
@@ -156,3 +181,51 @@ def test_native_rme_core_bridge_edits_save_xml_sidecars(tmp_path) -> None:
     assert 'name="Depot North"' in house_xml
     assert 'townid="4"' in house_xml
     assert 'size="14"' in house_xml
+
+
+def test_native_rme_core_exposes_tile_command_history() -> None:
+    rme_core = pytest.importorskip(
+        "pyrme.rme_core",
+        reason="pyrme.rme_core is not built in this environment",
+    )
+    required = (
+        "record_tile_command",
+        "can_undo_tile_command",
+        "can_redo_tile_command",
+        "undo_tile_command",
+        "redo_tile_command",
+    )
+    missing = [name for name in required if not hasattr(rme_core.EditorShellState, name)]
+    if missing:
+        pytest.skip(f"pyrme.rme_core missing M036 methods: {missing}")
+
+    shell = rme_core.EditorShellState()
+    assert shell.record_tile_command(
+        "Draw Tile",
+        [(32000, 32000, 7, None, (100, [200, 300]))],
+    ) is True
+    assert shell.can_undo_tile_command() is True
+    assert shell.undo_tile_command() == [
+        (32000, 32000, 7, (100, [200, 300]), None)
+    ]
+    assert shell.can_redo_tile_command() is True
+    assert shell.redo_tile_command() == [
+        (32000, 32000, 7, None, (100, [200, 300]))
+    ]
+
+
+def test_native_rme_core_tile_command_preserves_edge_coordinates() -> None:
+    rme_core = pytest.importorskip(
+        "pyrme.rme_core",
+        reason="pyrme.rme_core is not built in this environment",
+    )
+    if not hasattr(rme_core.EditorShellState, "record_tile_command"):
+        pytest.skip("pyrme.rme_core missing M036 command history methods")
+
+    shell = rme_core.EditorShellState()
+    assert shell.record_tile_command(
+        "Edge Tile",
+        [(65535, 65535, 15, None, (100, []))],
+    ) is True
+
+    assert shell.undo_tile_command() == [(65535, 65535, 15, (100, []), None)]

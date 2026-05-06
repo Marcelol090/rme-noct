@@ -6,6 +6,15 @@ from dataclasses import dataclass, field
 from os import cpu_count
 from typing import Any
 
+TileSnapshotPayload = tuple[int | None, tuple[int, ...]]
+TileCommandPayload = tuple[
+    int,
+    int,
+    int,
+    TileSnapshotPayload | None,
+    TileSnapshotPayload | None,
+]
+
 VIEW_FLAG_DEFAULTS: dict[str, bool] = {
     "show_all_floors": False,
     "show_as_minimap": False,
@@ -62,6 +71,12 @@ class _FallbackEditorShellState:
         default_factory=list
     )
     _towns: list[tuple[int, str, int, int, int]] = field(default_factory=list)
+    _tile_undo_stack: list[tuple[str, tuple[TileCommandPayload, ...]]] = field(
+        default_factory=list,
+    )
+    _tile_redo_stack: list[tuple[str, tuple[TileCommandPayload, ...]]] = field(
+        default_factory=list,
+    )
 
     def position(self) -> tuple[int, int, int]:
         return self._position
@@ -236,6 +251,57 @@ class _FallbackEditorShellState:
                 return True
         return False
 
+    def resolve_autoborder_items(
+        self,
+        neighbor_brush_ids: tuple[int | None, ...],
+        rule_id: int,
+        border_item_id: int,
+        center_brush_id: int | None = None,
+    ) -> tuple[int, ...]:
+        del center_brush_id, rule_id
+        if len(neighbor_brush_ids) != 8:
+            raise ValueError("autoborder neighborhood must contain exactly 8 neighbors")
+        if border_item_id <= 0:
+            return ()
+        if not any(brush_id is not None for brush_id in neighbor_brush_ids):
+            return ()
+        return (int(border_item_id),)
+
+    def record_tile_command(
+        self,
+        label: str,
+        changes: list[TileCommandPayload] | tuple[TileCommandPayload, ...],
+    ) -> bool:
+        effective = tuple(change for change in changes if change[3] != change[4])
+        if not effective:
+            return False
+        self._tile_undo_stack.append((str(label), effective))
+        self._tile_redo_stack.clear()
+        return True
+
+    def can_undo_tile_command(self) -> bool:
+        return bool(self._tile_undo_stack)
+
+    def can_redo_tile_command(self) -> bool:
+        return bool(self._tile_redo_stack)
+
+    def undo_tile_command(self) -> list[TileCommandPayload]:
+        if not self._tile_undo_stack:
+            return []
+        label, changes = self._tile_undo_stack.pop()
+        self._tile_redo_stack.append((label, changes))
+        return [
+            (x, y, z, after, before)
+            for x, y, z, before, after in reversed(changes)
+        ]
+
+    def redo_tile_command(self) -> list[TileCommandPayload]:
+        if not self._tile_redo_stack:
+            return []
+        label, changes = self._tile_redo_stack.pop()
+        self._tile_undo_stack.append((label, changes))
+        return list(changes)
+
     @staticmethod
     def _clamp_position(x: int, y: int, z: int) -> tuple[int, int, int]:
         return (
@@ -319,6 +385,58 @@ class EditorShellCoreBridge:
         if hasattr(self._inner, "collect_statistics"):
             return self._inner.collect_statistics()
         return None
+
+    def _command_inner(self) -> Any:
+        if hasattr(self._inner, "record_tile_command"):
+            return self._inner
+        if not hasattr(self, "_command_fallback"):
+            self._command_fallback = _FallbackEditorShellState()
+        return self._command_fallback
+
+    @staticmethod
+    def _normalize_tile_snapshot(value: Any) -> TileSnapshotPayload | None:
+        if value is None:
+            return None
+        ground_id, item_ids = value
+        normalized_ground = None if ground_id is None else int(ground_id)
+        return (normalized_ground, tuple(int(item_id) for item_id in item_ids))
+
+    @classmethod
+    def _normalize_tile_command(cls, value: Any) -> TileCommandPayload:
+        x, y, z, before, after = value
+        return (
+            int(x),
+            int(y),
+            int(z),
+            cls._normalize_tile_snapshot(before),
+            cls._normalize_tile_snapshot(after),
+        )
+
+    def record_tile_command(
+        self,
+        label: str,
+        changes: tuple[TileCommandPayload, ...],
+    ) -> bool:
+        normalized = tuple(self._normalize_tile_command(change) for change in changes)
+        return bool(self._command_inner().record_tile_command(label, list(normalized)))
+
+    def can_undo_tile_command(self) -> bool:
+        return bool(self._command_inner().can_undo_tile_command())
+
+    def can_redo_tile_command(self) -> bool:
+        return bool(self._command_inner().can_redo_tile_command())
+
+    def undo_tile_command(self) -> tuple[TileCommandPayload, ...]:
+        return tuple(
+            self._normalize_tile_command(change)
+            for change in self._command_inner().undo_tile_command()
+        )
+
+    def redo_tile_command(self) -> tuple[TileCommandPayload, ...]:
+        return tuple(
+            self._normalize_tile_command(change)
+            for change in self._command_inner().redo_tile_command()
+        )
 
     def towns(self) -> list[tuple[int, str, int, int, int]]:
         if hasattr(self._inner, "towns"):
@@ -429,6 +547,32 @@ class EditorShellCoreBridge:
         if hasattr(self._inner, "remove_house"):
             return bool(self._inner.remove_house(houseid))
         return False
+
+    def resolve_autoborder_items(
+        self,
+        center_brush_id: int | None,
+        neighbor_brush_ids: tuple[int | None, ...],
+        rule_id: int,
+        border_item_id: int,
+    ) -> tuple[int, ...]:
+        if len(neighbor_brush_ids) != 8:
+            raise ValueError("autoborder neighborhood must contain exactly 8 neighbors")
+        if not hasattr(self._inner, "resolve_autoborder_items"):
+            return _FallbackEditorShellState().resolve_autoborder_items(
+                neighbor_brush_ids,
+                rule_id,
+                border_item_id,
+                center_brush_id,
+            )
+        return tuple(
+            int(item_id)
+            for item_id in self._inner.resolve_autoborder_items(
+                list(neighbor_brush_ids),
+                int(rule_id),
+                int(border_item_id),
+                center_brush_id,
+            )
+        )
 
     def load_otbm(self, path: str) -> bool:
         if not hasattr(self._inner, "load_otbm"):

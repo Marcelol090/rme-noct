@@ -1,0 +1,7 @@
+{
+  "id": "M035-autoborder-core-bridge",
+  "title": "Autoborder Core Bridge",
+  "status": "review",
+  "active_slice": "S01-autoborder-core-bridge",
+  "source": "GAP_ANALYSIS.md Autoborder gap after M030/M034"
+}

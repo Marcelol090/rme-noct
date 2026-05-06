@@ -63,6 +63,7 @@ from pyrme.ui.legacy_menu_contract import (
     LEGACY_VIEW_FLAG_DEFAULTS,
     PHASE1_ACTIONS,
 )
+from pyrme.ui.models.brush_catalog import default_brush_palette_entries
 from pyrme.ui.styles import focus_panel_qss, qss_color
 from pyrme.ui.theme import THEME, TYPOGRAPHY
 
@@ -88,6 +89,16 @@ EDITOR_MODE_ACTIONS: tuple[tuple[str, str], ...] = (
 )
 
 QSETTINGS_BORDER_AUTOMAGIC = "editor/border_automagic"
+AUTOBORDER_NEIGHBOR_OFFSETS: tuple[tuple[int, int], ...] = (
+    (-1, -1),
+    (0, -1),
+    (1, -1),
+    (-1, 0),
+    (1, 0),
+    (-1, 1),
+    (0, 1),
+    (1, 1),
+)
 QSETTINGS_SELECTION_MODE = "editor/selection_mode"
 QSETTINGS_SELECTION_COMPENSATE = "editor/selection_compensate"
 QSETTINGS_RECENT_FILES = "file/recent_files"
@@ -438,6 +449,7 @@ class MainWindow(QMainWindow):
         self._edit_transform_service = (
             edit_transform_service or DeferredEditTransformService()
         )
+        self._autoborder_core = create_editor_shell_state()
         self._canvas_factory = canvas_factory or RendererHostCanvasWidget
         self._enable_docks = True if enable_docks is None else enable_docks
         self._editor_context = EditorContext()
@@ -673,14 +685,23 @@ class MainWindow(QMainWindow):
         )
         border_menu.addAction(self.edit_menu_actions["border_automagic"])
         border_menu.addSeparator()
-        for key, label in (
-            ("borderize_selection", "Borderize Selection"),
-            ("borderize_map", "Borderize Map"),
-            ("randomize_selection", "Randomize Selection"),
-            ("randomize_map", "Randomize Map"),
+        for key, handler in (
+            ("borderize_selection", self._borderize_selection),
+            ("borderize_map", self._borderize_map),
+            (
+                "randomize_selection",
+                lambda _checked=False: self._defer_edit_transform(
+                    "Randomize Selection"
+                ),
+            ),
+            (
+                "randomize_map",
+                lambda _checked=False: self._defer_edit_transform("Randomize Map"),
+            ),
         ):
             self.edit_menu_actions[key] = self._action_from_spec(
-                key, lambda _checked=False, value=label: self._defer_edit_transform(value)
+                key,
+                handler,
             )
             border_menu.addAction(self.edit_menu_actions[key])
 
@@ -1850,6 +1871,93 @@ class MainWindow(QMainWindow):
         self._editor_context.session.editor.clear_modified_state()
         self._refresh_dirty_chrome()
         self._status_bar().showMessage("Cleared modified state.", 3000)
+
+    def _borderize_selection(self, _checked: bool = False) -> None:
+        editor = self._editor_context.session.editor
+        self._borderize_positions(editor.selection_positions)
+
+    def _borderize_map(self, _checked: bool = False) -> None:
+        editor = self._editor_context.session.editor
+        self._borderize_positions(tuple(tile.position for tile in editor.map_model.tiles()))
+
+    def _borderize_positions(self, positions) -> None:
+        editor = self._editor_context.session.editor
+        additions = self._autoborder_additions_for_positions(positions)
+        changed_tile_count = editor.append_border_items(additions)
+        if changed_tile_count == 0:
+            self._status_bar().showMessage(
+                "Borderize deferred: no supported ground autoborder data.",
+                3000,
+            )
+            return
+        self._refresh_edit_action_state()
+        self._refresh_dirty_chrome()
+        label = "tile" if changed_tile_count == 1 else "tiles"
+        self._status_bar().showMessage(
+            f"Borderized {changed_tile_count} {label}.",
+            3000,
+        )
+
+    def _autoborder_additions_for_positions(
+        self,
+        positions,
+    ) -> dict[MapPosition, tuple[int, ...]]:
+        editor = self._editor_context.session.editor
+        entries_by_item_id = self._ground_brush_entries_by_item_id()
+        additions: dict[MapPosition, tuple[int, ...]] = {}
+        for position in sorted(set(positions)):
+            tile = editor.map_model.get_tile(position)
+            if tile is None or tile.ground_item_id is None:
+                continue
+            entry = entries_by_item_id.get(tile.ground_item_id)
+            if entry is None:
+                continue
+            border_item_id = self._autoborder_border_item_id(entry)
+            if border_item_id is None:
+                continue
+
+            neighbor_brush_ids = tuple(
+                self._ground_brush_id_at(position.x + dx, position.y + dy, position.z)
+                for dx, dy in AUTOBORDER_NEIGHBOR_OFFSETS
+            )
+            item_ids = self._autoborder_core.resolve_autoborder_items(
+                center_brush_id=entry.brush_id,
+                neighbor_brush_ids=neighbor_brush_ids,
+                rule_id=entry.brush_id,
+                border_item_id=border_item_id,
+            )
+            if item_ids:
+                additions[position] = item_ids
+        return additions
+
+    def _ground_brush_id_at(self, x: int, y: int, z: int) -> int | None:
+        try:
+            position = MapPosition(x, y, z)
+        except ValueError:
+            return None
+        tile = self._editor_context.session.editor.map_model.get_tile(position)
+        if tile is None or tile.ground_item_id is None:
+            return None
+        entry = self._ground_brush_entries_by_item_id().get(tile.ground_item_id)
+        if entry is None:
+            return None
+        return entry.brush_id
+
+    @staticmethod
+    def _ground_brush_entries_by_item_id() -> dict[int, BrushPaletteEntry]:
+        entries: dict[int, BrushPaletteEntry] = {}
+        for entry in default_brush_palette_entries():
+            if entry.kind != "ground":
+                continue
+            entries[entry.look_id] = entry
+        return entries
+
+    @staticmethod
+    def _autoborder_border_item_id(entry: BrushPaletteEntry) -> int | None:
+        for item_id in entry.related_item_ids:
+            if item_id != entry.look_id:
+                return item_id
+        return None
 
     def _defer_edit_transform(self, label: str) -> None:
         message = {

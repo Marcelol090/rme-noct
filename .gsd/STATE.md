@@ -1,18 +1,17 @@
 # GSD State
 
-**Active Milestone:** M035-ground-wall-brushes
-**Active Slice:** S01-GROUND-WALL-BRUSHES
+**Active Milestone:** M036-command-stack
+**Active Slice:** S01-COMMAND-STACK
 **Active Task:** none
 **Phase:** review
-**Next Action:** Run caveman-review on M035/S01 diff, then commit and PR after clean review.
-**Last Updated:** 2026-05-05T15:11:45-03:00
+**Next Action:** Run caveman-review on M036/S01 diff, then commit and PR after clean review.
+**Last Updated:** 2026-05-05T18:20:00-03:00
 **Requirements Status:** 0 active · 24 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
-- `M035/S01-GROUND-WALL-BRUSHES` is implemented: selected default ground and wall catalog brushes now mutate the Python map model through Draw while Fill/Move and deferred autoborder behavior remain unchanged.
-- `M035/S01-GROUND-WALL-BRUSHES` is designed from GitHub issue #72: apply selected ground and wall catalog brushes through the Python editor model while keeping autoborder mutation, renderer, Search menu, and PyO3/Rust export out of scope.
-- `M034/S01-TOOL-SELECTION-UI` is merged via PR #85: Drawing Tools toolbar exposes Select/Draw/Erase/Fill/Move as real exclusive mode actions.
+- `M036/S01-COMMAND-STACK` is implemented: Rust/fallback command history now owns Undo/Redo state for existing Python tile edit batches while Python `MapModel` remains the UI source of truth.
+- `M035/S01-AUTOBORDER-CORE-BRIDGE` is implemented in a clean worktree: Borderize Selection/Map now consume existing M030 `AutoborderPlan` output through a Python bridge and mutate `EditorModel` with undo support while Randomize remains an explicit catalog gap.
 - `M034/S01-TOOL-SELECTION-UI` is implemented: Drawing Tools toolbar now exposes Select/Draw/Erase/Fill/Move as real exclusive mode actions while Fill/Move remain no-op backend modes for later slices.
 - `M034/S01-TOOL-SELECTION-UI` is designed from GitHub issue #72: make Select/Draw/Erase/Fill/Move real exclusive toolbar modes without renderer, minimap, Search menu, PyO3, or new Fill/Move map mutation changes.
 - `M033/S01-BRUSH-CATALOG-UI-BRIDGE` is implemented: Brush Palette and Jump to Brush now use shared Python catalog entries, and catalog brush selection updates active shell state without Search menu, renderer, minimap, PyO3 export, or map mutation changes.
