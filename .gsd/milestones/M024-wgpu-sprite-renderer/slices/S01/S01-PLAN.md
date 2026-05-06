@@ -12,13 +12,13 @@ Design: `docs/superpowers/specs/2026-05-06-m024-wgpu-sprite-renderer-design.md`
 
 ## Tasks
 
-- [ ] T01: Dependency and Python render submodule gate.
-- [ ] T02: Headless renderer contract.
-- [ ] T03: WGPU device and empty offscreen readback.
-- [ ] T04: Textured sprite draw pass.
-- [ ] T05: Layer ordering.
-- [ ] T06: PyO3 headless bridge.
-- [ ] T07: Verification and closeout.
+- [x] T01: Dependency and Python render submodule gate.
+- [x] T02: Headless renderer contract.
+- [x] T03: WGPU device and empty offscreen readback.
+- [x] T04: Textured sprite draw pass.
+- [x] T05: Layer ordering.
+- [x] T06: PyO3 headless bridge.
+- [x] T07: Verification and closeout.
 
 ## Stop Conditions
 
