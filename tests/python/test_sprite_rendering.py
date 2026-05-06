@@ -6,6 +6,12 @@ from pyrme.rme_core import render
 SPRITE_BYTE_LEN = 32 * 32 * 4
 
 
+def test_native_render_submodule_exposes_sprite_atlas() -> None:
+    assert hasattr(render, "SpriteAtlas")
+    atlas = render.SpriteAtlas()
+    assert atlas.mapped_byte_len() == 0
+
+
 def test_sprite_atlas_maps_exact_rgba_sprite_bytes_to_cpu_staging() -> None:
     pixels = bytes(index % 256 for index in range(SPRITE_BYTE_LEN))
     atlas = render.SpriteAtlas()

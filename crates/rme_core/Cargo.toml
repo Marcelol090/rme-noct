@@ -19,8 +19,10 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 quick-xml = "0.39"
 
-# wgpu will be added in Milestone 4 (Canvas Renderer)
-# wgpu = "23.0"
+wgpu = "29.0.1"
+naga = { version = "29.0.1", features = ["wgsl-in"] }
+pollster = "0.4"
+bytemuck = { version = "1.25", features = ["derive"] }
 
 [dev-dependencies]
 criterion = "0.8.2"

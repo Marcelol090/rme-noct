@@ -1,15 +1,16 @@
 # GSD State
 
-**Active Milestone:** M037-sprite-draw-plan
-**Active Slice:** S01-SPRITE-DRAW-PLAN-INTEGRATION
+**Active Milestone:** M024-wgpu-sprite-renderer
+**Active Slice:** S01-HEADLESS-WGPU-SPRITE-RENDERER
 **Active Task:** none
 **Phase:** review
-**Next Action:** Run caveman-review on M037/S01 diff, then commit and PR after clean review.
+**Next Action:** Run caveman-review on M024/S01 stacked diff, then push PR after clean review.
 **Last Updated:** 2026-05-06T00:00:00-03:00
 **Requirements Status:** 0 active · 24 validated · 0 deferred · 3 out of scope
 
 ## Recent Decisions
 
+- `M024/S01-HEADLESS-WGPU-SPRITE-RENDERER` is implemented on an approved stacked branch above PR #89: real WGPU 29.0.1 offscreen RGBA output, PyO3 `render.SpriteAtlas.render_headless(width, height)` bridge, no CPU fallback, no Qt-native WGPU surface, no live canvas paint integration.
 - `M037/S01-SPRITE-DRAW-PLAN-INTEGRATION` is implemented: existing sprite draw plan diagnostics are restored through canvas hosts without sprite pixel drawing, atlas loading, minimap, Search menu, Rust, or PyO3 changes.
 - `M036/S01-COMMAND-STACK` is implemented: Rust/fallback command history now owns Undo/Redo state for existing Python tile edit batches while Python `MapModel` remains the UI source of truth.
 - `M035/S01-AUTOBORDER-CORE-BRIDGE` is implemented in a clean worktree: Borderize Selection/Map now consume existing M030 `AutoborderPlan` output through a Python bridge and mutate `EditorModel` with undo support while Randomize remains an explicit catalog gap.
