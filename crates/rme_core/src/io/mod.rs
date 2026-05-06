@@ -4,12 +4,14 @@
 
 pub mod binary_tree;
 pub mod dat;
+pub mod items;
 pub mod otb;
 pub mod otbm;
 pub mod spr;
 pub mod xml;
 
 pub use dat::{DatDatabase, DatItem};
+pub use items::{parse_items, ItemType, ItemsXmlError};
 pub use otb::{OtbDatabase, OtbItem};
 pub use spr::SprDatabase;
 
