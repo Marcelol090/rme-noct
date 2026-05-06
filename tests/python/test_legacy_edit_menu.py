@@ -112,6 +112,8 @@ def test_main_window_edit_menu_matches_legacy_order_and_defaults(
 
 def test_editor_model_tracks_undo_redo_for_tile_edits() -> None:
     editor = EditorModel()
+    assert not hasattr(editor, "_undo_stack")
+    assert not hasattr(editor, "_redo_stack")
     position = MapPosition(32000, 32000, 7)
     editor.activate_item_brush(1)
 
@@ -133,6 +135,21 @@ def test_editor_model_tracks_undo_redo_for_tile_edits() -> None:
         position=position,
         ground_item_id=1,
     )
+
+
+def test_editor_model_new_edit_after_undo_clears_redo() -> None:
+    editor = EditorModel()
+    first = MapPosition(32000, 32000, 7)
+    second = MapPosition(32001, 32000, 7)
+    editor.activate_item_brush(1)
+
+    assert editor.apply_active_tool_at(first) is True
+    assert editor.undo() is True
+    assert editor.can_redo() is True
+
+    assert editor.apply_active_tool_at(second) is True
+    assert editor.can_undo() is True
+    assert editor.can_redo() is False
 
 
 def test_editor_model_copies_cuts_and_pastes_selected_tiles() -> None:

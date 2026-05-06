@@ -1,5 +1,6 @@
 """Editor-domain models for the Python UI shell."""
 
+from pyrme.editor.command_history import TileCommandHistory
 from pyrme.editor.model import (
     EditorModel,
     MapModel,
@@ -13,5 +14,6 @@ __all__ = [
     "MapModel",
     "MapPosition",
     "MapStatisticsSnapshot",
+    "TileCommandHistory",
     "TileState",
 ]
