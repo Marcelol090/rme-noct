@@ -62,6 +62,166 @@ pub fn strip_padded_rows(
     tight
 }
 
+pub struct HeadlessSpriteRenderer {
+    device: wgpu::Device,
+    queue: wgpu::Queue,
+}
+
+impl HeadlessSpriteRenderer {
+    pub fn new() -> Result<Self, HeadlessRendererError> {
+        if host_wsl_without_render_node() {
+            return Err(HeadlessRendererError::AdapterUnavailable);
+        }
+        let instance = wgpu::Instance::default();
+        let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::LowPower,
+            compatible_surface: None,
+            force_fallback_adapter: false,
+            ..Default::default()
+        }))
+        .map_err(|_| HeadlessRendererError::AdapterUnavailable)?;
+        let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
+            label: Some("rme_core headless sprite device"),
+            required_features: wgpu::Features::empty(),
+            required_limits: wgpu::Limits::default(),
+            experimental_features: wgpu::ExperimentalFeatures::disabled(),
+            memory_hints: wgpu::MemoryHints::Performance,
+            trace: wgpu::Trace::Off,
+        }))
+        .map_err(|error| HeadlessRendererError::DeviceUnavailable(error.to_string()))?;
+        Ok(Self { device, queue })
+    }
+
+    pub fn render_frame(
+        &self,
+        width: u32,
+        height: u32,
+        sprites: &[GpuSpriteCommand],
+    ) -> Result<HeadlessRenderResult, HeadlessRendererError> {
+        let output = self.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("rme_core headless sprite output"),
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8Unorm,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+            view_formats: &[],
+        });
+        let view = output.create_view(&wgpu::TextureViewDescriptor::default());
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("rme_core headless sprite encoder"),
+            });
+        {
+            let _pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("rme_core headless sprite clear pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    depth_slice: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                            r: f64::from(CLEAR_RGBA[0]) / 255.0,
+                            g: f64::from(CLEAR_RGBA[1]) / 255.0,
+                            b: f64::from(CLEAR_RGBA[2]) / 255.0,
+                            a: 1.0,
+                        }),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
+        }
+        let rgba = self.read_texture_rgba(&output, width, height, encoder)?;
+        Ok(HeadlessRenderResult {
+            width,
+            height,
+            rgba,
+            rendered_sprite_count: sprites.len(),
+            missing_sprite_count: 0,
+        })
+    }
+
+    fn read_texture_rgba(
+        &self,
+        output: &wgpu::Texture,
+        width: u32,
+        height: u32,
+        mut encoder: wgpu::CommandEncoder,
+    ) -> Result<Vec<u8>, HeadlessRendererError> {
+        let padded_row = padded_bytes_per_row(width);
+        let buffer_size = padded_row as u64 * height as u64;
+        let staging = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("rme_core headless sprite readback"),
+            size: buffer_size,
+            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        encoder.copy_texture_to_buffer(
+            wgpu::TexelCopyTextureInfo {
+                texture: output,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            wgpu::TexelCopyBufferInfo {
+                buffer: &staging,
+                layout: wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(padded_row as u32),
+                    rows_per_image: Some(height),
+                },
+            },
+            wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+        );
+        self.queue.submit(Some(encoder.finish()));
+        let slice = staging.slice(..);
+        let (tx, rx) = std::sync::mpsc::channel();
+        slice.map_async(wgpu::MapMode::Read, move |result| {
+            let _ = tx.send(result);
+        });
+        let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
+        rx.recv()
+            .map_err(|error| HeadlessRendererError::MapFailed(error.to_string()))?
+            .map_err(|error| HeadlessRendererError::MapFailed(error.to_string()))?;
+        let mapped = slice.get_mapped_range();
+        let rgba = strip_padded_rows(&mapped, width, height, padded_row);
+        drop(mapped);
+        staging.unmap();
+        Ok(rgba)
+    }
+}
+
+fn host_wsl_without_render_node() -> bool {
+    let Ok(version) = std::fs::read_to_string("/proc/version") else {
+        return false;
+    };
+    let is_wsl = version.to_ascii_lowercase().contains("microsoft");
+    is_wsl && !std::path::Path::new("/dev/dri").exists()
+}
+
+#[derive(Debug, Clone)]
+pub struct GpuSpriteCommand {
+    pub x: u32,
+    pub y: u32,
+    pub layer: u32,
+    pub sprite_id: u32,
+    pub pixels: Vec<u8>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -87,5 +247,23 @@ mod tests {
             strip_padded_rows(&input, width, height, padded),
             vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
         );
+    }
+
+    #[test]
+    fn render_empty_frame_returns_clear_rgba() {
+        let renderer = match HeadlessSpriteRenderer::new() {
+            Ok(renderer) => renderer,
+            Err(HeadlessRendererError::AdapterUnavailable) => return,
+            Err(error) => panic!("unexpected renderer init error: {error:?}"),
+        };
+
+        let result = renderer.render_frame(4, 3, &[]).unwrap();
+
+        assert_eq!(result.width, 4);
+        assert_eq!(result.height, 3);
+        assert_eq!(result.rendered_sprite_count, 0);
+        assert_eq!(result.missing_sprite_count, 0);
+        assert_eq!(result.rgba.len(), 4 * 3 * 4);
+        assert!(result.rgba.chunks_exact(4).all(|pixel| pixel == CLEAR_RGBA));
     }
 }
