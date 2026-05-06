@@ -15,6 +15,7 @@ pub mod editor;
 pub mod io;
 pub mod item;
 pub mod map;
+pub mod minimap;
 pub mod render;
 pub mod rendering;
 
