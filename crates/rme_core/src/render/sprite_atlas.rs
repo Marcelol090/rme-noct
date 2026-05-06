@@ -4,6 +4,7 @@
 //! sprite RGBA payloads and records typed frame commands for a later renderer
 //! upload pass without claiming a live WGPU device exists.
 
+use crate::render::wgpu_sprite_renderer::{GpuSpriteCommand, HeadlessSpriteRenderer};
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes, PyDict};
@@ -122,6 +123,34 @@ impl SpriteAtlas {
             .iter()
             .map(|command| command.pixels.len())
             .collect()
+    }
+
+    pub fn render_headless<'py>(
+        &self,
+        py: Python<'py>,
+        width: u32,
+        height: u32,
+    ) -> PyResult<Bound<'py, PyDict>> {
+        let renderer = HeadlessSpriteRenderer::new()?;
+        let sprites = self
+            .last_frame
+            .iter()
+            .map(|command| GpuSpriteCommand {
+                x: command.x,
+                y: command.y,
+                layer: command.layer,
+                sprite_id: command.sprite_id,
+                pixels: command.pixels.clone(),
+            })
+            .collect::<Vec<_>>();
+        let result = renderer.render_frame(width, height, &sprites)?;
+        let output = PyDict::new(py);
+        output.set_item("width", result.width)?;
+        output.set_item("height", result.height)?;
+        output.set_item("rgba", PyBytes::new(py, &result.rgba))?;
+        output.set_item("rendered_sprite_count", result.rendered_sprite_count)?;
+        output.set_item("missing_sprite_count", result.missing_sprite_count)?;
+        Ok(output)
     }
 }
 
