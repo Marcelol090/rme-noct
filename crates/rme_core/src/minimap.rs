@@ -10,6 +10,12 @@ impl Minimap {
     }
 }
 
+impl Default for Minimap {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::Minimap;
