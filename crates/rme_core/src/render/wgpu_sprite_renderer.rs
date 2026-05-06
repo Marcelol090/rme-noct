@@ -4,10 +4,20 @@
 
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
+use wgpu::util::DeviceExt;
 
 pub const SPRITE_SIZE: u32 = 32;
 pub const RGBA_BYTES_PER_PIXEL: u32 = 4;
 pub const CLEAR_RGBA: [u8; 4] = [10, 10, 18, 255];
+
+#[repr(C)]
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+struct SpriteUniformRaw {
+    offset: [f32; 2],
+    scale: [f32; 2],
+    layer: u32,
+    _pad: [u32; 3],
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HeadlessRenderResult {
@@ -98,6 +108,77 @@ impl HeadlessSpriteRenderer {
         height: u32,
         sprites: &[GpuSpriteCommand],
     ) -> Result<HeadlessRenderResult, HeadlessRendererError> {
+        let sprite_texture = self.create_sprite_texture(sprites);
+        let sprite_view = sprite_texture.create_view(&wgpu::TextureViewDescriptor {
+            dimension: Some(wgpu::TextureViewDimension::D2Array),
+            ..Default::default()
+        });
+        let sampler = self.device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("rme_core sprite nearest sampler"),
+            mag_filter: wgpu::FilterMode::Nearest,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::MipmapFilterMode::Nearest,
+            ..Default::default()
+        });
+        let shader = self.device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("rme_core sprite shader"),
+            source: wgpu::ShaderSource::Wgsl(
+                crate::render::sprite_shader::SPRITE_SHADER_WGSL.into(),
+            ),
+        });
+        let texture_layout =
+            self.device
+                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some("rme_core sprite texture layout"),
+                    entries: &[
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 0,
+                            visibility: wgpu::ShaderStages::FRAGMENT,
+                            ty: wgpu::BindingType::Texture {
+                                sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                                view_dimension: wgpu::TextureViewDimension::D2Array,
+                                multisampled: false,
+                            },
+                            count: None,
+                        },
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 1,
+                            visibility: wgpu::ShaderStages::FRAGMENT,
+                            ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                            count: None,
+                        },
+                    ],
+                });
+        let uniform_layout =
+            self.device
+                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some("rme_core sprite uniform layout"),
+                    entries: &[wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    }],
+                });
+        let texture_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("rme_core sprite texture bind group"),
+            layout: &texture_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&sprite_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&sampler),
+                },
+            ],
+        });
+        let pipeline = self.create_pipeline(&shader, &texture_layout, &uniform_layout);
         let output = self.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("rme_core headless sprite output"),
             size: wgpu::Extent3d {
@@ -119,7 +200,7 @@ impl HeadlessSpriteRenderer {
                 label: Some("rme_core headless sprite encoder"),
             });
         {
-            let _pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("rme_core headless sprite clear pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &view,
@@ -140,6 +221,31 @@ impl HeadlessSpriteRenderer {
                 occlusion_query_set: None,
                 multiview_mask: None,
             });
+            if !sprites.is_empty() {
+                pass.set_pipeline(&pipeline);
+                pass.set_bind_group(0, &texture_bind_group, &[]);
+                for sprite in sprites {
+                    let uniform = sprite_uniform(width, height, sprite);
+                    let uniform_buffer =
+                        self.device
+                            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                                label: Some("rme_core sprite uniform buffer"),
+                                contents: bytemuck::bytes_of(&uniform),
+                                usage: wgpu::BufferUsages::UNIFORM,
+                            });
+                    let uniform_bind_group =
+                        self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+                            label: Some("rme_core sprite uniform bind group"),
+                            layout: &uniform_layout,
+                            entries: &[wgpu::BindGroupEntry {
+                                binding: 0,
+                                resource: uniform_buffer.as_entire_binding(),
+                            }],
+                        });
+                    pass.set_bind_group(1, &uniform_bind_group, &[]);
+                    pass.draw(0..6, 0..1);
+                }
+            }
         }
         let rgba = self.read_texture_rgba(&output, width, height, encoder)?;
         Ok(HeadlessRenderResult {
@@ -148,6 +254,93 @@ impl HeadlessSpriteRenderer {
             rgba,
             rendered_sprite_count: sprites.len(),
             missing_sprite_count: 0,
+        })
+    }
+
+    fn create_sprite_texture(&self, sprites: &[GpuSpriteCommand]) -> wgpu::Texture {
+        let layers = sprites
+            .iter()
+            .map(|sprite| sprite.layer)
+            .max()
+            .unwrap_or(0)
+            .saturating_add(1);
+        let texture = self.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("rme_core sprite texture array"),
+            size: wgpu::Extent3d {
+                width: SPRITE_SIZE,
+                height: SPRITE_SIZE,
+                depth_or_array_layers: layers,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8Unorm,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        });
+        for sprite in sprites {
+            self.queue.write_texture(
+                wgpu::TexelCopyTextureInfo {
+                    texture: &texture,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d {
+                        x: 0,
+                        y: 0,
+                        z: sprite.layer,
+                    },
+                    aspect: wgpu::TextureAspect::All,
+                },
+                &sprite.pixels,
+                wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(SPRITE_SIZE * RGBA_BYTES_PER_PIXEL),
+                    rows_per_image: Some(SPRITE_SIZE),
+                },
+                wgpu::Extent3d {
+                    width: SPRITE_SIZE,
+                    height: SPRITE_SIZE,
+                    depth_or_array_layers: 1,
+                },
+            );
+        }
+        texture
+    }
+
+    fn create_pipeline(
+        &self,
+        shader: &wgpu::ShaderModule,
+        texture_layout: &wgpu::BindGroupLayout,
+        uniform_layout: &wgpu::BindGroupLayout,
+    ) -> wgpu::RenderPipeline {
+        let layout = self.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("rme_core sprite pipeline layout"),
+            bind_group_layouts: &[Some(texture_layout), Some(uniform_layout)],
+            immediate_size: 0,
+        });
+        self.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("rme_core sprite pipeline"),
+            layout: Some(&layout),
+            vertex: wgpu::VertexState {
+                module: shader,
+                entry_point: Some("vs_main"),
+                compilation_options: Default::default(),
+                buffers: &[],
+            },
+            primitive: wgpu::PrimitiveState::default(),
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            fragment: Some(wgpu::FragmentState {
+                module: shader,
+                entry_point: Some("fs_main"),
+                compilation_options: Default::default(),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: wgpu::TextureFormat::Rgba8Unorm,
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+            }),
+            multiview_mask: None,
+            cache: None,
         })
     }
 
@@ -202,6 +395,23 @@ impl HeadlessSpriteRenderer {
         drop(mapped);
         staging.unmap();
         Ok(rgba)
+    }
+}
+
+fn sprite_uniform(width: u32, height: u32, sprite: &GpuSpriteCommand) -> SpriteUniformRaw {
+    let scale = [
+        SPRITE_SIZE as f32 / width as f32,
+        SPRITE_SIZE as f32 / height as f32,
+    ];
+    let offset = [
+        -1.0 + ((sprite.x as f32 + SPRITE_SIZE as f32 / 2.0) * 2.0 / width as f32),
+        1.0 - ((sprite.y as f32 + SPRITE_SIZE as f32 / 2.0) * 2.0 / height as f32),
+    ];
+    SpriteUniformRaw {
+        offset,
+        scale,
+        layer: sprite.layer,
+        _pad: [0; 3],
     }
 }
 
@@ -265,5 +475,28 @@ mod tests {
         assert_eq!(result.missing_sprite_count, 0);
         assert_eq!(result.rgba.len(), 4 * 3 * 4);
         assert!(result.rgba.chunks_exact(4).all(|pixel| pixel == CLEAR_RGBA));
+    }
+
+    #[test]
+    fn render_one_solid_sprite_writes_sprite_pixels() {
+        let renderer = match HeadlessSpriteRenderer::new() {
+            Ok(renderer) => renderer,
+            Err(HeadlessRendererError::AdapterUnavailable) => return,
+            Err(error) => panic!("unexpected renderer init error: {error:?}"),
+        };
+        let pixels = vec![255u8, 0, 0, 255].repeat((SPRITE_SIZE * SPRITE_SIZE) as usize);
+        let sprite = GpuSpriteCommand {
+            x: 0,
+            y: 0,
+            layer: 0,
+            sprite_id: 55,
+            pixels,
+        };
+
+        let result = renderer.render_frame(32, 32, &[sprite]).unwrap();
+
+        assert_eq!(result.rendered_sprite_count, 1);
+        assert_eq!(result.missing_sprite_count, 0);
+        assert!(result.rgba.chunks_exact(4).all(|pixel| pixel == [255, 0, 0, 255]));
     }
 }

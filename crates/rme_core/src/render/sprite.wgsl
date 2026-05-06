@@ -5,6 +5,7 @@ struct VertexOutput {
 
 struct SpriteUniforms {
     offset: vec2<f32>,
+    scale: vec2<f32>,
     layer: u32,
 };
 
@@ -36,7 +37,7 @@ fn vs_main(
         vec2<f32>(1.0, 0.0),
     );
     let index = vertex_index % 6u;
-    let position = quad_positions[index] + uniforms.offset;
+    let position = quad_positions[index] * uniforms.scale + uniforms.offset;
 
     var out: VertexOutput;
     out.tex_coords = quad_uvs[index];
