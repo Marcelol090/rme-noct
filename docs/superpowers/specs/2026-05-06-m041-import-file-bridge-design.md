@@ -44,7 +44,7 @@ The method must:
 - parse it with `crate::io::otbm::load_otbm`
 - convert `collision_policy` from `"replace"` or `"skip"` into M040 `CollisionPolicy`
 - call `merge_map_tiles(&mut self.map, &source_map, options)`
-- mark the active map dirty when `report.copied_tiles > 0`
+- rely on `MapModel` tile mutation generation to advance when `report.copied_tiles > 0`
 - return exact M040 report counts as a Python tuple
 - raise `PyValueError` for file read, parse, or unsupported policy errors
 
@@ -90,6 +90,7 @@ Rust tests should cover:
 - `"replace"` overwrites an existing destination tile and increments `replaced_tiles`
 - `"skip"` leaves an existing destination tile unchanged and increments `skipped_existing_tiles`
 - an out-of-bounds offset increments `discarded_tiles`
+- a copied import advances `map_generation` while the metadata-only dirty flag remains unchanged
 - unsupported collision policy raises `PyValueError`
 - missing or invalid source path raises `PyValueError`
 
