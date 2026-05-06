@@ -99,6 +99,12 @@ impl GroundBrush {
     }
 }
 
+impl Default for GroundBrush {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WallBrush {
     definition: WallBrushDefinition,
@@ -120,6 +126,12 @@ impl WallBrush {
 
     pub fn from_definition(definition: WallBrushDefinition) -> Self {
         Self { definition }
+    }
+}
+
+impl Default for WallBrush {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
